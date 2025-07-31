@@ -10,8 +10,8 @@ migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
-
+    # Allow requests only from your deployed frontend
+    CORS(app, resources={r"/api/*": {"origins": "https://lokdarpan.netlify.app"}})
     # Configure the database
     basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, '..', 'database.db')
