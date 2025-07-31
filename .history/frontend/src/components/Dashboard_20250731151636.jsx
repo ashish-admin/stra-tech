@@ -2,7 +2,10 @@ import EmotionChart from './EmotionChart';
 import LocationMap from './LocationMap';
 import DataTable from './DataTable';
 
+// The Dashboard now receives more props for filtering
 function Dashboard({ data, allData, filters, setFilters }) {
+
+  // Dynamically get unique emotions and cities from the full dataset for the dropdowns
   const emotions = ['All', ...new Set(allData.map(item => item.emotion))];
   const cities = ['All', ...new Set(allData.map(item => item.city))];
 
@@ -14,10 +17,13 @@ function Dashboard({ data, allData, filters, setFilters }) {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Filter Controls Section */}
-      <div className="bg-white p-4 rounded-lg shadow-md">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
+    <div>
+      {/* New Filter Controls Section */}
+      <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h3 className="text-lg font-semibold text-gray-800 col-span-1 md:col-span-3">Filters</h3>
+          
+          {/* Emotion Dropdown */}
           <div>
             <label htmlFor="emotion" className="block text-sm font-medium text-gray-700">Emotion</label>
             <select
@@ -31,6 +37,7 @@ function Dashboard({ data, allData, filters, setFilters }) {
             </select>
           </div>
 
+          {/* City Dropdown */}
           <div>
             <label htmlFor="city" className="block text-sm font-medium text-gray-700">City</label>
             <select
@@ -46,23 +53,18 @@ function Dashboard({ data, allData, filters, setFilters }) {
         </div>
       </div>
 
-      {/* Main Dashboard Grid */}
+      {/* Existing Dashboard Components */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map takes up 2/3 of the width on large screens */}
         <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Posts Map (Telangana)</h3>
           <LocationMap data={data} />
         </div>
-        
-        {/* Chart takes up 1/3 */}
         <div className="bg-white p-4 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Emotion Distribution</h3>
           <EmotionChart data={data} />
         </div>
-
-        {/* Table takes up the full width on the next row */}
         <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-md">
-           <h3 className="text-lg font-semibold text-gray-800 mb-4">Data View</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Data View</h3>
           <DataTable data={data} />
         </div>
       </div>
