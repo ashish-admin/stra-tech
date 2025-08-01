@@ -5,7 +5,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # Prevent python from writing pyc files to disc
-ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONONTWRITEBYTECODE 1
 # Ensure python output is sent straight to the terminal
 ENV PYTHONUNBUFFERED 1
 
@@ -16,12 +16,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # --- THIS IS THE CORRECTED SECTION ---
-# Copy the local app code, the data folder, and the pre-seeded database
-COPY ./app ./app
-COPY ./data ./data
-COPY ./migrations ./migrations
-COPY ./*.py .
-COPY ./*.db .
+# The destinations now end with a "/" to signify they are directories
+COPY ./app ./app/
+COPY ./data ./data/
+COPY ./migrations ./migrations/
+COPY ./*.py ./
+COPY ./*.db ./
 # ------------------------------------
 
 # Run the Gunicorn server
