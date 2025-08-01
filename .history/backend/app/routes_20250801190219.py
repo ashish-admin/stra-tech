@@ -13,19 +13,11 @@ wards_gdf = None
 def load_wards_geojson():
     global wards_gdf
     if wards_gdf is None:
-        # --- THIS IS THE CORRECTED FILE PATH ---
-        # It now correctly navigates up one level from /app to /backend
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        geojson_path = os.path.join(current_dir, '..', 'data', 'ghmc_wards.geojson')
-        
-        if not os.path.exists(geojson_path):
-            raise FileNotFoundError(f"GeoJSON file not found at the specified path: {geojson_path}")
-            
+        geojson_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'ghmc_wards.geojson')
         wards_gdf = gpd.read_file(geojson_path)
     return wards_gdf
-# -----------------------------------------
 
-# --- Authentication and other routes remain the same ---
+# --- Authentication Routes ---
 @bp.route('/api/v1/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -47,6 +39,7 @@ def status():
     else:
         return jsonify({'logged_in': False})
 
+# --- Protected API Endpoints ---
 @bp.route('/api/v1/analytics', methods=['GET'])
 def analytics():
     if not current_user.is_authenticated:
@@ -58,33 +51,34 @@ def analytics():
 def granular_analytics():
     if not current_user.is_authenticated:
         return jsonify({'message': 'Authentication required'}), 401
-    
+
     try:
         wards = load_wards_geojson()
         posts = Post.query.filter(Post.latitude.isnot(None), Post.longitude.isnot(None)).all()
         if not posts:
             return jsonify([])
 
+        # --- MODIFICATION START ---
+        # Convert SQLAlchemy objects to a Pandas DataFrame for easier type conversion
         posts_df = pd.DataFrame([p.to_dict() for p in posts])
+
+        # Ensure coordinates are numeric
         posts_df['longitude'] = pd.to_numeric(posts_df['longitude'])
         posts_df['latitude'] = pd.to_numeric(posts_df['latitude'])
 
+        # Create GeoDataFrame from the clean Pandas DataFrame
         geometry = [Point(xy) for xy in zip(posts_df['longitude'], posts_df['latitude'])]
         posts_gdf = gpd.GeoDataFrame(posts_df, geometry=geometry, crs="EPSG:4326")
-        
-        if wards.crs is None:
-            wards.set_crs("EPSG:4326", inplace=True)
-        if posts_gdf.crs != wards.crs:
-            posts_gdf.to_crs(wards.crs, inplace=True)
+        # --- MODIFICATION END ---
 
         joined_gdf = gpd.sjoin(posts_gdf, wards, how="inner", predicate='within')
 
         if joined_gdf.empty:
             return jsonify([])
-            
+
         emotion_counts = joined_gdf.groupby(['name', 'emotion']).size().unstack(fill_value=0)
         dominant_emotion = emotion_counts.idxmax(axis=1)
-        
+
         results = []
         for ward_name, emotion in dominant_emotion.items():
             ward_data = wards[wards['name'] == ward_name]
