@@ -14,6 +14,7 @@ login_manager.login_view = 'main.login' # The route to redirect to for login
 def create_app():
     app = Flask(__name__)
     
+    # --- THIS IS THE CORRECTED SECTION ---
     # Allow requests only from your deployed frontend and local dev server
     # This also enables sending credentials (like cookies)
     CORS(app, supports_credentials=True, resources={
@@ -21,6 +22,7 @@ def create_app():
             "origins": ["https://lokdarpan.netlify.app", "http://localhost:5173"]
         }
     })
+    # ------------------------------------
 
     # Add a secret key required for Flask sessions
     app.config['SECRET_KEY'] = 'a-very-secret-key-that-you-should-change'
