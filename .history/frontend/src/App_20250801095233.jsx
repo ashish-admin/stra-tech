@@ -17,15 +17,14 @@ function App() {
 
   const [filteredData, setFilteredData] = useState([]);
 
- // Fetch data on initial load
   useEffect(() => {
     const fetchData = async () => {
-      // Use the production URL from the environment variable, or an empty string for local dev
+      // Use the production URL if it exists, otherwise use the local proxy
       const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
       try {
         const response = await axios.get(`${apiUrl}/api/v1/analytics`);
         setAnalyticsData(response.data);
-        setFilteredData(response.data); // Initially, filtered data is all data
+        setFilteredData(response.data);
       } catch (err) {
         setError('Failed to fetch data from the backend. Please ensure the backend server is running.');
         console.error(err);
@@ -33,7 +32,6 @@ function App() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
