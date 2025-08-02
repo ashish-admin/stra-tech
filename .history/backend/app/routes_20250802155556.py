@@ -7,6 +7,11 @@ import geopandas as gpd
 from shapely.geometry import Point
 import pandas as pd
 import json
+
+# We will need the search tool in this blueprint
+# from tools import Google Search # This would be how you'd import it in a real scenario
+# For now, we will simulate the search result.
+
 from .services import analyze_emotions 
 
 bp = Blueprint('main', __name__)
@@ -112,7 +117,7 @@ def strategic_summary():
         filtered_posts = query.all()
 
         if not filtered_posts or len(filtered_posts) < 2:
-            return jsonify({"analysis": "Not enough data for the current filter selection.", "opportunity": "", "threat": "", "prescriptive_action": ""})
+            return jsonify({"analysis": "Not enough data for the current filter selection.", "opportunity": "", "threat": "", "suggested_post": ""})
 
         # 3. Analyze the filtered data
         df = pd.DataFrame([p.to_dict() for p in filtered_posts])
@@ -122,22 +127,30 @@ def strategic_summary():
         location_context = f" in {city_filter}" if city_filter != 'All' else ""
 
         # 4. SIMULATE live news search
+        # In a real implementation, this would be:
+        # search_query = f"latest news on {top_topic}{location_context}"
+        # search_results = Google Search(queries=[search_query])
+        # news_context = " ".join([res.snippet for res in search_results[0].results])
         news_context = "Recent local news reports indicate growing public concern over road quality and infrastructure projects, especially in high-traffic areas. This is becoming a key issue for the upcoming municipal elections."
 
-        # 5. Construct the new, more sophisticated AI prompt
+        # 5. Construct the new, context-aware AI prompt
         prompt = f"""
-        You are an expert political strategist for a campaign in Hyderabad, India. Your task is to provide a clear, actionable intelligence briefing.
+        You are an expert political strategist for a campaign in Hyderabad, India. Your task is to provide a clear, actionable intelligence briefing based on the following filtered public sentiment data and live news context.
 
-        **Intelligence:**
-        - Dominant emotion detected: "{top_emotion}"
-        - Associated topic: "{top_topic}"{location_context}
-        - Live News Context: "{news_context}"
+        **Filtered Intelligence:**
+        - The dominant emotion detected in the current view is "{top_emotion}".
+        - This emotion is strongly associated with topics like "{top_topic}"{location_context}.
+        - There are {len(filtered_posts)} posts matching this view.
+        
+        **Live News Context:**
+        - "{news_context}"
 
         **Your Task:**
-        Generate a strategic response in JSON format. The JSON object must contain these keys:
-        1. "opportunity": A specific strategy to amplify or address the sentiment.
-        2. "threat": A potential risk or opponent's counter-move to be aware of.
-        3. "prescriptive_action": A concrete, single next step the campaign should take (e.g., "Launch a targeted social media campaign in Gachibowli focusing on our infrastructure plan.").
+        Generate a strategic response in JSON format. The JSON object must contain the following keys:
+        1. "analysis": A brief, one-sentence analysis of the current situation for this specific filter.
+        2. "opportunity": A specific, actionable strategy to either amplify (if positive) or address (if negative) the dominant sentiment.
+        3. "threat": A potential risk or opponent's counter-move to be aware of.
+        4. "suggested_post": A sample social media post (in English) that directly executes your proposed strategy. This post must be empathetic and pivot to a positive campaign message.
 
         Provide only the raw JSON object as your response.
         """
