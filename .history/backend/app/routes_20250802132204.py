@@ -13,19 +13,17 @@ wards_gdf = None
 def load_wards_geojson():
     global wards_gdf
     if wards_gdf is None:
-        # --- THIS IS THE CORRECTED FILE PATH ---
-        # It now correctly navigates up one level from /app to /backend
+        # This path correctly navigates from /app up to /backend and then into /data
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        geojson_path = os.path.join(current_dir, '..', 'data', 'ghmc-wards.geojson')
+        geojson_path = os.path.join(current_dir, '..', 'data', 'ghmc_wards.geojson')
         
         if not os.path.exists(geojson_path):
             raise FileNotFoundError(f"GeoJSON file not found at the specified path: {geojson_path}")
             
         wards_gdf = gpd.read_file(geojson_path)
     return wards_gdf
-# -----------------------------------------
 
-# --- Authentication and other routes remain the same ---
+# --- Authentication Routes ---
 @bp.route('/api/v1/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -47,6 +45,7 @@ def status():
     else:
         return jsonify({'logged_in': False})
 
+# --- Protected API Endpoints ---
 @bp.route('/api/v1/analytics', methods=['GET'])
 def analytics():
     if not current_user.is_authenticated:

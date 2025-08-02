@@ -16,7 +16,7 @@ def load_wards_geojson():
         # --- THIS IS THE CORRECTED FILE PATH ---
         # It now correctly navigates up one level from /app to /backend
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        geojson_path = os.path.join(current_dir, '..', 'data', 'ghmc-wards.geojson')
+        geojson_path = os.path.join(current_dir, '..', 'data', 'ghmc_wards.geojson')
         
         if not os.path.exists(geojson_path):
             raise FileNotFoundError(f"GeoJSON file not found at the specified path: {geojson_path}")
@@ -68,15 +68,19 @@ def granular_analytics():
         posts_df = pd.DataFrame([p.to_dict() for p in posts])
         posts_df['longitude'] = pd.to_numeric(posts_df['longitude'])
         posts_df['latitude'] = pd.to_numeric(posts_df['latitude'])
+
         geometry = [Point(xy) for xy in zip(posts_df['longitude'], posts_df['latitude'])]
         posts_gdf = gpd.GeoDataFrame(posts_df, geometry=geometry, crs="EPSG:4326")
         
-        if wards.crs is None: wards.set_crs("EPSG:4326", inplace=True)
-        if posts_gdf.crs != wards.crs: posts_gdf.to_crs(wards.crs, inplace=True)
+        if wards.crs is None:
+            wards.set_crs("EPSG:4326", inplace=True)
+        if posts_gdf.crs != wards.crs:
+            posts_gdf.to_crs(wards.crs, inplace=True)
 
         joined_gdf = gpd.sjoin(posts_gdf, wards, how="inner", predicate='within')
 
-        if joined_gdf.empty: return jsonify([])
+        if joined_gdf.empty:
+            return jsonify([])
             
         emotion_counts = joined_gdf.groupby(['name', 'emotion']).size().unstack(fill_value=0)
         dominant_emotion = emotion_counts.idxmax(axis=1)

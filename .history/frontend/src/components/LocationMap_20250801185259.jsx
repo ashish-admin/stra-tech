@@ -3,10 +3,9 @@ import { MapContainer, TileLayer, GeoJSON, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 
-const CENTER = [17.44, 78.47]; // Centered on Hyderabad
-const ZOOM_LEVEL = 11;
+const CENTER = [17.3850, 78.4867]; // Hyderabad center
 
-// Define a consistent color scheme for emotions
+// Define a color scheme for emotions
 const emotionColorMap = {
   Hope: '#2ecc71',     // Green
   Anger: '#e74c3c',    // Red
@@ -15,15 +14,13 @@ const emotionColorMap = {
   Sadness: '#9b59b6', // Purple
   Disgust: '#7f8c8d',  // Grey
   Apathy: '#bdc3c7',   // Lighter Grey
-  Neutral: '#bdc3c7',  // Also Lighter Grey for apathy/neutral
   Error: '#e67e22',    // Orange
-  Default: '#95a5a6'  // Default Grey for unknown
+  Default: '#95a5a6' // Default Grey
 };
 
 function LocationMap() {
   const [geoData, setGeoData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchGranularData = async () => {
@@ -32,29 +29,23 @@ function LocationMap() {
         axios.defaults.withCredentials = true;
         const response = await axios.get(`${apiUrl}/api/v1/analytics/granular`);
         
-        if (response.data && response.data.length > 0) {
-            // Transform the API response into a valid GeoJSON FeatureCollection
-            const geoJsonFeatures = {
-              type: "FeatureCollection",
-              features: response.data.map(ward => ({
-                type: "Feature",
-                geometry: ward.geometry,
-                properties: {
-                  name: ward.ward_name,
-                  emotion: ward.dominant_emotion,
-                  count: ward.post_count
-                }
-              }))
-            };
-            setGeoData(geoJsonFeatures);
-        } else {
-            // Handle cases where no data is returned
-            setGeoData(null); 
-        }
+        // Transform the API response into a GeoJSON FeatureCollection
+        const geoJsonFeatures = {
+          type: "FeatureCollection",
+          features: response.data.map(ward => ({
+            type: "Feature",
+            geometry: ward.geometry,
+            properties: {
+              name: ward.ward_name,
+              emotion: ward.dominant_emotion,
+              count: ward.post_count
+            }
+          }))
+        };
+        setGeoData(geoJsonFeatures);
 
-      } catch (err) {
-        console.error("Failed to fetch granular map data:", err);
-        setError("Could not load granular map data.");
+      } catch (error) {
+        console.error("Failed to fetch granular map data:", error);
       } finally {
         setLoading(false);
       }
@@ -63,7 +54,6 @@ function LocationMap() {
     fetchGranularData();
   }, []);
 
-  // Function to determine the style of each ward polygon
   const getStyle = (feature) => {
     const emotion = feature.properties.emotion;
     return {
@@ -75,7 +65,6 @@ function LocationMap() {
     };
   };
 
-  // Function to bind popups to each ward
   const onEachFeature = (feature, layer) => {
     if (feature.properties) {
       const { name, emotion, count } = feature.properties;
@@ -89,22 +78,14 @@ function LocationMap() {
   };
 
   if (loading) {
-    return <div className="text-center p-4">Loading map data...</div>;
-  }
-  
-  if (error) {
-    return <div className="text-center p-4 text-red-500">{error}</div>;
-  }
-  
-  if (!geoData) {
-    return <div className="text-center p-4">No granular data available to display on the map.</div>;
+    return <div>Loading map data...</div>;
   }
 
   return (
-    <div className="h-96 w-full rounded-lg overflow-hidden">
+    <div className="h-96">
       <MapContainer
         center={CENTER}
-        zoom={ZOOM_LEVEL}
+        zoom={11}
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%" }}
       >
@@ -112,7 +93,7 @@ function LocationMap() {
           attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} />
+        {geoData && <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} />}
       </MapContainer>
     </div>
   );
