@@ -26,8 +26,7 @@ class Post(db.Model):
     longitude = db.Column(db.Float)
     city = db.Column(db.String(100))
     emotion = db.Column(db.String(50))
-    drivers = db.Column(db.JSON, nullable=True)
-    ward = db.Column(db.String(100), nullable=True)
+    drivers = db.Column(db.JSON, nullable=True) # <-- THIS IS THE ONLY CHANGE
 
     def to_dict(self):
         return {
@@ -37,7 +36,5 @@ class Post(db.Model):
             'latitude': self.latitude,
             'longitude': self.longitude,
             'city': self.city,
-            'emotion': self.emotion,
-            'ward': self.ward,
-            'drivers': self.drivers or []
+            'emotion': self.emotion
         }

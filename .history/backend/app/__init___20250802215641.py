@@ -13,9 +13,8 @@ def create_app():
     app = Flask(__name__, instance_relative_config=True) 
     
     # --- THIS IS THE FIX ---
-    # This updated configuration is more direct and robustly handles
-    # requests from your frontend's origin, which is crucial for
-    # browsers to allow login requests and subsequent API calls.
+    # This configuration is more robust. It tells your entire Flask app
+    # to correctly handle preflight OPTIONS requests from your specific frontend origins.
     CORS(app, supports_credentials=True, origins=["http://localhost:5173", "https://lokdarpan.netlify.app"])
 
     app.config['SECRET_KEY'] = 'a-very-secret-key-that-you-should-change'
@@ -25,7 +24,6 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Ensure the instance folder exists
     try:
         os.makedirs(app.instance_path)
     except OSError:

@@ -1,8 +1,8 @@
-"""Initial migration with Post and User tables.
+"""Initial migration with all columns
 
-Revision ID: e7d9cfb7d146
+Revision ID: af4474fa8822
 Revises: 
-Create Date: 2025-08-02 16:16:35.139791
+Create Date: 2025-08-02 22:17:14.885207
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'e7d9cfb7d146'
+revision = 'af4474fa8822'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -26,6 +26,8 @@ def upgrade():
     sa.Column('longitude', sa.Float(), nullable=True),
     sa.Column('city', sa.String(length=100), nullable=True),
     sa.Column('emotion', sa.String(length=50), nullable=True),
+    sa.Column('drivers', sa.JSON(), nullable=True),
+    sa.Column('ward', sa.String(length=100), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('user',
