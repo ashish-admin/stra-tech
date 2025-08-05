@@ -1,8 +1,13 @@
 import random
 import logging
+from dotenv import load_dotenv
+
+# --- FIX 1: Load environment variables from .env file ---
+load_dotenv()
+
 from app import create_app, db
 from app.models import Post, Author
-from app.services import get_emotion_and_drivers
+from app.services import get_emotion_and_drivers, model as ai_model # Import the model to check if it's available
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,7 +24,6 @@ WARDS = [
     "Dhoolpet", "Karwan", "Jiyaguda", "Gudimalkapur", "Asif Nagar", "Mehdipatnam", "Vijay Nagar Colony", "Ahmed Nagar", "Mallepally", "Red Hills",
     "Jambagh", "Gunfoundry", "Himayatnagar", "Kachiguda", "Nallakunta", "Golnaka", "Amberpet", "Bagh Amberpet", "Vidyanagar", "Domalguda",
     "Ramnagar", "Musheerabad", "Bholakpur", "Gandhinagar", "Kavadiguda", "Khairatabad", "Venkateshwara Colony", "Banjara Hills", "Jubilee Hills", "Shaikpet",
-
     "Tolichowki", "Gachibowli", "Serilingampally", "Hafeezpet", "Miyapur", "Madinaguda", "Chanda Nagar", "Patancheruvu", "Kukatpally", "Vivekananda Nagar Colony",
     "Hydernagar", "Allwyn Colony", "Balanagar", "Fateh Nagar", "Boudha Nagar", "Erragadda", "Borabanda", "Yousufguda", "Sri Nagar Colony", "Somajiguda",
     "Ameerpet", "Sanath Nagar", "Begumpet", "Mettuguda", "Sitaphalmandi", "Bansilalpet", "Ramgopalpet", "Paradise", "Patny", "Karkhana",
@@ -70,13 +74,18 @@ POST_TEMPLATES = {
 
 def seed_database():
     """
-    Clears and seeds the database with realistic, competitive political data.
+    Creates tables if they don't exist, then clears and seeds the database.
     """
     app = create_app()
     with app.app_context():
         logging.info("Starting database seeding process...")
 
-        # Clear existing data
+        # --- FIX 2: Create tables if they don't exist ---
+        logging.info("Ensuring all tables are created...")
+        db.create_all()
+        logging.info("Tables created successfully.")
+        
+        # Now it is safe to clear existing data
         logging.info("Clearing existing Post and Author data...")
         Post.query.delete()
         Author.query.delete()
@@ -92,26 +101,27 @@ def seed_database():
         db.session.commit()
         logging.info(f"Successfully created {len(author_objects)} authors.")
 
+        # Check if AI model is available before generating posts
+        if not ai_model:
+            logging.error("AI Model not available due to missing API key. Aborting post generation.")
+            return
+
         # Generate and insert posts
         logging.info(f"Generating posts for {len(WARDS)} wards...")
         total_posts = 0
         for ward in WARDS:
-            # Create 2-4 posts per ward for realism
             for _ in range(random.randint(2, 4)):
                 try:
-                    # Choose a random author and get a post template
                     author_name = random.choice(list(POST_TEMPLATES.keys()))
                     author = author_objects[author_name]
                     content_template = random.choice(POST_TEMPLATES[author_name])
                     content = content_template.format(ward=ward)
 
-                    # Analyze post using the AI service
                     logging.info(f"Analyzing post for '{ward}' from '{author_name}'...")
                     analysis = get_emotion_and_drivers(content)
                     emotion = analysis.get('emotion', 'Unknown')
                     drivers = analysis.get('drivers', [])
 
-                    # Create new Post object
                     new_post = Post(
                         content=content,
                         ward=ward,
@@ -125,7 +135,6 @@ def seed_database():
                     logging.error(f"Failed to create post for ward {ward}. Error: {e}")
                     db.session.rollback()
 
-        # Commit all new posts
         db.session.commit()
         logging.info(f"Successfully created {total_posts} new posts.")
         logging.info("Database seeding process completed successfully!")

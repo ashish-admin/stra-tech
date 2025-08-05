@@ -2,26 +2,25 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'tailwindcss/tailwind.css';
 
-import Header from './components/Header';
+// Using correct relative paths
 import LocationMap from './components/LocationMap';
 import DataTable from './components/DataTable';
 import StrategicSummary from './components/StrategicSummary';
 import CompetitiveAnalysis from './components/CompetitiveAnalysis';
 
 function App() {
-  const [posts, setPosts] = useState(null); // Initialize as null
+  const [posts, setPosts] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedWard, setSelectedWard] = useState(null);
 
   useEffect(() => {
-    // Fetch all posts on initial load
     axios.get('/api/v1/posts')
       .then(response => {
         setPosts(response.data);
       })
       .catch(error => {
         console.error("There was an error fetching the posts data!", error);
-        setPosts([]); // Set to empty array on error to prevent crashes
+        setPosts([]);
       })
       .finally(() => {
         setLoading(false);
@@ -32,7 +31,6 @@ function App() {
     setSelectedWard(ward);
   };
 
-  // Display a full-page loading screen while fetching initial data
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -46,9 +44,8 @@ function App() {
 
   return (
     <div className="bg-gray-100 min-h-screen">
-      <Header />
+      <h1 className="text-3xl font-bold text-center text-gray-800 p-4 bg-white shadow-md">LokDarpan Dashboard</h1>
       <main className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Row */}
         <div className="h-[60vh]">
           <LocationMap posts={posts || []} setSelectedWard={handleWardSelect} selectedWard={selectedWard} />
         </div>
@@ -60,8 +57,6 @@ function App() {
             <StrategicSummary ward={selectedWard} />
           </div>
         </div>
-
-        {/* Bottom Row */}
         <div className="lg:col-span-2 h-[40vh] mt-4">
           <DataTable posts={posts || []} onRowClick={handleWardSelect} selectedWard={selectedWard} />
         </div>

@@ -1,19 +1,32 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_from_directory
 from .models import db, Post, Author
 from . import services
 from sqlalchemy import func
 import logging
+import os # Import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 main_bp = Blueprint('main', __name__)
 
+# --- NEW API ENDPOINT FOR MAP DATA ---
+@main_bp.route('/api/v1/map-data/ghmc-wards', methods=['GET'])
+def get_ghmc_wards_data():
+    """
+    Serves the ghmc_wards.geojson file from the backend data directory.
+    """
+    try:
+        # Construct the path to the data directory within the app
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        return send_from_directory(data_dir, 'ghmc_wards.geojson')
+    except Exception as e:
+        logging.error(f"Error serving map data: {e}", exc_info=True)
+        return jsonify({"error": "Could not load map data"}), 500
+
 @main_bp.route('/api/v1/posts', methods=['GET'])
 def get_posts():
-    """
-    Fetches all posts from the database.
-    """
+    """ Fetches all posts from the database. """
     logging.info("Received request for /api/v1/posts")
     try:
         posts = Post.query.join(Author).all()
@@ -24,11 +37,11 @@ def get_posts():
         logging.error(f"Error fetching posts: {e}", exc_info=True)
         return jsonify({"error": "An internal error occurred"}), 500
 
+# ... (the rest of your routes.py file remains the same) ...
+
 @main_bp.route('/api/v1/wards', methods=['GET'])
 def get_wards():
-    """
-    Fetches all unique ward names from the database.
-    """
+    """ Fetches all unique ward names from the database. """
     logging.info("Received request for /api/v1/wards")
     try:
         wards = db.session.query(Post.ward).distinct().all()
@@ -41,10 +54,7 @@ def get_wards():
 
 @main_bp.route('/api/v1/competitive-analysis', methods=['GET'])
 def get_competitive_analysis():
-    """
-    Provides a competitive analysis by aggregating post counts and emotion
-    distribution by author affiliation ('Client' vs. 'Opposition').
-    """
+    """ Provides a competitive analysis by aggregating post counts and emotion distribution by author affiliation. """
     logging.info("Received request for /api/v1/competitive-analysis")
     try:
         results = db.session.query(
@@ -74,18 +84,14 @@ def get_competitive_analysis():
 
 @main_bp.route('/api/v1/strategic-summary/<ward_name>', methods=['GET'])
 def get_strategic_summary_for_ward(ward_name):
-    """
-    Generates and returns the strategic playbook for a specific ward.
-    """
+    """ Generates and returns the strategic playbook for a specific ward. """
     logging.info(f"Received request for strategic summary for ward: {ward_name}")
     try:
-        # Fetch all posts relevant to the specified ward
         ward_posts = Post.query.filter_by(ward=ward_name).all()
         ward_posts_data = [post.to_dict() for post in ward_posts]
         
         logging.info(f"Found {len(ward_posts_data)} posts for {ward_name} to generate summary.")
 
-        # Call the enhanced service function
         summary_data = services.get_strategic_summary(ward_name, ward_posts_data)
         
         return jsonify(summary_data)

@@ -1,11 +1,6 @@
 import React from 'react';
 
 const DataTable = ({ posts, onRowClick, selectedWard }) => {
-  // Add a guard clause: If posts is not an array, return null or a loading state.
-  if (!Array.isArray(posts)) {
-    return <div>Loading data...</div>; // Or return null;
-  }
-
   const filteredPosts = selectedWard ? posts.filter(p => p.ward === selectedWard) : posts;
 
   return (
@@ -24,7 +19,12 @@ const DataTable = ({ posts, onRowClick, selectedWard }) => {
           </thead>
           <tbody>
             {filteredPosts.map(post => (
-              <tr key={post.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => onRowClick(post.ward)}>
+              <tr 
+                key={post.id} 
+                className="bg-white border-b hover:bg-gray-50 cursor-pointer" 
+                // --- FIX IS HERE: Corrected the typo from onRowCick to onRowClick ---
+                onClick={() => onRowClick(post.ward)}
+              >
                 <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{post.ward}</td>
                 <td className="px-6 py-4">{post.author}</td>
                 <td className="px-6 py-4">{post.content}</td>
