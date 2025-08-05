@@ -4,14 +4,13 @@ import json
 import logging
 import tweepy
 from newsapi import NewsApiClient
-from .models import db, Post, Author
+from datetime import datetime, timedelta
+from .models import db, Post, Author, Alert
 
 # --- CONFIGURATION ---
 
-# Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Configure AI Model
 try:
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -19,11 +18,7 @@ try:
 except KeyError:
     logging.error("GEMINI_API_KEY environment variable not set.")
     model = None
-except Exception as e:
-    logging.error(f"An error occurred during Generative AI configuration: {e}")
-    model = None
 
-# Configure Twitter API
 try:
     twitter_client = tweepy.Client(os.environ["TWITTER_BEARER_TOKEN"])
     logging.info("Tweepy client configured successfully.")
@@ -31,13 +26,110 @@ except KeyError:
     logging.error("TWITTER_BEARER_TOKEN environment variable not set.")
     twitter_client = None
 
-# Configure News API
 try:
     newsapi = NewsApiClient(api_key=os.environ["NEWS_API_KEY"])
     logging.info("NewsAPI client configured successfully.")
 except KeyError:
     logging.error("NEWS_API_KEY environment variable not set.")
     newsapi = None
+
+# --- NEW PROACTIVE ANALYSIS SERVICE ---
+
+def generate_proactive_analysis(context_level, context_name):
+    """
+    Generates an on-demand analysis of opportunities and threats based on live news,
+    tailored to the user's specific context (ward, city, or state).
+    """
+    if not newsapi:
+        logging.error("NewsAPI client is not available.")
+        return {"error": "NewsAPI client not configured."}
+    if not model:
+        logging.error("AI model is not available.")
+        return {"error": "AI model not configured."}
+
+    # 1. Generate Contextual News Query
+    keywords = {
+        "ward": f'"{context_name}" AND (local issues OR infrastructure OR water OR garbage)',
+        "city": f'"{context_name}" AND (GHMC OR development OR traffic OR metro)',
+        "state": f'"{context_name}" AND ("chief minister" OR Kaleshwaram OR "state budget" OR politics)'
+    }
+    query = keywords.get(context_level, context_name) # Default to context_name if level is unknown
+    logging.info(f"Generated NewsAPI query for {context_level} '{context_name}': {query}")
+
+    # 2. Fetch Live News
+    try:
+        articles = newsapi.get_everything(
+            q=query,
+            language='en',
+            sort_by='relevancy',
+            page_size=5 # Focus on the top 5 most relevant articles
+        )['articles']
+
+        if not articles:
+            logging.info("No relevant news articles found for this context.")
+            # Store a "no data" alert to prevent re-running analysis too soon
+            alert = Alert(ward=context_name, description="No recent news found for this context.", severity="Info")
+            db.session.add(alert)
+            db.session.commit()
+            return {"message": "No relevant news articles found to analyze."}
+            
+        news_content = "\n".join([f"Title: {a['title']}. Description: {a.get('description', '')}" for a in articles])
+
+    except Exception as e:
+        logging.error(f"Error fetching news from NewsAPI: {e}", exc_info=True)
+        return {"error": "Failed to fetch news."}
+
+    # 3. AI-Powered Deep Dive Analysis
+    prompt = f"""
+    You are 'Chanakya', a master political strategist for the BJP party in Hyderabad, India.
+    Your task is to conduct a deep-dive analysis of the following news articles related to '{context_name}' and identify strategic opportunities and threats.
+
+    **News Articles Content:**
+    ---
+    {news_content}
+    ---
+
+    Based on your analysis, provide a structured report as a JSON object with three keys:
+    1. "opportunities": A JSON list of 2-3 specific, actionable opportunities we can leverage. These should be positive developments or opposition weaknesses.
+    2. "threats": A JSON list of 2-3 emerging threats or negative narratives we need to counter.
+    3. "priority_alert": A single, concise string (under 280 characters) summarizing the most critical finding that requires immediate attention. This will be the main alert message.
+
+    Example Response:
+    {{
+        "opportunities": [
+            "Capitalize on the positive local media coverage of the new flyover by organizing a press meet with the MLA.",
+            "The opposition's internal conflict over the water board appointments is a weakness we can highlight."
+        ],
+        "threats": [
+            "A growing narrative about delays in garbage collection in the Old City is gaining traction.",
+            "Rival parties are starting to use the power-cut issue to mobilize residents."
+        ],
+        "priority_alert": "Threat: Negative sentiment is growing around garbage collection delays in the Old City. Recommend immediate statement from local leadership."
+    }}
+    """
+
+    try:
+        logging.info("Sending news content to AI for deep-dive analysis...")
+        response = model.generate_content(prompt)
+        cleaned_response = response.text.strip().replace('```json', '').replace('```', '').strip()
+        analysis_result = json.loads(cleaned_response)
+
+        # 4. Store the Alert in the Database
+        if analysis_result.get("priority_alert"):
+            alert = Alert(
+                ward=context_name,
+                description=analysis_result["priority_alert"],
+                severity="High" if "threat" in analysis_result["priority_alert"].lower() else "Medium"
+            )
+            db.session.add(alert)
+            db.session.commit()
+            logging.info(f"New alert for '{context_name}' stored successfully.")
+        
+        return analysis_result
+
+    except Exception as e:
+        logging.error(f"Error during AI analysis or database storage: {e}", exc_info=True)
+        return {"error": "Failed to generate analysis."}
 
 # --- AI & DATA PROCESSING SERVICES ---
 
