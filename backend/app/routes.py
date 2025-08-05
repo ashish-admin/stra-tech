@@ -1,161 +1,95 @@
-from flask import Blueprint, jsonify, request, current_app
-from .models import Post, User
-from . import db
-from flask_login import login_user, logout_user, current_user, login_required
-import os
-import geopandas as gpd
-from shapely.geometry import Point
-import pandas as pd
-import json
-from collections import Counter
-import google.generativeai as genai
-from sqlalchemy import distinct
-import traceback
+from flask import Blueprint, jsonify, request
+from .models import db, Post, Author
+from . import services
+from sqlalchemy import func
+import logging
 
-bp = Blueprint('api', __name__, url_prefix='/api/v1')
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Helper function for GeoJSON loading (No Changes) ---
-wards_gdf = None
-def load_wards_geojson():
-    global wards_gdf
-    if wards_gdf is None:
-        geojson_path = os.path.join(current_app.root_path, 'data', 'ghmc_wards.geojson')
-        if not os.path.exists(geojson_path):
-             raise FileNotFoundError(f"GeoJSON file not found at path: {geojson_path}")
-        wards_gdf = gpd.read_file(geojson_path)
-    return wards_gdf
+main_bp = Blueprint('main', __name__)
 
-# --- Authentication and Basic Routes (No Changes) ---
-@bp.route('/login', methods=['POST'])
-def login():
-    # ... (code is unchanged)
-    data = request.get_json()
-    user = User.query.filter_by(username=data.get('username')).first()
-    if user is None or not user.check_password(data.get('password')):
-        return jsonify({'message': 'Invalid username or password'}), 401
-    login_user(user)
-    return jsonify({'message': 'Logged in successfully'}), 200
+@main_bp.route('/api/v1/posts', methods=['GET'])
+def get_posts():
+    """
+    Fetches all posts from the database.
+    """
+    logging.info("Received request for /api/v1/posts")
+    try:
+        posts = Post.query.join(Author).all()
+        posts_data = [post.to_dict() for post in posts]
+        logging.info(f"Successfully retrieved {len(posts_data)} posts.")
+        return jsonify(posts_data)
+    except Exception as e:
+        logging.error(f"Error fetching posts: {e}", exc_info=True)
+        return jsonify({"error": "An internal error occurred"}), 500
 
-@bp.route('/logout', methods=['POST'])
-def logout():
-    # ... (code is unchanged)
-    logout_user()
-    return jsonify({'message': 'Logged out successfully'}), 200
-
-@bp.route('/status', methods=['GET'])
-def status():
-    # ... (code is unchanged)
-    return jsonify({'logged_in': current_user.is_authenticated})
-
-@bp.route('/wards', methods=['GET'])
-@login_required
+@main_bp.route('/api/v1/wards', methods=['GET'])
 def get_wards():
-    # ... (code is unchanged)
+    """
+    Fetches all unique ward names from the database.
+    """
+    logging.info("Received request for /api/v1/wards")
     try:
-        wards_query = db.session.query(distinct(Post.ward)).filter(Post.ward.isnot(None)).order_by(Post.ward).all()
-        wards = [ward[0] for ward in wards_query]
-        return jsonify(wards)
+        wards = db.session.query(Post.ward).distinct().all()
+        ward_names = [ward[0] for ward in wards]
+        logging.info(f"Successfully retrieved {len(ward_names)} unique wards.")
+        return jsonify(ward_names)
     except Exception as e:
-        print(f"\n❌ ERROR IN /api/v1/wards ❌\n{traceback.format_exc()}\n")
-        return jsonify({"error": "Could not fetch ward list"}), 500
+        logging.error(f"Error fetching wards: {e}", exc_info=True)
+        return jsonify({"error": "An internal error occurred"}), 500
 
-@bp.route('/analytics', methods=['GET'])
-@login_required
-def analytics():
-    # ... (code is unchanged)
+@main_bp.route('/api/v1/competitive-analysis', methods=['GET'])
+def get_competitive_analysis():
+    """
+    Provides a competitive analysis by aggregating post counts and emotion
+    distribution by author affiliation ('Client' vs. 'Opposition').
+    """
+    logging.info("Received request for /api/v1/competitive-analysis")
     try:
-        filters = { 'emotion': request.args.get('emotion', 'All'), 'city': request.args.get('city', 'All'), 'ward': request.args.get('ward', 'All'), 'searchTerm': request.args.get('searchTerm', '') }
-        query = Post.query
-        if filters['emotion'] != 'All': query = query.filter(Post.emotion == filters['emotion'])
-        if filters['city'] != 'All': query = query.filter(Post.city == filters['city'])
-        if filters['ward'] != 'All': query = query.filter(Post.ward == filters['ward'])
-        if filters['searchTerm']: query = query.filter(Post.text.like(f"%{filters['searchTerm']}%"))
-        posts = query.all()
-        return jsonify([p.to_dict() for p in posts])
-    except Exception as e:
-        print(f"\n❌ ERROR IN /api/v1/analytics ❌\n{traceback.format_exc()}\n")
-        return jsonify({"error": f"Failed to retrieve analytics data"}), 500
+        results = db.session.query(
+            Author.affiliation,
+            Post.emotion,
+            func.count(Post.id)
+        ).join(Post, Author.id == Post.author_id)\
+         .group_by(Author.affiliation, Post.emotion)\
+         .all()
 
-@bp.route('/analytics/granular', methods=['GET'])
-@login_required
-def granular_analytics():
-    # ... (code is unchanged)
-    try:
-        wards = load_wards_geojson()
-        posts = Post.query.filter(Post.latitude.isnot(None), Post.longitude.isnot(None)).all()
-        if not posts: return jsonify({"type": "FeatureCollection", "features": []})
-        ward_data = {row['name']: {'posts': [], 'geometry': row.geometry} for _, row in wards.iterrows()}
-        for post in posts:
-            if post.ward and post.ward in ward_data:
-                ward_data[post.ward]['posts'].append(post)
-        results = []
-        for ward_name, data in ward_data.items():
-            if not data['posts']: continue
-            emotions = [p.emotion for p in data['posts'] if p.emotion]
-            drivers = [driver for p in data['posts'] if p.drivers for driver in p.drivers]
-            results.append({
-                "type": "Feature", "geometry": data['geometry'].__geo_interface__,
-                "properties": {
-                    "ward_name": ward_name, "dominant_emotion": Counter(emotions).most_common(1)[0][0] if emotions else 'N/A',
-                    "post_count": len(data['posts']), "top_drivers": [driver[0] for driver in Counter(drivers).most_common(3)]
-                }
-            })
-        return jsonify({"type": "FeatureCollection", "features": results})
-    except Exception as e:
-        print(f"\n❌ ERROR IN /api/v1/analytics/granular ❌\n{traceback.format_exc()}\n")
-        return jsonify({"error": "An error occurred during geo-analysis"}), 500
+        analysis_data = {
+            "Client": {"total_posts": 0, "emotions": {}},
+            "Opposition": {"total_posts": 0, "emotions": {}}
+        }
 
-# --- STRATEGIC COMMS WORKBENCH ENDPOINT (UPGRADED) ---
-@bp.route('/strategic-summary', methods=['GET'])
-@login_required
-def strategic_summary():
-    endpoint_name = "/api/v1/strategic-summary"
-    try:
-        print(f"--- Received request for {endpoint_name} with args: {request.args} ---")
-        filters = { 'emotion': request.args.get('emotion', 'All'), 'city': request.args.get('city', 'All'), 'ward': request.args.get('ward', 'All'), 'searchTerm': request.args.get('searchTerm', '') }
+        for affiliation, emotion, count in results:
+            if affiliation in analysis_data:
+                analysis_data[affiliation]["total_posts"] += count
+                analysis_data[affiliation]["emotions"][emotion] = count
+
+        logging.info(f"Successfully generated competitive analysis data: {analysis_data}")
+        return jsonify(analysis_data)
         
-        query = Post.query
-        if filters['emotion'] != 'All': query = query.filter(Post.emotion == filters['emotion'])
-        if filters['city'] != 'All': query = query.filter(Post.city == filters['city'])
-        if filters['ward'] != 'All': query = query.filter(Post.ward == filters['ward'])
-        if filters['searchTerm']: query = query.filter(Post.text.like(f"%{filters['searchTerm']}%"))
+    except Exception as e:
+        logging.error(f"Error generating competitive analysis: {e}", exc_info=True)
+        return jsonify({"error": "An internal error occurred"}), 500
+
+@main_bp.route('/api/v1/strategic-summary/<ward_name>', methods=['GET'])
+def get_strategic_summary_for_ward(ward_name):
+    """
+    Generates and returns the strategic playbook for a specific ward.
+    """
+    logging.info(f"Received request for strategic summary for ward: {ward_name}")
+    try:
+        # Fetch all posts relevant to the specified ward
+        ward_posts = Post.query.filter_by(ward=ward_name).all()
+        ward_posts_data = [post.to_dict() for post in ward_posts]
         
-        filtered_posts = query.limit(100).all()
+        logging.info(f"Found {len(ward_posts_data)} posts for {ward_name} to generate summary.")
 
-        if len(filtered_posts) < 2:
-            return jsonify({"error": "Not enough data for the current filter selection. Please broaden your criteria."})
-
-        top_emotion = pd.Series([p.emotion for p in filtered_posts]).mode()[0]
-        all_drivers = [driver for p in filtered_posts if p.drivers for driver in p.drivers]
-        top_drivers_text = ", ".join([d[0] for d in Counter(all_drivers).most_common(3)])
+        # Call the enhanced service function
+        summary_data = services.get_strategic_summary(ward_name, ward_posts_data)
         
-        # --- NEW, MORE SOPHISTICATED AI PROMPT ---
-        prompt = f"""
-        You are an expert political communications director for a campaign in Hyderabad, India. 
-        Based on the intelligence provided, generate a complete communications playbook.
-
-        **Intelligence:**
-        - Dominant detected emotion: "{top_emotion}"
-        - Key topics of public discussion: "{top_drivers_text if top_drivers_text else 'General chatter'}"
-        - Location Context: The analysis is focused on the "{filters['ward']}" ward in "{filters['city']}".
-
-        **Your Task:**
-        Return a single, raw JSON object with the following three keys:
-        1. "candidate_brief": A concise, one-paragraph summary of the situation for the main candidate.
-        2. "talking_points": A JSON list of 3-4 specific, actionable talking points for a local leader to use in a press meet or public address.
-        3. "social_media_posts": A JSON list of 3 distinct, ready-to-post social media messages. Each message should have a different tone (e.g., one empathetic, one data-driven, one forward-looking).
-        """
-
-        summary_json = generate_ai_response(prompt)
-        print(f"--- Generated Comms Workbench for {endpoint_name} ---")
-        return jsonify(summary_json)
+        return jsonify(summary_data)
 
     except Exception as e:
-        print(f"\n❌ ERROR IN {endpoint_name} ❌\n{traceback.format_exc()}\n")
-        return jsonify({"error": "Failed to generate AI strategic communications."}), 500
-
-def generate_ai_response(prompt):
-    # This helper function remains the same
-    model = genai.GenerativeModel('gemini-1.5-flash-latest', generation_config={"response_mime_type": "application/json"})
-    response = model.generate_content(prompt)
-    return json.loads(response.text)
+        logging.error(f"Error generating strategic summary for {ward_name}: {e}", exc_info=True)
+        return jsonify({"error": f"An internal error occurred while generating summary for {ward_name}"}), 500

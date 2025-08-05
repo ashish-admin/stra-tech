@@ -1,61 +1,225 @@
 import os
-import json
-from dotenv import load_dotenv
 import google.generativeai as genai
+import json
+import logging
+import tweepy
+from newsapi import NewsApiClient
+from .models import db, Post, Author
 
-load_dotenv()
-GOOGLE_API_KEY = os.getenv('GEMINI_API_KEY')
+# --- CONFIGURATION ---
 
-if not GOOGLE_API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in .env file.")
-genai.configure(api_key=GOOGLE_API_KEY)
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def analyze_emotions_and_drivers(records):
-    model = genai.GenerativeModel('gemini-1.5-flash-latest', generation_config={"response_mime_type": "application/json"})
+# Configure AI Model
+try:
+    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    logging.info("Generative AI model configured successfully.")
+except KeyError:
+    logging.error("GEMINI_API_KEY environment variable not set.")
+    model = None
+except Exception as e:
+    logging.error(f"An error occurred during Generative AI configuration: {e}")
+    model = None
+
+# Configure Twitter API
+try:
+    twitter_client = tweepy.Client(os.environ["TWITTER_BEARER_TOKEN"])
+    logging.info("Tweepy client configured successfully.")
+except KeyError:
+    logging.error("TWITTER_BEARER_TOKEN environment variable not set.")
+    twitter_client = None
+
+# Configure News API
+try:
+    newsapi = NewsApiClient(api_key=os.environ["NEWS_API_KEY"])
+    logging.info("NewsAPI client configured successfully.")
+except KeyError:
+    logging.error("NEWS_API_KEY environment variable not set.")
+    newsapi = None
+
+# --- AI & DATA PROCESSING SERVICES ---
+
+def get_emotion_and_drivers(text):
+    """Analyzes text to extract emotion and drivers."""
+    # This function remains as is from Phase 1 & 2
+    if not model:
+        logging.error("AI model is not available. Cannot analyze text.")
+        return {"emotion": "Unknown", "drivers": []}
+    
     prompt = f"""
-    You are a sophisticated political analyst. For each text entry, perform two tasks:
-    1. Analyze the dominant emotion from this list: [Hope, Anger, Joy, Anxiety, Sadness, Disgust, Apathy].
-    2. Extract a list of 1 to 3 specific keywords, topics, or proper nouns that are the root cause of the emotion.
-    Return a single JSON object with a key "analysis" containing an array. Each object must have an "id", its "emotion", and a "drivers" list.
-    Input Data: {json.dumps(records)}
+    Analyze the following text from a social media post or news article in a political context for Hyderabad, India.
+    Your task is to identify the primary emotion and the specific topics or entities driving that emotion.
+    Text: "{text}"
+    Provide your response as a JSON object with two keys:
+    1. "emotion": A single string representing the dominant emotion.
+    2. "drivers": A JSON list of short, specific strings (1-3 words each) that are the key topics, names, or issues causing the emotion.
+    """
+    try:
+        logging.debug(f"Sending text for analysis: '{text[:100]}...'")
+        response = model.generate_content(prompt)
+        cleaned_response = response.text.strip().replace('```json', '').replace('```', '').strip()
+        result = json.loads(cleaned_response)
+        if isinstance(result, dict) and 'emotion' in result and 'drivers' in result:
+            return result
+        else:
+            return {"emotion": "Unknown", "drivers": []}
+    except Exception as e:
+        logging.error(f"Error in get_emotion_and_drivers: {e}")
+        return {"emotion": "Error", "drivers": []}
+
+def get_strategic_summary(ward_name, posts):
+    """
+    Generates a comprehensive strategic communications playbook for a given ward
+    based on the posts from that area.
+    """
+    if not model:
+        logging.error("AI model is not available. Cannot generate strategic summary.")
+        return {"error": "AI model not available."}
+        
+    if not posts:
+        return {
+            "candidate_briefing": f"No recent data available for {ward_name} to generate a summary.",
+            "talking_points": [],
+            "social_media_drafts": [],
+            "proactive_initiatives": []
+        }
+
+    # Separate posts by affiliation for the prompt
+    client_posts_str = "\n".join([p['content'] for p in posts if p['affiliation'] == 'Client'])
+    opposition_posts_str = "\n".join([p['content'] for p in posts if p['affiliation'] == 'Opposition'])
+
+    prompt = f"""
+    You are 'Chanakya', a master political strategist for the BJP party in Hyderabad, India. Your task is to create a comprehensive communications action plan for the '{ward_name}' ward.
+
+    Analyze the provided social media data, which includes posts from our campaign ('Client') and the opposition (Congress, BRS, MIM). Based on this data, generate a strategic playbook as a JSON object.
+
+    **Client's Narrative (Our Posts):**
+    ---
+    {client_posts_str or "No client posts to analyze."}
+    ---
+
+    **Opposition's Narrative:**
+    ---
+    {opposition_posts_str or "No opposition posts to analyze."}
+    ---
+
+    Now, based on your analysis of the above narratives, provide a complete strategic response in the following JSON format. Ensure all fields are filled.
+
+    {{
+      "candidate_briefing": "A concise, one-paragraph summary for our candidate explaining the current situation in the ward. What is the opposition focusing on? What is the general public sentiment?",
+      "talking_points": [
+        "A JSON list of 3-4 powerful, bullet-point talking points for a press conference. These should praise our work and effectively counter the opposition's narrative.",
+        "Each talking point should be a complete sentence."
+      ],
+      "social_media_drafts": [
+        {{
+          "platform": "Twitter/X",
+          "content": "A short, impactful tweet (under 280 characters) to be posted on social media. It should be positive and highlight a specific achievement.",
+          "tone": "Assertive"
+        }},
+        {{
+          "platform": "Facebook/Instagram",
+          "content": "A slightly longer, more detailed post for Facebook or Instagram. It can be more narrative-driven and connect emotionally with residents.",
+          "tone": "Empathetic"
+        }}
+      ],
+      "proactive_initiatives": [
+        "A JSON list of 2-3 concrete, real-world actions our campaign can take in the next 48 hours to win the narrative in '{ward_name}'. Examples: 'Organize a press meet at the new community hall', 'Candidate to visit the water-logged areas and assure action', 'Release a video testimonial from a local beneficiary'."
+      ]
+    }}
     """
     
-    print("\n--- Sending Prompt to Gemini AI ---")
-    print(f"Analyzing {len(records)} records...")
-    
     try:
+        logging.info(f"Generating strategic summary for ward: {ward_name}")
         response = model.generate_content(prompt)
-        print("--- Received Raw Response from Gemini AI ---")
-        print(response.text)
-        
-        response_data = json.loads(response.text)
-        analysis_data = response_data.get('analysis', [])
-        
-        if not analysis_data:
-            print("WARNING: AI analysis returned an empty list.")
+        cleaned_response = response.text.strip().replace('```json', '').replace('```', '').strip()
+        result = json.loads(cleaned_response)
+        return result
+    except Exception as e:
+        logging.error(f"An error occurred during strategic summary generation: {e}", exc_info=True)
+        return {"error": f"Could not generate summary due to an error: {e}"}
 
-        analysis_map = {int(item['id']): {'emotion': item.get('emotion', 'Unclassified'), 'drivers': item.get('drivers', [])} for item in analysis_data}
-        
-        for record in records:
-            record_id = record.get('id')
-            if record_id in analysis_map:
-                record.update(analysis_map[record_id])
-            else:
-                record['emotion'] = 'Unknown'
-                record['drivers'] = []
-        
-        print("--- Successfully Parsed AI Response ---")
-        return records
+def process_and_store_content(content, source_author_name, ward="Hyderabad"):
+    """Analyzes content and stores it as a Post in the database."""
+    # This function remains as is
+    existing_post = Post.query.filter_by(content=content).first()
+    if existing_post:
+        logging.info(f"Skipping duplicate content: '{content[:50]}...'")
+        return
 
-    except (json.JSONDecodeError, KeyError, Exception) as e:
-        print("\n❌ FATAL ERROR IN AI SERVICE ❌")
-        print(f"Error Type: {type(e).__name__}")
-        print(f"Error Details: {e}")
-        if 'response' in locals():
-            print("--- Raw AI Response that caused error ---")
-            print(response.text)
-        
-        for record in records:
-            record['emotion'] = 'AI Error'
-            record['drivers'] = []
-        return records
+    logging.info(f"Processing new content from '{source_author_name}': '{content[:50]}...'")
+    author = Author.query.filter_by(name=source_author_name).first()
+    if not author:
+        logging.warning(f"Author '{source_author_name}' not found. Creating new author with 'Opposition' affiliation.")
+        author = Author(name=source_author_name, affiliation="Opposition")
+        db.session.add(author)
+        db.session.commit()
+
+    analysis = get_emotion_and_drivers(content)
+    new_post = Post(
+        content=content,
+        ward=ward,
+        emotion=analysis.get('emotion', 'Unknown'),
+        drivers=analysis.get('drivers', []),
+        author_id=author.id
+    )
+    db.session.add(new_post)
+    db.session.commit()
+    logging.info(f"Successfully stored new post from '{source_author_name}'.")
+
+# --- LIVE DATA FETCHING SERVICES ---
+
+def fetch_and_process_tweets():
+    """Fetches and processes tweets from the Twitter API."""
+    # This function remains as is
+    if not twitter_client:
+        logging.error("Twitter client not available. Skipping tweet fetch.")
+        return "Twitter client not configured."
+    query = '("BJP Telangana" OR "Telangana Congress" OR "BRS Party" OR "AIMIM" OR "GHMC") -is:retweet -is:reply lang:en'
+    try:
+        logging.info(f"Fetching tweets with query: {query}")
+        response = twitter_client.search_recent_tweets(query=query, max_results=10)
+        if not response.data:
+            logging.info("No new tweets found for the given query.")
+            return "No new tweets found."
+        tweet_count = 0
+        for tweet in response.data:
+            process_and_store_content(tweet.text, source_author_name="Twitter User")
+            tweet_count += 1
+        logging.info(f"Successfully processed {tweet_count} tweets.")
+        return f"Processed {tweet_count} tweets."
+    except Exception as e:
+        logging.error(f"An error occurred while fetching tweets: {e}", exc_info=True)
+        return "Error fetching tweets."
+
+def fetch_and_process_news():
+    """Fetches and processes news from the News API."""
+    # This function remains as is
+    if not newsapi:
+        logging.error("NewsAPI client not available. Skipping news fetch.")
+        return "NewsAPI client not configured."
+    query = 'Hyderabad politics OR GHMC OR Telangana government'
+    try:
+        logging.info(f"Fetching news with query: {query}")
+        top_headlines = newsapi.get_everything(
+            q=query,
+            language='en',
+            sort_by='publishedAt',
+            page_size=10
+        )
+        if not top_headlines['articles']:
+            logging.info("No new articles found for the given query.")
+            return "No new articles found."
+        article_count = 0
+        for article in top_headlines['articles']:
+            content_to_process = f"{article['title']}. {article['description']}"
+            author_name = article['source']['name']
+            process_and_store_content(content_to_process, source_author_name=author_name)
+            article_count += 1
+        logging.info(f"Successfully processed {article_count} articles.")
+        return f"Processed {article_count} articles."
+    except Exception as e:
+        logging.error(f"An error occurred while fetching news: {e}", exc_info=True)
+        return "Error fetching news."

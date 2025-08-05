@@ -1,34 +1,44 @@
-import React from "react";
+import React from 'react';
 
-const DataTable = ({ data }) => (
-  <div className="overflow-x-auto max-h-96">
-    <table className="min-w-full table-auto text-sm">
-      <thead className="sticky top-0 bg-indigo-100 z-10">
-        <tr>
-          <th className="px-3 py-2 text-left">Text</th>
-          <th className="px-3 py-2 text-left">Emotion</th>
-          <th className="px-3 py-2 text-left">Drivers</th>
-          <th className="px-3 py-2 text-left">City</th>
-          <th className="px-3 py-2 text-left">Ward</th>
-          <th className="px-3 py-2 text-left">Timestamp</th>
-        </tr>
-      </thead>
-      <tbody className="bg-white">
-        {data?.map((row) => (
-          <tr key={row.id} className="border-b border-gray-200 hover:bg-gray-50">
-            <td className="px-3 py-2">{row.text}</td>
-            <td className="px-3 py-2 font-semibold">{row.emotion}</td>
-            <td className="px-3 py-2 italic text-gray-600">
-                {row.drivers?.join(', ') || 'N/A'}
-            </td>
-            <td className="px-3 py-2">{row.city}</td>
-            <td className="px-3 py-2">{row.ward}</td>
-            <td className="px-3 py-2">{row.timestamp}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
+const DataTable = ({ posts, onRowClick, selectedWard }) => {
+  // Add a guard clause: If posts is not an array, return null or a loading state.
+  if (!Array.isArray(posts)) {
+    return <div>Loading data...</div>; // Or return null;
+  }
+
+  const filteredPosts = selectedWard ? posts.filter(p => p.ward === selectedWard) : posts;
+
+  return (
+    <div className="bg-white p-4 shadow rounded-lg overflow-auto h-full">
+      <h2 className="text-xl font-bold mb-4">{selectedWard ? `Posts for ${selectedWard}` : 'All Posts'}</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left text-gray-500">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3">Ward</th>
+              <th scope="col" className="px-6 py-3">Author</th>
+              <th scope="col" className="px-6 py-3">Content</th>
+              <th scope="col" className="px-6 py-3">Emotion</th>
+              <th scope="col" className="px-6 py-3">Emotion Drivers</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredPosts.map(post => (
+              <tr key={post.id} className="bg-white border-b hover:bg-gray-50 cursor-pointer" onClick={() => onRowClick(post.ward)}>
+                <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">{post.ward}</td>
+                <td className="px-6 py-4">{post.author}</td>
+                <td className="px-6 py-4">{post.content}</td>
+                <td className="px-6 py-4">{post.emotion}</td>
+                <td className="px-6 py-4">
+                  {post.drivers && post.drivers.join(', ')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
 
 export default DataTable;

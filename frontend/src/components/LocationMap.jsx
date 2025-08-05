@@ -1,62 +1,144 @@
-import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import React, { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
+import L from 'leaflet';
+import ghmcWards from '../data/ghmc_wards.json';
 
-const CENTER = [17.44, 78.47];
-const ZOOM_LEVEL = 11;
-const emotionColorMap = {
-  Hope: '#2ecc71', Anger: '#e74c3c', Joy: '#3498db',
-  Anxiety: '#f1c40f', Sadness: '#9b59b6', Disgust: '#7f8c8d',
-  Apathy: '#bdc3c7', Default: '#95a5a6'
+// Fix for default marker icon issue with webpack
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
+// Emotion-to-color mapping
+const emotionColors = {
+  'Anger': 'red',
+  'Frustration': 'darkred',
+  'Disappointment': 'brown',
+  'Hope': 'green',
+  'Admiration': 'blue',
+  'Neutral': 'grey',
+  'Joy': 'yellow',
+  'Unknown': 'black',
+  'Error': 'black'
 };
 
-function LocationMap() {
-  const [geoData, setGeoData] = useState(null);
+const LocationMap = ({ posts, setSelectedWard, selectedWard }) => {
+  const [wardCenters, setWardCenters] = useState({});
+  const mapRef = useRef();
 
   useEffect(() => {
-    const fetchGranularData = async () => {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
-      try {
-        const { data } = await axios.get(`${apiUrl}/api/v1/analytics/granular`);
-        if (data?.features) setGeoData(data);
-      } catch (err) { console.error("Failed to fetch map data:", err); }
-    };
-    fetchGranularData();
+    // --- FIX IS HERE ---
+    // Add a guard clause to ensure ghmcWards and its features exist before processing.
+    if (!ghmcWards || !ghmcWards.features) {
+      return; 
+    }
+    // --- END OF FIX ---
+
+    const centers = {};
+    ghmcWards.features.forEach(feature => {
+      const wardName = feature.properties.ward_name;
+      if (wardName) {
+        const coords = feature.geometry.coordinates[0][0];
+        if (!Array.isArray(coords)) {
+            console.error("Coordinates are not an array for ward:", wardName);
+            return;
+        }
+        let latSum = 0, lonSum = 0;
+        coords.forEach(coord => {
+            lonSum += coord[0];
+            latSum += coord[1];
+        });
+        centers[wardName] = [latSum / coords.length, lonSum / coords.length];
+      }
+    });
+    setWardCenters(centers);
   }, []);
 
-  const getStyle = (feature) => ({
-    fillColor: emotionColorMap[feature.properties.dominant_emotion] || emotionColorMap.Default,
-    weight: 1, opacity: 1, color: 'white', fillOpacity: 0.75
-  });
+  useEffect(() => {
+    if (selectedWard && wardCenters[selectedWard] && mapRef.current) {
+      mapRef.current.flyTo(wardCenters[selectedWard], 14);
+    }
+  }, [selectedWard, wardCenters]);
+
 
   const onEachFeature = (feature, layer) => {
-    if (feature.properties) {
-      const { ward_name, dominant_emotion, post_count, top_drivers } = feature.properties;
-      const driversHtml = top_drivers?.length ? `<ul class="list-disc list-inside mt-1">${top_drivers.map(driver => `<li>${driver}</li>`).join('')}</ul>` : 'No specific drivers identified.';
-      const popupContent = `
-        <div class="p-1">
-          <h3 class="font-bold text-lg">${ward_name}</h3>
-          <p><b>Dominant Emotion:</b> ${dominant_emotion}</p>
-          <p><b>Post Count:</b> ${post_count}</p>
-          <hr class="my-1"/>
-          <p class="font-semibold">Top Drivers:</p>
-          ${driversHtml}
-        </div>
-      `;
-      layer.bindPopup(popupContent);
-    }
+    layer.on({
+      click: () => {
+        setSelectedWard(feature.properties.ward_name);
+      }
+    });
   };
 
-  if (!geoData) return <div className="text-center p-4">Loading map data...</div>;
+  const getWardEmotion = (wardName) => {
+    const wardPosts = posts.filter(p => p.ward === wardName);
+    if (wardPosts.length === 0) return 'Neutral';
+
+    return wardPosts[0].emotion;
+  }
+
+  const geoJsonStyle = (feature) => {
+    const emotion = getWardEmotion(feature.properties.ward_name);
+    const color = emotionColors[emotion] || 'grey';
+    return {
+      fillColor: color,
+      weight: 1,
+      opacity: 1,
+      color: 'white',
+      dashArray: '3',
+      fillOpacity: 0.6
+    };
+  };
 
   return (
-    <div className="h-96 w-full rounded-lg overflow-hidden shadow-inner">
-      <MapContainer center={CENTER} zoom={ZOOM_LEVEL} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
-        <TileLayer attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <GeoJSON key={JSON.stringify(geoData)} data={geoData} style={getStyle} onEachFeature={onEachFeature} />
-      </MapContainer>
-    </div>
+    <MapContainer center={[17.3850, 78.4867]} zoom={11} ref={mapRef} style={{ height: '100%', width: '100%' }}>
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      />
+      <GeoJSON data={ghmcWards} style={geoJsonStyle} onEachFeature={onEachFeature} />
+      
+      {posts.map(post => {
+        const center = wardCenters[post.ward];
+        if (!center) return null;
+
+        return (
+          <Marker position={center} key={post.id}>
+            <Popup>
+              <div className="p-1 max-w-xs">
+                <h3 className="font-bold text-lg mb-2">{post.ward}</h3>
+                <p className="text-sm text-gray-600 mb-2">"{post.content}"</p>
+                <div className="mb-2">
+                  <span className="font-semibold">Author: </span>
+                  <span>{post.author}</span>
+                </div>
+                <div className="mb-2">
+                  <span className="font-semibold">Emotion: </span>
+                  <span style={{ color: emotionColors[post.emotion] || 'black' }}>
+                    {post.emotion}
+                  </span>
+                </div>
+                {post.drivers && post.drivers.length > 0 && (
+                  <div>
+                    <span className="font-semibold">Emotion Drivers:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {post.drivers.map((driver, index) => (
+                        <span key={index} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                          {driver}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
+    </MapContainer>
   );
-}
+};
+
 export default LocationMap;

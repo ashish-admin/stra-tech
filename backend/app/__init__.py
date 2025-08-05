@@ -1,44 +1,53 @@
-import os
 from flask import Flask
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_login import LoginManager
-
-db = SQLAlchemy()
-migrate = Migrate()
-login_manager = LoginManager()
+from .models import db
+from .routes import main_bp
+from .tasks import celery
+import os
 
 def create_app():
-    app = Flask(__name__, instance_relative_config=True) 
+    """
+    Creates and configures a Flask application instance.
+    """
+    app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
     
-    # --- THIS IS THE FIX ---
-    # This updated configuration is more direct and robustly handles
-    # requests from your frontend's origin, which is crucial for
-    # browsers to allow login requests and subsequent API calls.
-    CORS(app, supports_credentials=True, origins=["http://localhost:5173", "https://lokdarpan.netlify.app"])
+    # Load configuration from config.py
+    app.config.from_object('config.Config')
 
-    app.config['SECRET_KEY'] = 'a-very-secret-key-that-you-should-change'
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None'
-    app.config['SESSION_COOKIE_SECURE'] = True
-    
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    # Ensure the instance folder exists
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
-
+    # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)
-    login_manager.init_app(app)
 
-    with app.app_context():
-        from . import routes
-        app.register_blueprint(routes.bp)
-        
-        from . import models
+    # Initialize Celery
+    celery.conf.update(
+        broker_url=app.config["CELERY_BROKER_URL"],
+        result_backend=app.config["CELERY_RESULT_BACKEND"]
+    )
+    celery.conf.beat_schedule = {
+        'fetch-twitter-every-15-minutes': {
+            'task': 'app.tasks.fetch_twitter_data',
+            'schedule': 43200.0,  # 12 hours in seconds
+        },
+        'fetch-news-every-hour': {
+            'task': 'app.tasks.fetch_news_data',
+            'schedule': 43200.0,  # 12 hours in seconds
+        },
+    }
 
-        return app
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery.Task = ContextTask
+    
+    # Register blueprints
+    app.register_blueprint(main_bp)
+
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path):
+        if path != "" and os.path.exists(app.static_folder + '/' + path):
+            return app.send_static_file(path)
+        else:
+            return app.send_static_file('index.html')
+
+    return app
