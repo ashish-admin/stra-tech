@@ -2,12 +2,12 @@ import random
 import logging
 from dotenv import load_dotenv
 
-# --- FIX 1: Load environment variables from .env file ---
+# Load environment variables from .env file
 load_dotenv()
 
 from app import create_app, db
 from app.models import Post, Author
-from app.services import get_emotion_and_drivers, model as ai_model # Import the model to check if it's available
+from app.services import get_emotion_and_drivers, model as ai_model
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -80,12 +80,10 @@ def seed_database():
     with app.app_context():
         logging.info("Starting database seeding process...")
 
-        # --- FIX 2: Create tables if they don't exist ---
         logging.info("Ensuring all tables are created...")
         db.create_all()
         logging.info("Tables created successfully.")
         
-        # Now it is safe to clear existing data
         logging.info("Clearing existing Post and Author data...")
         Post.query.delete()
         Author.query.delete()
@@ -95,7 +93,7 @@ def seed_database():
         logging.info("Creating author records...")
         author_objects = {}
         for author_data in AUTHORS:
-            author = Author(name=author_data["name"], affiliation=author_data["affiliation"])
+            author = Author(name=author_data["name"])
             db.session.add(author)
             author_objects[author.name] = author
         db.session.commit()
@@ -120,14 +118,16 @@ def seed_database():
                     logging.info(f"Analyzing post for '{ward}' from '{author_name}'...")
                     analysis = get_emotion_and_drivers(content)
                     emotion = analysis.get('emotion', 'Unknown')
-                    drivers = analysis.get('drivers', [])
-
+                    
+                    # --- THIS IS THE CORRECTED SECTION ---
+                    # The keyword arguments now match the Post model in models.py
                     new_post = Post(
-                        content=content,
-                        ward=ward,
+                        text=content,      # 'content' is now 'text'
+                        city=ward,         # 'ward' is now 'city'
                         emotion=emotion,
-                        drivers=drivers,
-                        author_id=author.id
+                        # 'drivers' column does not exist in the model, so it's removed
+                        author_id=author.id,
+                        source="Social Media" # Adding a default source
                     )
                     db.session.add(new_post)
                     total_posts += 1

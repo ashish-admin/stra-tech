@@ -1,51 +1,57 @@
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import JSON
+from .extensions import db, login_manager # Corrected import
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+import datetime
 
-db = SQLAlchemy()
+# This function is now correctly linked to the login_manager instance
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-class Author(db.Model):
-    """
-    Represents a political author or entity.
-    """
-    __tablename__ = 'authors'
-
+class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    affiliation = db.Column(db.String(50), nullable=False)  # e.g., 'Client', 'Opposition'
-    posts = db.relationship('Post', back_populates='author')
+    username = db.Column(db.String(64), index=True, unique=True)
+    password_hash = db.Column(db.String(256))
 
-    def __repr__(self):
-        return f'<Author {self.name}>'
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 class Post(db.Model):
-    """
-    Represents a social media post in the database.
-    """
-    __tablename__ = 'posts'
-
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    ward = db.Column(db.String(255), nullable=False)
-    emotion = db.Column(db.String(50), nullable=True)
-    drivers = db.Column(JSON, nullable=True)
-
-    # Foreign key to link to the Author table
-    author_id = db.Column(db.Integer, db.ForeignKey('authors.id'), nullable=False)
-    author = db.relationship('Author', back_populates='posts')
-
-    def __repr__(self):
-        return f'<Post {self.id}>'
+    timestamp = db.Column(db.String(50))
+    text = db.Column(db.Text, nullable=False)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    city = db.Column(db.String(100))
+    emotion = db.Column(db.String(50))
+    source = db.Column(db.String(50))
+    author_id = db.Column(db.Integer, db.ForeignKey('author.id'))
 
     def to_dict(self):
-        """
-        Serializes the Post object to a dictionary.
-        """
         return {
             'id': self.id,
-            'content': self.content,
-            'ward': self.ward,
+            'timestamp': self.timestamp,
+            'text': self.text,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'city': self.city,
             'emotion': self.emotion,
-            'drivers': self.drivers,
-            'author': self.author.name,  # Include author's name
-            'affiliation': self.author.affiliation # Include author's affiliation
+            'source': self.source,
+            'author': self.author.name if self.author else 'Unknown'
         }
+
+class Author(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), unique=True, nullable=False)
+    posts = db.relationship('Post', backref='author', lazy='dynamic')
+
+class Alert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.datetime.utcnow)
+    metric = db.Column(db.String(128))
+    change_description = db.Column(db.Text)
+    ai_summary = db.Column(db.Text)
+    is_read = db.Column(db.Boolean, default=False)

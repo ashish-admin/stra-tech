@@ -1,53 +1,39 @@
-from flask import Flask
-from .models import db
-from .routes import main_bp
-from .tasks import celery
 import os
+from flask import Flask
+from flask_cors import CORS
+from dotenv import load_dotenv
+from .extensions import db, migrate, login_manager
+
+# Load environment variables from .env file
+load_dotenv()
 
 def create_app():
-    """
-    Creates and configures a Flask application instance.
-    """
-    app = Flask(__name__, static_folder='../frontend/dist', static_url_path='/')
+    app = Flask(__name__, instance_relative_config=True)
     
-    # Load configuration from config.py
-    app.config.from_object('config.Config')
-
-    # Initialize extensions
+    # --- CONFIGURATIONS ARE NOW LOADED FROM ENVIRONMENT ---
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    # ----------------------------------------------------
+    
+    CORS(app, supports_credentials=True, resources={
+        r"/api/*": {
+            "origins": ["https://lokdarpan.netlify.app", "http://localhost:5173"]
+        }
+    })
+    
+    # Initialize extensions with the app
     db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
 
-    # Initialize Celery
-    celery.conf.update(
-        broker_url=app.config["CELERY_BROKER_URL"],
-        result_backend=app.config["CELERY_RESULT_BACKEND"]
-    )
-    celery.conf.beat_schedule = {
-        'fetch-twitter-every-15-minutes': {
-            'task': 'app.tasks.fetch_twitter_data',
-            'schedule': 43200.0,  # 12 hours in seconds
-        },
-        'fetch-news-every-hour': {
-            'task': 'app.tasks.fetch_news_data',
-            'schedule': 43200.0,  # 12 hours in seconds
-        },
-    }
+    # Import and register blueprints, models, etc. inside the app context
+    with app.app_context():
+        from . import models
+        
+        # --- THIS IS THE CORRECTED IMPORT ---
+        from .routes import main_bp
+        app.register_blueprint(main_bp, url_prefix='/api/v1')
+        # ------------------------------------
 
-    class ContextTask(celery.Task):
-        def __call__(self, *args, **kwargs):
-            with app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery.Task = ContextTask
-    
-    # Register blueprints
-    app.register_blueprint(main_bp)
-
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def serve(path):
-        if path != "" and os.path.exists(app.static_folder + '/' + path):
-            return app.send_static_file(path)
-        else:
-            return app.send_static_file('index.html')
-
-    return app
+        return app
