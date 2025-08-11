@@ -1,87 +1,119 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import 'tailwindcss/tailwind.css';
-
-// Import all components
-import LocationMap from './components/LocationMap';
-import DataTable from './components/DataTable';
-import StrategicSummary from './components/StrategicSummary';
-import CompetitiveAnalysis from './components/CompetitiveAnalysis';
-import AlertsPanel from './components/AlertsPanel'; // Import the new panel
+import Dashboard from './components/Dashboard';
+import LoginPage from './components/LoginPage'; // Import the new component
 
 function App() {
-    const [posts, setPosts] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [selectedWard, setSelectedWard] = useState(null);
-    const [activeTab, setActiveTab] = useState('analysis'); // For the new tabbed view
-    const [newAlert, setNewAlert] = useState(null); // To trigger alert refetching
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  
+  const [analyticsData, setAnalyticsData] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        axios.get('/api/v1/posts')
-            .then(response => setPosts(response.data))
-            .catch(error => {
-                console.error("Error fetching posts data!", error);
-                setPosts([]);
-            })
-            .finally(() => setLoading(false));
-    }, []);
+  const [filters, setFilters] = useState({ emotion: 'All', city: 'All' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
 
-    const handleWardSelect = (ward) => {
-        setSelectedWard(ward);
-    };
-
-    const handleAnalysisComplete = (alertData) => {
-        // This function will be called from the summary component
-        // to signal that a new alert was created and the panel should refresh.
-        setNewAlert(alertData);
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-gray-100">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-24 w-24 border-t-4 border-b-4 border-blue-600 mx-auto"></div>
-                    <h2 className="text-2xl font-semibold mt-6 text-gray-700">Loading LokDarpan Dashboard...</h2>
-                </div>
-            </div>
-        );
+  // This function now checks the session status
+  const checkAuthStatus = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
+    try {
+      axios.defaults.withCredentials = true;
+      const response = await axios.get(`${apiUrl}/api/v1/status`);
+      setIsLoggedIn(response.data.logged_in);
+    } catch (err) {
+      setIsLoggedIn(false); // If status check fails, assume not logged in
+    } finally {
+      setLoadingAuth(false);
     }
+  };
+  
+  // This function fetches the dashboard data
+  const fetchData = async () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
+    try {
+      const response = await axios.get(`${apiUrl}/api/v1/posts`);
+      setAnalyticsData(response.data);
+    } catch (err) {
+      setError('Failed to fetch data. Please check your connection or login status.');
+      console.error(err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
-    return (
-        <div className="bg-gray-100 min-h-screen">
-            <h1 className="text-3xl font-bold text-center text-gray-800 p-4 bg-white shadow-md">LokDarpan Dashboard</h1>
-            <main className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Left Column */}
-                <div className="h-[60vh]">
-                    <LocationMap posts={posts || []} setSelectedWard={handleWardSelect} selectedWard={selectedWard} />
-                </div>
-                
-                {/* Right Column */}
-                <div className="h-[60vh] flex flex-col gap-4">
-                    {/* Top Right: Tabbed View */}
-                    <div className="bg-white rounded-lg shadow flex-1 flex flex-col">
-                        <div className="flex border-b">
-                            <button onClick={() => setActiveTab('analysis')} className={`px-4 py-2 text-sm font-medium ${activeTab === 'analysis' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>Competitive Analysis</button>
-                            <button onClick={() => setActiveTab('alerts')} className={`px-4 py-2 text-sm font-medium ${activeTab === 'alerts' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>Proactive Alerts</button>
-                        </div>
-                        <div className="flex-grow p-4 overflow-hidden">
-                            {activeTab === 'analysis' && <CompetitiveAnalysis />}
-                            {activeTab === 'alerts' && <AlertsPanel newAlert={newAlert} />}
-                        </div>
-                    </div>
-                    {/* Bottom Right: Strategic Summary */}
-                    <div className="flex-1">
-                        <StrategicSummary ward={selectedWard} onAnalysisComplete={handleAnalysisComplete} />
-                    </div>
-                </div>
+  // Check auth status on initial load
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
 
-                {/* Bottom Row */}
-                <div className="lg:col-span-2 h-[40vh] mt-4">
-                    <DataTable posts={posts || []} onRowClick={handleWardSelect} selectedWard={selectedWard} />
-                </div>
-            </main>
+  // Fetch dashboard data only if the user is logged in
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchData();
+    }
+  }, [isLoggedIn]);
+  
+  // Handle all filtering logic
+  useEffect(() => {
+    let data = [...analyticsData];
+    if (filters.emotion !== 'All') data = data.filter(item => item.emotion === filters.emotion);
+    if (filters.city !== 'All') data = data.filter(item => item.city === filters.city);
+    if (searchTerm) data = data.filter(item => item.text.toLowerCase().includes(searchTerm.toLowerCase()));
+    setFilteredData(data);
+  }, [filters, searchTerm, analyticsData]);
+
+  // Handle clicks from the pie chart
+  const handleChartClick = (emotion) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      emotion: emotion
+    }));
+  };
+
+  // Render different components based on the authentication state
+  if (loadingAuth) {
+    return <div className="flex justify-center items-center h-screen text-2xl">Checking Authentication...</div>;
+  }
+  
+  if (!isLoggedIn) {
+    return <LoginPage onLoginSuccess={() => {
+      setIsLoggedIn(true);
+      setLoadingData(true);
+    }} />;
+  }
+  
+  if (loadingData) {
+    return <div className="flex justify-center items-center h-screen text-2xl">Loading Dashboard...</div>;
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-2xl text-red-500">{error}</div>;
+  }
+
+  return (
+    <div className="bg-gray-100 min-h-screen">
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold text-gray-900">LokDarpan: Discourse Analytics</h1>
         </div>
-    );
+      </header>
+      <main>
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <Dashboard 
+            data={filteredData} 
+            allData={analyticsData}
+            filters={filters}
+            setFilters={setFilters}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            handleChartClick={handleChartClick}
+          />
+        </div>
+      </main>
+    </div>
+  );
 }
 
 export default App;
