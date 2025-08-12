@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Dashboard from './components/Dashboard';
-import LoginPage from './components/LoginPage'; // Import the new component
+import LoginPage from './components/LoginPage';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -23,7 +23,7 @@ function App() {
       const response = await axios.get(`${apiUrl}/api/v1/status`);
       setIsLoggedIn(response.data.logged_in);
     } catch (err) {
-      setIsLoggedIn(false); // If status check fails, assume not logged in
+      setIsLoggedIn(false);
     } finally {
       setLoadingAuth(false);
     }
@@ -31,10 +31,12 @@ function App() {
   
   // This function fetches the dashboard data
   const fetchData = async () => {
+    setLoadingData(true); // Ensure loading state is true before fetching
     const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
     try {
       const response = await axios.get(`${apiUrl}/api/v1/posts`);
       setAnalyticsData(response.data);
+      // No longer setting filteredData here to avoid race conditions
     } catch (err) {
       setError('Failed to fetch data. Please check your connection or login status.');
       console.error(err);
@@ -55,14 +57,15 @@ function App() {
     }
   }, [isLoggedIn]);
   
-  // Handle all filtering logic
+  // --- ENHANCEMENT ---
+  // This single, robust useEffect now handles all filtering and data updates.
   useEffect(() => {
     let data = [...analyticsData];
     if (filters.emotion !== 'All') data = data.filter(item => item.emotion === filters.emotion);
     if (filters.city !== 'All') data = data.filter(item => item.city === filters.city);
     if (searchTerm) data = data.filter(item => item.text.toLowerCase().includes(searchTerm.toLowerCase()));
     setFilteredData(data);
-  }, [filters, searchTerm, analyticsData]);
+  }, [filters, searchTerm, analyticsData]); // This runs whenever the source data or filters change
 
   // Handle clicks from the pie chart
   const handleChartClick = (emotion) => {
@@ -80,7 +83,6 @@ function App() {
   if (!isLoggedIn) {
     return <LoginPage onLoginSuccess={() => {
       setIsLoggedIn(true);
-      setLoadingData(true);
     }} />;
   }
   

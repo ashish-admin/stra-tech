@@ -10,11 +10,10 @@ load_dotenv()
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     
-    # --- CONFIGURATIONS ARE NOW LOADED FROM ENVIRONMENT ---
+    # --- CONFIGURATIONS ARE LOADED FROM ENVIRONMENT ---
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-    # ----------------------------------------------------
     
     CORS(app, supports_credentials=True, resources={
         r"/api/*": {
@@ -32,6 +31,7 @@ def create_app():
         from . import models
         
         # --- THIS IS THE CORRECTED IMPORT ---
+        # It now correctly imports the blueprint from your routes.py file
         from .routes import main_bp
         app.register_blueprint(main_bp, url_prefix='/api/v1')
         # ------------------------------------
