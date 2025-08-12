@@ -49,7 +49,6 @@ def get_geojson():
     data_directory = os.path.join(current_app.root_path, 'data')
     return send_from_directory(data_directory, 'ghmc_wards.geojson')
 
-# --- UPGRADE: This endpoint is now dynamic and accepts filters ---
 @main_bp.route('/competitive-analysis', methods=['GET'])
 @login_required
 def competitive_analysis():
@@ -61,7 +60,6 @@ def competitive_analysis():
             func.count(Post.id)
         ).join(Post, Author.id == Post.author_id)
 
-        # Apply optional city filter from the request
         city_filter = request.args.get('city')
         if city_filter and city_filter != 'All':
             query = query.filter(Post.city == city_filter)

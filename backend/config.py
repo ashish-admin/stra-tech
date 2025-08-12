@@ -1,13 +1,10 @@
-# backend/config.py
-
 import os
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
-# Ensure dotenv is loaded right at the start
 load_dotenv()
 
 class Config:
-    """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'a_default_secret_key')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'postgresql://user:password@localhost/lokdarpan_db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -27,7 +24,16 @@ class Config:
         broker_url=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'),
         result_backend=os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'),
         task_ignore_result=True,
-        # --- THE FIX IS HERE ---
-        # This line tells the Celery worker to look for tasks inside the 'app.tasks' module.
         imports=("app.tasks",)
     )
+
+    # --- NEW: Celery Beat Schedule ---
+    CELERY_BEAT_SCHEDULE = {
+        'ingest-daily-epaper': {
+            'task': 'app.tasks.ingest_and_analyze_epaper',
+            # This runs the task every day at 7:00 AM.
+            'schedule': crontab(hour=7, minute=0),
+            # For testing, you can run it every 5 minutes:
+            # 'schedule': crontab(minute='*/5'),
+        },
+    }

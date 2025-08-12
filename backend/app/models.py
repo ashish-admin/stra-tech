@@ -1,5 +1,3 @@
-# backend/app/models.py
-
 from app.extensions import db
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -23,11 +21,9 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-# --- THE FIX IS HERE ---
-# Restore the Author model to represent data sources
 class Author(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False) # e.g., 'Twitter', 'NewsAPI'
+    name = db.Column(db.String(100), unique=True, nullable=False)
     posts = db.relationship('Post', backref='author', lazy='dynamic')
 
     def to_dict(self):
@@ -42,9 +38,6 @@ class Post(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('author.id'), nullable=False)
 
     def to_dict(self):
-        # --- THE FIX IS HERE ---
-        # We now check if created_at has a value before trying to format it.
-        # If it's None, we return None, which is valid JSON.
         return {
             'id': self.id,
             'text': self.text,
@@ -57,9 +50,9 @@ class Post(db.Model):
 class Alert(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ward = db.Column(db.String(150), nullable=False, index=True)
-    opportunities = db.Column(db.Text, nullable=True)
-    threats = db.Column(db.Text, nullable=True)
-    actionable_alerts = db.Column(db.Text, nullable=True)
+    opportunities = db.Column(db.Text, nullable=True) # Stores the JSON briefing
+    threats = db.Column(db.Text, nullable=True) # Deprecated but kept for schema stability
+    actionable_alerts = db.Column(db.Text, nullable=True) # Deprecated
     source_articles = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -68,8 +61,17 @@ class Alert(db.Model):
             'id': self.id,
             'ward': self.ward,
             'opportunities': self.opportunities,
-            'threats': self.threats,
-            'actionable_alerts': self.actionable_alerts,
             'source_articles': self.source_articles,
             'created_at': self.created_at.isoformat()
         }
+
+# --- NEW: Model to store extracted E-Paper content ---
+class Epaper(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    publication_name = db.Column(db.String(100), nullable=False) # e.g., 'Eenadu'
+    publication_date = db.Column(db.Date, nullable=False)
+    raw_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<Epaper {self.publication_name} {self.publication_date}>'
