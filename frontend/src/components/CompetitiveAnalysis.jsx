@@ -18,16 +18,24 @@ const CompetitiveAnalysis = () => {
                 const response = await axios.get(`${apiUrl}/api/v1/competitive-analysis`);
                 const data = response.data;
 
-                // Format the data for Chart.js
+                const labels = Object.keys(data);
+                const emotions = ['Joy', 'Anger', 'Sadness', 'Fear', 'Surprise', 'Neutral'];
+                const colors = {
+                    'Joy': '#10B981',
+                    'Anger': '#EF4444',
+                    'Sadness': '#3B82F6',
+                    'Fear': '#8B5CF6',
+                    'Surprise': '#F59E0B',
+                    'Neutral': '#6B7280',
+                };
+
                 setChartData({
-                    labels: data.map(item => item.source),
-                    datasets: [{
-                        label: 'Volume of Mentions by Source',
-                        data: data.map(item => item.count),
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1,
-                    }]
+                    labels,
+                    datasets: emotions.map(emotion => ({
+                        label: emotion,
+                        data: labels.map(label => data[label][emotion] || 0),
+                        backgroundColor: colors[emotion],
+                    })),
                 });
             } catch (err) {
                 console.error("Failed to fetch competitive analysis data:", err);
@@ -47,14 +55,14 @@ const CompetitiveAnalysis = () => {
     }
 
     const options = {
-        indexAxis: 'y', // Makes the bar chart horizontal
+        indexAxis: 'y',
+        plugins: {
+            title: { display: false },
+            legend: { position: 'bottom', labels: { boxWidth: 12 } },
+        },
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false,
-            },
-        },
+        scales: { x: { stacked: true }, y: { stacked: true } },
     };
 
     return (

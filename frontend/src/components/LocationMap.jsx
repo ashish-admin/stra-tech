@@ -22,38 +22,18 @@ const LocationMap = () => {
         fetchGeoJson();
     }, []);
 
-    const highlightFeature = (e) => {
-        const layer = e.target;
-        layer.setStyle({
-            weight: 3,
-            color: '#FFC107', // Amber highlight
-            fillOpacity: 0.8,
-        });
-        layer.bringToFront();
-    };
-
-    const resetHighlight = (e) => {
-        const layer = e.target;
-        layer.setStyle({
-            weight: 1,
-            color: 'white',
-            fillOpacity: 0.6,
-        });
-    };
-
     const onEachFeature = (feature, layer) => {
-        // Use the 'ghmc_ward' property from your GeoJSON for the tooltip
         if (feature.properties && feature.properties.ghmc_ward) {
+            // FIX: Make tooltips permanent for clear identification
             layer.bindTooltip(feature.properties.ghmc_ward, {
-                permanent: false,
+                permanent: true,
                 direction: 'center',
-                className: 'ward-tooltip'
+                className: 'ward-label' // Add a class for custom styling
             });
         }
         layer.on({
-            mouseover: highlightFeature,
-            mouseout: resetHighlight,
-            // click: (e) => { /* Add click functionality later if needed */ }
+            mouseover: (e) => e.target.setStyle({ weight: 3, color: '#FFC107', fillOpacity: 0.9 }),
+            mouseout: (e) => e.target.setStyle({ weight: 1, color: 'white', fillOpacity: 0.6 }),
         });
     };
 

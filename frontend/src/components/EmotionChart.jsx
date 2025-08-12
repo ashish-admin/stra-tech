@@ -7,8 +7,6 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const EmotionChart = ({ data, handleChartClick }) => {
-    // --- THE FIX IS HERE ---
-    // This guard clause prevents the component from crashing if data hasn't loaded yet.
     if (!data || data.length === 0) {
         return <div className="text-center text-gray-500">Loading chart data...</div>;
     }
@@ -24,21 +22,14 @@ const EmotionChart = ({ data, handleChartClick }) => {
             {
                 label: '# of Posts',
                 data: Object.values(emotionCounts),
+                // FIX: New, more insightful color palette
                 backgroundColor: [
-                    'rgba(75, 192, 192, 0.6)', // Joy
-                    'rgba(255, 99, 132, 0.6)', // Anger
-                    'rgba(255, 206, 86, 0.6)', // Sadness
-                    'rgba(153, 102, 255, 0.6)',// Fear
-                    'rgba(54, 162, 235, 0.6)', // Surprise
-                    'rgba(255, 159, 64, 0.6)'  // Neutral
-                ],
-                borderColor: [
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 159, 64, 1)'
+                    '#10B981', // Green: Joy/Positivity
+                    '#EF4444', // Red: Anger/Frustration
+                    '#3B82F6', // Blue: Sadness
+                    '#8B5CF6', // Purple: Fear
+                    '#F59E0B', // Amber: Surprise
+                    '#6B7280', // Gray: Neutral
                 ],
                 borderWidth: 1,
             },

@@ -17,7 +17,6 @@ const DataTable = ({
 
     return (
         <div className="flex flex-col">
-            {/* Filter and Search Controls can be enhanced here */}
             <div className="mb-4">
                 <input
                     type="text"

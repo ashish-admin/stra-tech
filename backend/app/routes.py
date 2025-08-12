@@ -3,13 +3,11 @@ from flask import Blueprint, jsonify, request, current_app, send_from_directory
 from functools import wraps
 from flask_login import current_user, login_user, logout_user
 from .models import db, User, Post, Alert, Author
-from .extensions import celery  # Import the celery instance directly
+from .extensions import celery
 from sqlalchemy import func
 
-# Define the Blueprint for the API
 main_bp = Blueprint('api', __name__, url_prefix='/api/v1')
 
-# --- AUTHENTICATION DECORATOR ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -18,7 +16,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- AUTHENTICATION & STATUS ROUTES ---
 @main_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -40,46 +37,50 @@ def status():
         return jsonify({'logged_in': True, 'user': current_user.to_dict()}), 200
     return jsonify({'logged_in': False}), 200
 
-# --- CORE DATA ROUTES ---
 @main_bp.route('/posts', methods=['GET'])
 @login_required
 def get_posts():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     return jsonify([post.to_dict() for post in posts]), 200
 
-# --- MAP DATA ROUTE ---
 @main_bp.route('/geojson', methods=['GET'])
 @login_required
 def get_geojson():
     data_directory = os.path.join(current_app.root_path, 'data')
     return send_from_directory(data_directory, 'ghmc_wards.geojson')
 
-# --- COMPETITIVE ANALYSIS ROUTE ---
+# --- FIX: Upgraded for Deeper Insight ---
 @main_bp.route('/competitive-analysis', methods=['GET'])
 @login_required
 def competitive_analysis():
+    """Calculates the sentiment breakdown of posts per author (source)."""
     try:
-        analysis = db.session.query(Author.name, func.count(Post.id).label('post_count')).join(Post, Author.id == Post.author_id).group_by(Author.name).order_by(func.count(Post.id).desc()).all()
-        result = [{'source': name, 'count': post_count} for name, post_count in analysis]
+        analysis = db.session.query(
+            Author.name,
+            Post.emotion,
+            func.count(Post.id).label('post_count')
+        ).join(Post, Author.id == Post.author_id).group_by(Author.name, Post.emotion).all()
+
+        result = {}
+        for author_name, emotion, count in analysis:
+            if author_name not in result:
+                result[author_name] = {}
+            result[author_name][emotion] = count
         return jsonify(result), 200
     except Exception as e:
         current_app.logger.error(f"Error in competitive analysis: {e}")
         return jsonify({"error": "Could not perform competitive analysis."}), 500
 
-# --- PROACTIVE ALERTS ENGINE ROUTES ---
 @main_bp.route('/trigger_analysis', methods=['POST'])
 @login_required
 def trigger_analysis():
-    """Triggers the background task to analyze news for a specific ward."""
     data = request.get_json()
     ward_name = data.get('ward')
     if not ward_name:
         return jsonify({'error': 'Ward name is required'}), 400
 
-    # **THE FIX**: Use the imported celery instance directly. This is the correct and most stable method.
     task_name = 'app.tasks.analyze_news_for_alerts'
     celery.send_task(task_name, args=[ward_name])
-
     return jsonify({'message': f'Analysis for {ward_name} has been triggered.'}), 202
 
 @main_bp.route('/alerts/<ward_name>', methods=['GET'])
