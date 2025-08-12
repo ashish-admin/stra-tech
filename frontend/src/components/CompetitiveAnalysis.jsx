@@ -4,10 +4,8 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const CompetitiveAnalysis = ({ analysisData }) => {
-    // No internal useEffect for data fetching
-
-    if (!analysisData) {
+const CompetitiveAnalysis = ({ analysisData, handleCompetitorClick }) => {
+    if (!analysisData || Object.keys(analysisData).length === 0) {
         return <div className="text-center p-4">Loading analysis...</div>;
     }
     
@@ -28,6 +26,13 @@ const CompetitiveAnalysis = ({ analysisData }) => {
         indexAxis: 'y',
         scales: { x: { stacked: true }, y: { stacked: true } },
         responsive: true,
+        onClick: (event, elements) => {
+            if (elements.length > 0) {
+                const chartElement = elements[0];
+                const label = labels[chartElement.index];
+                handleCompetitorClick(label);
+            }
+        }
     };
 
     return (

@@ -5,7 +5,6 @@ import DataTable from './DataTable';
 import StrategicSummary from './StrategicSummary';
 import CompetitiveAnalysis from './CompetitiveAnalysis';
 
-// Dashboard now receives all data and functions as props from App.jsx
 function Dashboard({
     filteredData,
     allData,
@@ -17,7 +16,6 @@ function Dashboard({
     setSearchTerm,
     handleChartClick
 }) {
-    // These dropdown options are now derived from the data passed down from App.jsx
     const emotions = ['All', ...new Set(allData.map(item => item.emotion))];
     const cities = ['All', ...new Set(allData.map(item => item.city))];
 
@@ -97,7 +95,7 @@ function Dashboard({
                 </div>
 
                 <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Live Data Feed</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Actionable Intelligence Feed</h3>
                     <DataTable data={filteredData} />
                 </div>
             </div>

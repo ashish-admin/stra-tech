@@ -97,4 +97,4 @@ def get_alerts(ward_name):
     alert = Alert.query.filter_by(ward=ward_name).order_by(Alert.created_at.desc()).first()
     if alert:
         return jsonify(alert.to_dict())
-    return jsonify({'message': 'No alerts found for this ward. Please trigger an analysis.'}), 404
+    return jsonify({'message': 'No alerts found for this ward.'}), 404
