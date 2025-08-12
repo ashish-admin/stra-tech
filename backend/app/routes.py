@@ -49,27 +49,35 @@ def get_geojson():
     data_directory = os.path.join(current_app.root_path, 'data')
     return send_from_directory(data_directory, 'ghmc_wards.geojson')
 
-# --- FIX: Upgraded for Deeper Insight ---
+# --- UPGRADE: This endpoint is now dynamic and accepts filters ---
 @main_bp.route('/competitive-analysis', methods=['GET'])
 @login_required
 def competitive_analysis():
-    """Calculates the sentiment breakdown of posts per author (source)."""
+    """Calculates the sentiment breakdown per author, optionally filtered by city/ward."""
     try:
-        analysis = db.session.query(
+        query = db.session.query(
             Author.name,
             Post.emotion,
-            func.count(Post.id).label('post_count')
-        ).join(Post, Author.id == Post.author_id).group_by(Author.name, Post.emotion).all()
+            func.count(Post.id)
+        ).join(Post, Author.id == Post.author_id)
 
+        # Apply optional city filter from the request
+        city_filter = request.args.get('city')
+        if city_filter and city_filter != 'All':
+            query = query.filter(Post.city == city_filter)
+
+        analysis = query.group_by(Author.name, Post.emotion).all()
+        
         result = {}
-        for author_name, emotion, count in analysis:
-            if author_name not in result:
-                result[author_name] = {}
-            result[author_name][emotion] = count
-        return jsonify(result), 200
+        for author, emotion, count in analysis:
+            if author not in result:
+                result[author] = {}
+            result[author][emotion] = count
+            
+        return jsonify(result)
     except Exception as e:
         current_app.logger.error(f"Error in competitive analysis: {e}")
-        return jsonify({"error": "Could not perform competitive analysis."}), 500
+        return jsonify({"error": "Analysis failed"}), 500
 
 @main_bp.route('/trigger_analysis', methods=['POST'])
 @login_required
