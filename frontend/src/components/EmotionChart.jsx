@@ -1,52 +1,69 @@
-import { Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title } from 'chart.js';
+// frontend/src/components/EmotionChart.jsx
 
-ChartJS.register(ArcElement, Tooltip, Legend, Title);
+import React from 'react';
+import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 
-function EmotionChart({ data }) {
-  const emotionCounts = data.reduce((acc, item) => {
-    acc[item.emotion] = (acc[item.emotion] || 0) + 1;
-    return acc;
-  }, {});
+ChartJS.register(ArcElement, Tooltip, Legend);
 
-  const chartData = {
-    labels: Object.keys(emotionCounts),
-    datasets: [
-      {
-        label: '# of Posts',
-        data: Object.values(emotionCounts),
-        backgroundColor: [
-          'rgba(26, 188, 156, 0.7)', // Hope (Teal)
-          'rgba(231, 76, 60, 0.7)',  // Anger (Red)
-          'rgba(52, 152, 219, 0.7)', // Joy (Blue)
-          'rgba(241, 196, 15, 0.7)', // Anxiety (Yellow)
-          'rgba(155, 89, 182, 0.7)', // Sadness (Purple)
-          'rgba(149, 165, 166, 0.7)' // Neutral (Grey)
+const EmotionChart = ({ data, handleChartClick }) => {
+    // --- THE FIX IS HERE ---
+    // This guard clause prevents the component from crashing if data hasn't loaded yet.
+    if (!data || data.length === 0) {
+        return <div className="text-center text-gray-500">Loading chart data...</div>;
+    }
+
+    const emotionCounts = data.reduce((acc, item) => {
+        acc[item.emotion] = (acc[item.emotion] || 0) + 1;
+        return acc;
+    }, {});
+
+    const chartData = {
+        labels: Object.keys(emotionCounts),
+        datasets: [
+            {
+                label: '# of Posts',
+                data: Object.values(emotionCounts),
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.6)', // Joy
+                    'rgba(255, 99, 132, 0.6)', // Anger
+                    'rgba(255, 206, 86, 0.6)', // Sadness
+                    'rgba(153, 102, 255, 0.6)',// Fear
+                    'rgba(54, 162, 235, 0.6)', // Surprise
+                    'rgba(255, 159, 64, 0.6)'  // Neutral
+                ],
+                borderColor: [
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1,
+            },
         ],
-        borderColor: [
-          'rgba(22, 160, 133, 1)',
-          'rgba(192, 57, 43, 1)',
-          'rgba(41, 128, 185, 1)',
-          'rgba(243, 156, 18, 1)',
-          'rgba(142, 68, 173, 1)',
-          'rgba(127, 140, 141, 1)'
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
+    };
 
-  const options = {
-    responsive: true, // This makes the chart responsive
-    maintainAspectRatio: true, // Maintains aspect ratio while resizing
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-    },
-  };
+    const options = {
+        onClick: (event, elements) => {
+            if (elements.length > 0) {
+                const chartElement = elements[0];
+                const label = chartData.labels[chartElement.index];
+                if(handleChartClick) {
+                    handleChartClick(label);
+                }
+            }
+        },
+        responsive: true,
+        maintainAspectRatio: false,
+    };
 
-  return <Doughnut data={chartData} options={options} />;
-}
+    return (
+        <div style={{ height: '300px' }}>
+            <Pie data={chartData} options={options} />
+        </div>
+    );
+};
 
 export default EmotionChart;

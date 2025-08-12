@@ -1,52 +1,84 @@
-import { useState, useEffect } from 'react';
+// frontend/src/components/LocationMap.jsx
+
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
 
-const CENTER = [17.44, 78.47];
-const ZOOM_LEVEL = 11;
+const LocationMap = () => {
+    const [geoJsonData, setGeoJsonData] = useState(null);
+    const [error, setError] = useState(null);
 
-const emotionColorMap = { /* ... (colors remain the same) ... */ };
+    useEffect(() => {
+        const fetchGeoJson = async () => {
+            const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
+            try {
+                const response = await axios.get(`${apiUrl}/api/v1/geojson`);
+                setGeoJsonData(response.data);
+            } catch (err) {
+                setError("Could not load map data.");
+            }
+        };
+        fetchGeoJson();
+    }, []);
 
-// The map now receives the onWardClick function as a prop
-function LocationMap({ onWardClick }) {
-  const [geoData, setGeoData] = useState(null);
-  // ... (loading and error states remain the same)
+    const highlightFeature = (e) => {
+        const layer = e.target;
+        layer.setStyle({
+            weight: 3,
+            color: '#FFC107', // Amber highlight
+            fillOpacity: 0.8,
+        });
+        layer.bringToFront();
+    };
 
-  useEffect(() => {
-    // ... (fetchGranularData logic remains the same)
-  }, []);
+    const resetHighlight = (e) => {
+        const layer = e.target;
+        layer.setStyle({
+            weight: 1,
+            color: 'white',
+            fillOpacity: 0.6,
+        });
+    };
 
-  const getStyle = (feature) => { /* ... (style logic remains the same) ... */ };
-
-  // We add the onClick event to each ward layer
-  const onEachFeature = (feature, layer) => {
-    if (feature.properties) {
-      const { name, emotion, count } = feature.properties;
-      const popupContent = `<b>Ward:</b> ${name}<br/><b>Emotion:</b> ${emotion}<br/><b>Count:</b> ${count}`;
-      layer.bindPopup(popupContent);
-
-      // Add the click handler
-      layer.on({
-        click: () => {
-          onWardClick(name); // Call the function passed from Dashboard
+    const onEachFeature = (feature, layer) => {
+        // Use the 'ghmc_ward' property from your GeoJSON for the tooltip
+        if (feature.properties && feature.properties.ghmc_ward) {
+            layer.bindTooltip(feature.properties.ghmc_ward, {
+                permanent: false,
+                direction: 'center',
+                className: 'ward-tooltip'
+            });
         }
-      });
-    }
-  };
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            // click: (e) => { /* Add click functionality later if needed */ }
+        });
+    };
 
-  if (loading) { /* ... (loading JSX remains the same) ... */ }
-  if (error) { /* ... (error JSX remains the same) ... */ }
-  if (!geoData) { /* ... (no data JSX remains the same) ... */ }
+    if (error) return <div className="p-4 text-red-500 bg-red-100 rounded-md">{error}</div>;
+    if (!geoJsonData) return <div className="p-4 text-center text-gray-500">Loading map data...</div>;
 
-  return (
-    <div className="h-96 w-full rounded-lg overflow-hidden">
-      <MapContainer center={CENTER} zoom={ZOOM_LEVEL} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
-        <TileLayer attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} />
-      </MapContainer>
-    </div>
-  );
-}
+    const geoJsonStyle = {
+        fillColor: '#3182CE',
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        fillOpacity: 0.6,
+    };
+
+    return (
+        <div className="map-container" style={{ height: '400px', width: '100%', borderRadius: '8px', overflow: 'hidden' }}>
+            <MapContainer center={[17.3850, 78.4867]} zoom={11} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <GeoJSON data={geoJsonData} style={geoJsonStyle} onEachFeature={onEachFeature} />
+            </MapContainer>
+        </div>
+    );
+};
 
 export default LocationMap;
