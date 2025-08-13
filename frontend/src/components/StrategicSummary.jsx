@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import wardDemographics from '../wardDemographics';
 
 /**
  * Provides the on‑demand "Area Pulse" feature.  Users can enter a ward name
@@ -7,13 +8,24 @@ import axios from 'axios';
  * recent briefing if one exists, otherwise it allows triggering a new
  * analysis.  It polls the server until results are ready.
  */
-const StrategicSummary = () => {
-  const [ward, setWard] = useState('Jubilee Hills');
+const StrategicSummary = ({ selectedWard }) => {
+  // The currently selected ward.  Default to the selectedWard prop if
+  // provided, otherwise use a sensible default.  When selectedWard changes
+  // (e.g. via the map), this state is synchronised via the effect below.
+  const [ward, setWard] = useState(selectedWard && selectedWard !== 'All' ? selectedWard : 'Jubilee Hills');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [briefing, setBriefing] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Whenever the selectedWard prop changes, update the local ward state
+  // unless the user has manually entered a different ward.  Ignore "All".
+  useEffect(() => {
+    if (selectedWard && selectedWard !== 'All' && selectedWard !== ward) {
+      setWard(selectedWard);
+    }
+  }, [selectedWard]);
 
   useEffect(() => {
     const fetchLatestBriefing = async () => {
@@ -112,6 +124,22 @@ const StrategicSummary = () => {
       {!isFetching && briefing && (
         <div className="space-y-2 border rounded-md p-4 bg-gray-50">
           <h3 className="text-xl font-bold">Candidate Briefing: {ward}</h3>
+          {/* Display demographic/voter information if available for this ward.  We
+              normalise the ward name in the same way as the map so that
+              "Ward 8 Habsiguda" maps to "Habsiguda". */}
+          {(() => {
+            // Normalise the ward to look up demographics: remove "Ward X " prefix
+            const normalised = ward.replace(/^\s*Ward\s*\d+\s+/i, '').trim();
+            const info = wardDemographics[normalised];
+            if (info) {
+              return (
+                <div className="text-sm text-gray-700">
+                  <strong>Registered Voters (est.):</strong> {info.voters.toLocaleString()} &ndash; {info.description}
+                </div>
+              );
+            }
+            return null;
+          })()}
           {briefing.key_issue && (
             <div>
               <strong>Key Issue:</strong> {briefing.key_issue}

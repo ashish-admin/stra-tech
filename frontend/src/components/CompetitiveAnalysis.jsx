@@ -13,8 +13,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
  * handleCompetitorClick with the selected author.
  */
 const CompetitiveAnalysis = ({ analysisData, handleCompetitorClick }) => {
+  // If there is no competitive analysis data for the selected ward,
+  // display a message rather than leaving the user waiting.  This
+  // typically happens when there are no posts from that ward.
   if (!analysisData || Object.keys(analysisData).length === 0) {
-    return <div>Loading analysis...</div>;
+    return <div>No competitive analysis available for the selected ward.</div>;
   }
 
   const labels = Object.keys(analysisData);

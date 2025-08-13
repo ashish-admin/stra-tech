@@ -15,8 +15,28 @@ const LocationMap = ({ geoJsonData, setFilters }) => {
    * analytics and charts.  We shallow‑merge the existing filters and
    * override the city value with the clicked ward name.
    */
+  /**
+   * Normalise a ward name from the GeoJSON to match the city names used in
+   * the posts dataset.  Many ward names in the map include a prefix like
+   * "Ward 79 " or "Ward 8 ".  This function strips that numeric prefix so
+   * that clicking on "Ward 8 Habsiguda" will map to the city "Habsiguda".
+   */
+  const normalizeWardName = (name) => {
+    if (!name) return name;
+    // Match patterns like "Ward 79 Himayath Nagar" or "WARD 3 Kapra"
+    const match = name.match(/^\s*Ward\s*\d+\s+(.*)$/i);
+    if (match) {
+      return match[1].trim();
+    }
+    return name.trim();
+  };
+
   const handleWardClick = (wardName) => {
-    setFilters((prev) => ({ ...prev, city: wardName }));
+    // Normalise the ward name before updating filters.  Use the
+    // normalised name as the city filter so that the sentiment and
+    // competitive analysis APIs return data when available.
+    const normalized = normalizeWardName(wardName);
+    setFilters((prev) => ({ ...prev, city: normalized }));
   };
 
   /**
@@ -54,7 +74,7 @@ const LocationMap = ({ geoJsonData, setFilters }) => {
 
   return (
     <MapContainer
-      style={{ height: '600px', width: '100%' }}
+      style={{ height: '400px', width: '100%' }}
       // Define bounds around Hyderabad to keep the map centred
       bounds={[ [17.20, 78.30], [17.60, 78.80] ]}
       // Enable scroll wheel zooming so users can explore the map

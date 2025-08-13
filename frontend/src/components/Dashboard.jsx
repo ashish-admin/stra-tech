@@ -4,6 +4,7 @@ import LocationMap from './LocationMap';
 import DataTable from './DataTable';
 import StrategicSummary from './StrategicSummary';
 import CompetitiveAnalysis from './CompetitiveAnalysis';
+import TopicAnalysis from './TopicAnalysis';
 
 /**
  * Presents the core dashboard layout, including filter controls
@@ -84,7 +85,10 @@ function Dashboard({
         {/* On‑Demand Strategic Summary */}
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">On‑Demand Strategic Summary</h2>
-          <StrategicSummary />
+          {/* Pass the selected ward from filters into the StrategicSummary.
+              When the ward changes via the map or dropdown, the summary will
+              automatically load the latest briefing for that ward. */}
+          <StrategicSummary selectedWard={filters.city} />
         </div>
       </div>
 
@@ -102,6 +106,11 @@ function Dashboard({
             <CompetitiveAnalysis analysisData={competitiveData} handleCompetitorClick={(label) => setFilters((prev) => ({ ...prev, competitor: label }))} />
           </div>
         </div>
+      </div>
+
+      {/* Topic Analysis (Trending Keywords) */}
+      <div className="grid grid-cols-1">
+        <TopicAnalysis data={filteredData} numTopics={5} />
       </div>
 
       {/* Actionable Intelligence Feed */}

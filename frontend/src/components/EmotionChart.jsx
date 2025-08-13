@@ -14,8 +14,11 @@ ChartJS.register(ArcElement, Tooltip, Legend);
  * a segment is clicked.
  */
 const EmotionChart = ({ data, handleChartClick }) => {
+  // If there is no data to display for the selected ward, show a friendly
+  // message instead of an infinite loading spinner.  This avoids confusing
+  // the user when a ward has no posts.
   if (!data || data.length === 0) {
-    return <div>Loading chart data...</div>;
+    return <div>No sentiment data available for the selected ward.</div>;
   }
 
   // Compute counts per emotion
