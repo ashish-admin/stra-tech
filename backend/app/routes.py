@@ -4,7 +4,7 @@ from functools import wraps
 from flask_login import current_user, login_user, logout_user
 from .models import db, User, Post, Alert, Author
 from .extensions import celery
-from sqlalchemy import func
+from sqlalchemy import func, extract
 
 main_bp = Blueprint('api', __name__, url_prefix='/api/v1')
 
@@ -52,7 +52,7 @@ def get_geojson():
 @main_bp.route('/competitive-analysis', methods=['GET'])
 @login_required
 def competitive_analysis():
-    """Calculates the sentiment breakdown per author, now dynamically filtered by city/ward."""
+    """Calculates the sentiment breakdown per author, optionally filtered by city/ward."""
     try:
         query = db.session.query(
             Author.name,
@@ -65,17 +65,50 @@ def competitive_analysis():
             query = query.filter(Post.city == city_filter)
 
         analysis = query.group_by(Author.name, Post.emotion).all()
-        
         result = {}
         for author, emotion, count in analysis:
             if author not in result:
                 result[author] = {}
             result[author][emotion] = count
-            
         return jsonify(result)
     except Exception as e:
         current_app.logger.error(f"Error in competitive analysis: {e}")
         return jsonify({"error": "Analysis failed"}), 500
+
+@main_bp.route('/competitive-trend', methods=['GET'])
+@login_required
+def competitive_trend():
+    """Return sentiment counts per author grouped by day for trend analysis."""
+    try:
+        days = int(request.args.get('days', 7))
+        # compute counts per author per day for the last N days
+        query = db.session.query(
+            Author.name.label('author'),
+            func.date_trunc('day', Post.created_at).label('day'),
+            Post.emotion.label('emotion'),
+            func.count(Post.id).label('count')
+        ).join(Post, Author.id == Post.author_id)
+        # Filter by timeframe
+        if days > 0:
+            from datetime import datetime, timedelta, timezone
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            query = query.filter(Post.created_at >= cutoff)
+        city_filter = request.args.get('city')
+        if city_filter and city_filter != 'All':
+            query = query.filter(Post.city == city_filter)
+        rows = query.group_by('author', 'day', 'emotion').order_by('day').all()
+        result = {}
+        for author, day, emotion, count in rows:
+            day_str = day.date().isoformat()
+            if author not in result:
+                result[author] = {}
+            if day_str not in result[author]:
+                result[author][day_str] = {}
+            result[author][day_str][emotion] = count
+        return jsonify(result)
+    except Exception as e:
+        current_app.logger.error(f"Error in competitive trend: {e}")
+        return jsonify({"error": "Trend analysis failed"}), 500
 
 @main_bp.route('/trigger_analysis', methods=['POST'])
 @login_required
@@ -84,7 +117,6 @@ def trigger_analysis():
     ward_name = data.get('ward')
     if not ward_name:
         return jsonify({'error': 'Ward name is required'}), 400
-
     task_name = 'app.tasks.analyze_news_for_alerts'
     celery.send_task(task_name, args=[ward_name])
     return jsonify({'message': f'Analysis for {ward_name} has been triggered.'}), 202
