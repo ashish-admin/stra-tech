@@ -1,16 +1,12 @@
-from .extensions import db, login_manager # Corrected import
-from flask_login import UserMixin
+from app.extensions import db
+from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
-import datetime
-
-# This function is now correctly linked to the login_manager instance
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+from flask_login import UserMixin
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True)
+    username = db.Column(db.String(64), index=True, unique=True, nullable=False)
+    email = db.Column(db.String(120), index=True, unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
 
     def set_password(self, password):
@@ -19,39 +15,63 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    def to_dict(self):
+        return {'id': self.id, 'username': self.username, 'email': self.email}
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+class Author(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    posts = db.relationship('Post', backref='author', lazy='dynamic')
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name}
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.String(50))
-    text = db.Column(db.Text, nullable=False)
-    latitude = db.Column(db.Float)
-    longitude = db.Column(db.Float)
-    city = db.Column(db.String(100))
+    text = db.Column(db.String(280), nullable=False)
     emotion = db.Column(db.String(50))
-    source = db.Column(db.String(50))
-    author_id = db.Column(db.Integer, db.ForeignKey('author.id'))
+    city = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    author_id = db.Column(db.Integer, db.ForeignKey('author.id'), nullable=False)
 
     def to_dict(self):
         return {
             'id': self.id,
-            'timestamp': self.timestamp,
             'text': self.text,
-            'latitude': self.latitude,
-            'longitude': self.longitude,
-            'city': self.city,
             'emotion': self.emotion,
-            'source': self.source,
-            'author': self.author.name if self.author else 'Unknown'
+            'city': self.city,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'author_name': self.author.name if self.author else 'Unknown'
         }
-
-class Author(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), unique=True, nullable=False)
-    posts = db.relationship('Post', backref='author', lazy='dynamic')
 
 class Alert(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.datetime.utcnow)
-    metric = db.Column(db.String(128))
-    change_description = db.Column(db.Text)
-    ai_summary = db.Column(db.Text)
-    is_read = db.Column(db.Boolean, default=False)
+    ward = db.Column(db.String(150), nullable=False, index=True)
+    opportunities = db.Column(db.Text, nullable=True) # Stores the JSON briefing
+    threats = db.Column(db.Text, nullable=True) # Deprecated but kept for schema stability
+    actionable_alerts = db.Column(db.Text, nullable=True) # Deprecated
+    source_articles = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'ward': self.ward,
+            'opportunities': self.opportunities,
+            'source_articles': self.source_articles,
+            'created_at': self.created_at.isoformat()
+        }
+
+# --- NEW: Model to store extracted E-Paper content ---
+class Epaper(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    publication_name = db.Column(db.String(100), nullable=False) # e.g., 'Eenadu'
+    publication_date = db.Column(db.Date, nullable=False)
+    raw_text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<Epaper {self.publication_name} {self.publication_date}>'

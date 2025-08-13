@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 
-function LoginPage({ onLoginSuccess }) {
+/**
+ * Simple login page component.  It sends a username and password to the
+ * `/api/v1/login` endpoint.  On successful authentication it calls
+ * `setIsLoggedIn(true)` on the parent.  Errors are displayed to the user.
+ */
+const LoginPage = ({ setIsLoggedIn }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -9,60 +14,47 @@ function LoginPage({ onLoginSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
     try {
-      // Tell axios to include cookies with its requests
-      axios.defaults.withCredentials = true;
-      await axios.post(`${apiUrl}/api/v1/login`, { username, password });
-      onLoginSuccess();
+      const res = await axios.post(`${apiUrl}/api/v1/login`, {
+        username,
+        password
+      });
+      if (res.status === 200) {
+        setIsLoggedIn(true);
+      }
     } catch (err) {
       setError('Invalid username or password.');
-      console.error(err);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-8 bg-white rounded-lg shadow-md w-full max-w-sm">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">LokDarpan Login</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
-              Username
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
-          {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-            >
-              Sign In
-            </button>
-          </div>
-        </form>
-      </div>
+    <div className="max-w-md mx-auto p-6 border rounded-md mt-12">
+      <h2 className="text-xl font-semibold mb-4">Login</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+        {error && <div className="text-red-600 font-semibold">{error}</div>}
+        <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-md">Log In</button>
+      </form>
     </div>
   );
-}
+};
 
 export default LoginPage;

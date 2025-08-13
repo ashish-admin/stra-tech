@@ -49,6 +49,7 @@ pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pydantic==2.11.7
 pydantic_core==2.33.2
+PyMuPDF==1.24.1
 pyogrio==0.11.0
 pyparsing==3.2.3
 pyproj==3.7.1
@@ -73,3 +74,4 @@ urllib3==2.5.0
 vine==5.1.0
 wcwidth==0.2.13
 Werkzeug==3.1.3
+

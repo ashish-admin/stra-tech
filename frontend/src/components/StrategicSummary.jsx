@@ -1,116 +1,194 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Briefcase, MessageSquare, Megaphone, ClipboardCopy, AlertTriangle, Zap } from 'lucide-react';
+import wardData from '../wardData';
 
-const StrategicSummary = ({ ward, onAnalysisComplete }) => {
-    const [summaryData, setSummaryData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [copiedIndex, setCopiedIndex] = useState(null);
+/**
+ * Provides the on‑demand "Area Pulse" feature.  Users can enter a ward name
+ * and request a real‑time analysis.  The component displays the most
+ * recent briefing if one exists, otherwise it allows triggering a new
+ * analysis.  It polls the server until results are ready.
+ */
+const StrategicSummary = ({ selectedWard }) => {
+  // The currently selected ward.  Default to the selectedWard prop if
+  // provided, otherwise use a sensible default.  When selectedWard changes
+  // (e.g. via the map), this state is synchronised via the effect below.
+  const [ward, setWard] = useState(selectedWard && selectedWard !== 'All' ? selectedWard : 'Jubilee Hills');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [briefing, setBriefing] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [error, setError] = useState('');
 
-    // This effect clears the old summary when the ward changes
-    useEffect(() => {
-        setSummaryData(null);
-        setError(null);
-    }, [ward]);
+  // Whenever the selectedWard prop changes, update the local ward state
+  // unless the user has manually entered a different ward.  Ignore "All".
+  useEffect(() => {
+    if (selectedWard && selectedWard !== 'All' && selectedWard !== ward) {
+      setWard(selectedWard);
+    }
+  }, [selectedWard]);
 
-    const handleRunAnalysis = () => {
-        if (!ward) return;
-
-        setLoading(true);
-        setError(null);
-        setSummaryData(null);
-
-        axios.post('/api/v1/proactive-analysis', {
-            context_level: 'ward', // For now, we only support 'ward' level analysis
-            context_name: ward
-        })
-        .then(response => {
-            // We use the response from this analysis as our "summary"
-            setSummaryData(response.data);
-            // Notify the parent App component that new alert data is available
-            onAnalysisComplete(response.data);
-        })
-        .catch(err => {
-            console.error("Error running proactive analysis:", err);
-            setError(`Failed to generate analysis for ${ward}.`);
-        })
-        .finally(() => {
-            setLoading(false);
-        });
+  useEffect(() => {
+    const fetchLatestBriefing = async () => {
+      if (!ward) return;
+      setIsFetching(true);
+      setBriefing(null);
+      setStatusMessage('');
+      setError('');
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
+      try {
+        const res = await axios.get(`${apiUrl}/api/v1/alerts/${ward}`);
+        if (res.status === 200 && res.data && res.data.opportunities) {
+          const result = JSON.parse(res.data.opportunities);
+          if (result.briefing) {
+            setBriefing(result.briefing);
+          } else {
+            setStatusMessage(result.status || 'No recent briefing available. Generate one now.');
+          }
+        } else {
+          setStatusMessage('No briefing has been generated for this ward yet.');
+        }
+      } catch (err) {
+        setStatusMessage('No briefing has been generated for this ward yet.');
+      } finally {
+        setIsFetching(false);
+      }
     };
+    fetchLatestBriefing();
+  }, [ward]);
 
-    const handleCopy = (text, index) => {
-        navigator.clipboard.writeText(text);
-        setCopiedIndex(index);
-        setTimeout(() => setCopiedIndex(null), 2000);
-    };
+  const handleTriggerAnalysis = async () => {
+    setIsLoading(true);
+    setError('');
+    setBriefing(null);
+    setStatusMessage('');
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || '';
+    try {
+      await axios.post(`${apiUrl}/api/v1/trigger_analysis`, { ward });
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        if (attempts >= 20) {
+          setError('Analysis is taking longer than expected. Please try again.');
+          setIsLoading(false);
+          clearInterval(interval);
+          return;
+        }
+        try {
+          const res = await axios.get(`${apiUrl}/api/v1/alerts/${ward}`);
+          if (res.status === 200 && res.data && res.data.opportunities) {
+            const result = JSON.parse(res.data.opportunities);
+            if (result.briefing) {
+              setBriefing(result.briefing);
+            } else {
+              setStatusMessage(result.status);
+            }
+            setIsLoading(false);
+            clearInterval(interval);
+          }
+        } catch (pollError) {
+          if (pollError.response?.status !== 404) {
+            setError('An error occurred while fetching results.');
+            setIsLoading(false);
+            clearInterval(interval);
+          }
+        }
+        attempts++;
+      }, 3000);
+    } catch (err) {
+      setError('Failed to trigger analysis.');
+      setIsLoading(false);
+    }
+  };
 
-    const renderContent = () => {
-        if (loading) {
-            return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div></div>;
-        }
-        if (error) {
-            return <div className="flex flex-col items-center justify-center h-full text-red-500"><AlertTriangle className="h-12 w-12 mb-4" /><p>{error}</p></div>;
-        }
-        if (!ward) {
-            return <div className="flex flex-col items-center justify-center h-full text-gray-500"><Briefcase className="h-12 w-12 mb-4" /><p>Select a ward to run an analysis.</p></div>;
-        }
-        if (!summaryData) {
-            return (
-                <div className="flex flex-col items-center justify-center h-full">
-                    <h3 className="text-lg font-semibold text-gray-700">Analysis for {ward}</h3>
-                    <p className="text-gray-500 mb-4">Click the button to generate a new strategic deep-dive.</p>
-                    <button onClick={handleRunAnalysis} className="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center transition-colors">
-                        <Zap className="h-5 w-5 mr-2" />
-                        Run Deep-Dive Analysis
-                    </button>
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        <input
+          type="text"
+          value={ward}
+          onChange={(e) => setWard(e.target.value)}
+          placeholder="Enter Ward Name"
+          className="p-2 border rounded-md w-full md:w-1/3"
+        />
+        <button
+          onClick={handleTriggerAnalysis}
+          disabled={!ward || isLoading}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+        >
+          {isLoading ? 'Analyzing...' : 'Area Pulse'}
+        </button>
+      </div>
+      {error && <div className="text-red-600 font-semibold">{error}</div>}
+      {isLoading && <div>Briefing in progress...</div>}
+      {isFetching && !isLoading && <div>Loading latest briefing...</div>}
+      {!isFetching && statusMessage && !briefing && <div>{statusMessage}</div>}
+      {!isFetching && briefing && (
+        <div className="space-y-2 border rounded-md p-4 bg-gray-50">
+          <h3 className="text-xl font-bold">Candidate Briefing: {ward}</h3>
+          {/* Display voter and election information if available for this ward.
+              We normalise the ward name in the same way as the map so that
+              "Ward 8 Habsiguda" maps to "Habsiguda".  The wardData file
+              contains the number of registered electors in the 2020 GHMC
+              election, voter turnout percentage, votes cast and the
+              winning party. */}
+          {(() => {
+            // Normalise the ward to look up demographics: remove "Ward X " prefix
+            const normalised = ward.replace(/^\s*Ward\s*\d+\s+/i, '').trim();
+            const info = wardData[normalised];
+            if (info) {
+              return (
+                <div className="text-sm text-gray-700 space-y-1">
+                  <div><strong>Registered Electors:</strong> {info.voters.toLocaleString()}</div>
+                  <div><strong>Votes Cast (2020):</strong> {info.votesCast.toLocaleString()} ({info.turnout.toFixed(1)}% turnout)</div>
+                  <div><strong>2016/2020 Winner:</strong> {info.winnerParty || 'Unknown'}</div>
                 </div>
-            );
-        }
-
-        // Render the analysis results
-        return (
-            <div className="space-y-4 overflow-y-auto h-full pr-2">
-                <div>
-                    <h3 className="text-md font-semibold text-gray-800 flex items-center mb-2">
-                        <AlertTriangle className="h-5 w-5 mr-2 text-red-600" />
-                        Priority Alert
-                    </h3>
-                    <p className="text-sm text-gray-600 bg-red-50 p-3 rounded-md border border-red-200">
-                        {summaryData.priority_alert}
-                    </p>
-                </div>
-                <div>
-                    <h3 className="text-md font-semibold text-gray-800 flex items-center mb-2">
-                        <Megaphone className="h-5 w-5 mr-2 text-green-600" />
-                        Opportunities
-                    </h3>
-                    <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
-                        {summaryData.opportunities?.map((point, index) => <li key={index}>{point}</li>)}
-                    </ul>
-                </div>
-                 <div>
-                    <h3 className="text-md font-semibold text-gray-800 flex items-center mb-2">
-                        <ShieldAlert className="h-5 w-5 mr-2 text-yellow-600" />
-                        Threats
-                    </h3>
-                    <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
-                        {summaryData.threats?.map((point, index) => <li key={index}>{point}</li>)}
-                    </ul>
-                </div>
+              );
+            }
+            return null;
+          })()}
+          {briefing.key_issue && (
+            <div>
+              <strong>Key Issue:</strong> {briefing.key_issue}
             </div>
-        );
-    };
-
-    return (
-        <div className="bg-gray-50 p-4 shadow-inner rounded-lg h-full flex flex-col">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 border-b pb-2">On-Demand Analysis</h2>
-            <div className="flex-grow overflow-hidden">
-                {renderContent()}
+          )}
+          {briefing.our_angle && (
+            <div>
+              <strong>Our Angle (The Narrative):</strong> {briefing.our_angle}
             </div>
+          )}
+          {briefing.opposition_weakness && (
+            <div>
+              <strong>Opposition's Weakness:</strong> {briefing.opposition_weakness}
+            </div>
+          )}
+          <div>
+            <strong>Recommended Actions (Next 24h):</strong>
+            {/* Safely render the recommended actions list. Each item can be a string or an object. */}
+            {Array.isArray(briefing.recommended_actions) && (
+              <ul className="list-decimal list-outside ml-5 mt-2 space-y-2 text-blue-900">
+                {briefing.recommended_actions.map((item, index) => {
+                  // If the item is a plain string, render it directly
+                  if (typeof item === 'string') {
+                    return <li key={index}>{item}</li>;
+                  }
+                  // If it's an object, display the action and optional timeline
+                  if (item && typeof item === 'object') {
+                    return (
+                      <li key={index}>
+                        <strong>{item.action ?? 'Action'}</strong>
+                        {item.timeline ? ` – ${item.timeline}` : null}
+                      </li>
+                    );
+                  }
+                  // Otherwise render nothing
+                  return null;
+                })}
+              </ul>
+            )}
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default StrategicSummary;

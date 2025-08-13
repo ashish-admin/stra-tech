@@ -1,52 +1,92 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
 
-const CENTER = [17.44, 78.47];
-const ZOOM_LEVEL = 11;
+/**
+ * Displays the GHMC ward boundaries.  Hovering a ward highlights it and
+ * clicking a ward updates the selected city filter via the setFilters
+ * callback.  If no geoJsonData is available a loading message is
+ * displayed.
+ */
+const LocationMap = ({ geoJsonData, setFilters }) => {
+  /**
+   * Handler to update the dashboard filter when a ward is clicked.  Selecting
+   * a ward automatically updates the "Ward" dropdown and re‑filters the
+   * analytics and charts.  We shallow‑merge the existing filters and
+   * override the city value with the clicked ward name.
+   */
+  /**
+   * Normalise a ward name from the GeoJSON to match the city names used in
+   * the posts dataset.  Many ward names in the map include a prefix like
+   * "Ward 79 " or "Ward 8 ".  This function strips that numeric prefix so
+   * that clicking on "Ward 8 Habsiguda" will map to the city "Habsiguda".
+   */
+  const normalizeWardName = (name) => {
+    if (!name) return name;
+    // Match patterns like "Ward 79 Himayath Nagar" or "WARD 3 Kapra"
+    const match = name.match(/^\s*Ward\s*\d+\s+(.*)$/i);
+    if (match) {
+      return match[1].trim();
+    }
+    return name.trim();
+  };
 
-const emotionColorMap = { /* ... (colors remain the same) ... */ };
+  const handleWardClick = (wardName) => {
+    // Normalise the ward name before updating filters.  Use the
+    // normalised name as the city filter so that the sentiment and
+    // competitive analysis APIs return data when available.
+    const normalized = normalizeWardName(wardName);
+    setFilters((prev) => ({ ...prev, city: normalized }));
+  };
 
-// The map now receives the onWardClick function as a prop
-function LocationMap({ onWardClick }) {
-  const [geoData, setGeoData] = useState(null);
-  // ... (loading and error states remain the same)
-
-  useEffect(() => {
-    // ... (fetchGranularData logic remains the same)
-  }, []);
-
-  const getStyle = (feature) => { /* ... (style logic remains the same) ... */ };
-
-  // We add the onClick event to each ward layer
+  /**
+   * Define interactive behaviour for each ward polygon.  A tooltip with the
+   * ward name is permanently displayed in the centre.  Hovering a ward
+   * highlights it and clicking selects it.  If the GeoJSON has other
+   * property names (e.g. ward_name or name), those are used as fallbacks.
+   */
   const onEachFeature = (feature, layer) => {
-    if (feature.properties) {
-      const { name, emotion, count } = feature.properties;
-      const popupContent = `<b>Ward:</b> ${name}<br/><b>Emotion:</b> ${emotion}<br/><b>Count:</b> ${count}`;
-      layer.bindPopup(popupContent);
-
-      // Add the click handler
+    const wardName = feature.properties.ghmc_ward || feature.properties.ward_name || feature.properties.name;
+    if (wardName) {
+      layer.bindTooltip(wardName, { permanent: true, direction: 'center', className: 'ward-label' });
       layer.on({
-        click: () => {
-          onWardClick(name); // Call the function passed from Dashboard
-        }
+        click: () => handleWardClick(wardName),
+        mouseover: (e) => {
+          e.target.setStyle({ weight: 3, color: '#F59E0B', fillOpacity: 0.7 });
+          e.target.bringToFront();
+        },
+        mouseout: (e) => e.target.setStyle({ weight: 1, color: 'white', fillOpacity: 0.5 })
       });
     }
   };
 
-  if (loading) { /* ... (loading JSX remains the same) ... */ }
-  if (error) { /* ... (error JSX remains the same) ... */ }
-  if (!geoData) { /* ... (no data JSX remains the same) ... */ }
+  // Guard against missing GeoJSON data
+  if (!geoJsonData) return <div>Loading map...</div>;
+
+  // Base style for all ward polygons
+  const geoJsonStyle = {
+    fillColor: '#3182CE',
+    weight: 1,
+    opacity: 1,
+    color: 'white',
+    fillOpacity: 0.5
+  };
 
   return (
-    <div className="h-96 w-full rounded-lg overflow-hidden">
-      <MapContainer center={CENTER} zoom={ZOOM_LEVEL} scrollWheelZoom={true} style={{ height: "100%", width: "100%" }}>
-        <TileLayer attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <GeoJSON data={geoData} style={getStyle} onEachFeature={onEachFeature} />
-      </MapContainer>
-    </div>
+    <MapContainer
+      style={{ height: '700px', width: '100%' }}
+      // Define bounds around Hyderabad to keep the map centred
+      bounds={[ [17.20, 78.30], [17.60, 78.80] ]}
+      // Enable scroll wheel zooming so users can explore the map
+      scrollWheelZoom={true}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <GeoJSON data={geoJsonData} style={geoJsonStyle} onEachFeature={onEachFeature} />
+    </MapContainer>
   );
-}
+};
 
 export default LocationMap;

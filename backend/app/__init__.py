@@ -1,39 +1,31 @@
-import os
+# backend/app/__init__.py
+
 from flask import Flask
 from flask_cors import CORS
-from dotenv import load_dotenv
-from .extensions import db, migrate, login_manager
+from .extensions import db, migrate, login_manager, celery
+from .models import User
+from .celery_utils import celery_init_app
 
-# Load environment variables from .env file
-load_dotenv()
+def create_app(config_class='config.Config'):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
 
-def create_app():
-    app = Flask(__name__, instance_relative_config=True)
-    
-    # --- CONFIGURATIONS ARE LOADED FROM ENVIRONMENT ---
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-    
-    CORS(app, supports_credentials=True, resources={
-        r"/api/*": {
-            "origins": ["https://lokdarpan.netlify.app", "http://localhost:5173"]
-        }
-    })
-    
-    # Initialize extensions with the app
+    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
+    CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"], supports_credentials=True)
     login_manager.init_app(app)
+    
+    # Initialize Celery with the app
+    celery_init_app(app, celery)
 
-    # Import and register blueprints, models, etc. inside the app context
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
     with app.app_context():
-        from . import models
-        
-        # --- THIS IS THE CORRECTED IMPORT ---
-        # It now correctly imports the blueprint from your routes.py file
+        # Import and register blueprints
         from .routes import main_bp
-        app.register_blueprint(main_bp, url_prefix='/api/v1')
-        # ------------------------------------
+        app.register_blueprint(main_bp)
 
         return app

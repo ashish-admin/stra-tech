@@ -1,95 +1,156 @@
+import React from 'react';
 import EmotionChart from './EmotionChart';
 import LocationMap from './LocationMap';
 import DataTable from './DataTable';
 import StrategicSummary from './StrategicSummary';
-import { useState } from 'react';
+import CompetitiveAnalysis from './CompetitiveAnalysis';
+import TopicAnalysis from './TopicAnalysis';
+import TimeSeriesChart from './TimeSeriesChart';
+import CompetitorBenchmark from './CompetitorBenchmark';
+import CompetitorTrendChart from './CompetitorTrendChart';
+import PredictionSummary from './PredictionSummary';
 
-function Dashboard({ data, allData, filters, setFilters, searchTerm, setSearchTerm, handleChartClick }) {
-  
-  const [selectedWard, setSelectedWard] = useState(null);
-
-  const emotions = ['All', ...new Set(allData.map(item => item.emotion))];
-  const cities = ['All', ...new Set(allData.map(item => item.city))];
+/**
+ * Presents the core dashboard layout, including filter controls
+ * (emotion, ward, keyword), the map, the Area Pulse panel,
+ * the sentiment overview pie chart, competitive analysis bar chart,
+ * and the actionable intelligence feed.
+ */
+function Dashboard({
+  filteredData,
+  allData,
+  geoJsonData,
+  competitiveData,
+  filters,
+  setFilters,
+  searchTerm,
+  setSearchTerm,
+  handleChartClick
+}) {
+  const emotions = ['All', ...new Set(allData.map((item) => item.emotion))];
+  const cities = ['All', ...new Set(allData.map((item) => item.city))];
 
   const handleFilterChange = (e) => {
-    setFilters(prevFilters => ({
+    setFilters((prevFilters) => ({
       ...prevFilters,
       [e.target.name]: e.target.value
     }));
   };
 
-  const onChartClick = (emotion) => {
-    handleChartClick(emotion);
-  };
-
   return (
     <div className="space-y-6">
       {/* Filter Controls Section */}
-      <div className="bg-white p-4 rounded-lg shadow-md">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-end">
-          <div>
-            <label htmlFor="emotion" className="block text-sm font-medium text-gray-700">Emotion</label>
-            <select
-              id="emotion"
-              name="emotion"
-              value={filters.emotion}
-              onChange={handleFilterChange}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            >
-              {emotions.map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700">City</label>
-            <select
-              id="city"
-              name="city"
-              value={filters.city}
-              onChange={handleFilterChange}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-            >
-              {cities.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="sm:col-span-2 md:col-span-1">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700">Keyword Search</label>
-            <input
-              type="text"
-              id="search"
-              name="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="e.g., roads, festival"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Emotion</label>
+          <select
+            name="emotion"
+            value={filters.emotion}
+            onChange={handleFilterChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          >
+            {emotions.map((e, idx) => (
+              <option key={idx} value={e}>{e}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Ward</label>
+          <select
+            name="city"
+            value={filters.city}
+            onChange={handleFilterChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          >
+            {cities.map((c, idx) => (
+              <option key={idx} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Keyword Search</label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="e.g., roads, festival"
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
         </div>
       </div>
 
       {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Strategic Briefing</h3>
-          {/* --- THIS IS THE CORRECTED LINE --- */}
-          {/* We are now passing the filters and searchTerm to the component */}
-          <StrategicSummary filters={filters} searchTerm={searchTerm} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Geospatial Intelligence */}
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Geospatial Intelligence</h2>
+          <LocationMap geoJsonData={geoJsonData} setFilters={setFilters} />
         </div>
+        {/* On‑Demand Strategic Summary */}
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">On‑Demand Strategic Summary</h2>
+          {/* Pass the selected ward from filters into the StrategicSummary.
+              When the ward changes via the map or dropdown, the summary will
+              automatically load the latest briefing for that ward. */}
+          <StrategicSummary selectedWard={filters.city} />
+        </div>
+      </div>
 
-        <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Granular Emotion Map (GHMC Wards)</h3>
-          <LocationMap onWardClick={setSelectedWard} />
+      {/* Sentiment Overview and Competitive Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Sentiment Overview</h2>
+          <div style={{ height: '300px' }}>
+            <EmotionChart data={filteredData} handleChartClick={handleChartClick} />
+          </div>
         </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Overall Emotion Distribution</h3>
-          <EmotionChart data={data} onChartClick={onChartClick} />
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Competitive Analysis</h2>
+          <div style={{ height: '300px' }}>
+            <CompetitiveAnalysis analysisData={competitiveData} handleCompetitorClick={(label) => setFilters((prev) => ({ ...prev, competitor: label }))} />
+          </div>
         </div>
+      </div>
 
-        <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-md">
-           <h3 className="text-lg font-semibold text-gray-800 mb-4">Data View ({data.length} results)</h3>
-          <DataTable data={data} />
+      {/* Sentiment Trend and Competitor Benchmark */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Sentiment Trend</h2>
+          <TimeSeriesChart data={filteredData} />
         </div>
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Competitor Benchmark</h2>
+          <CompetitorBenchmark analysisData={competitiveData} />
+        </div>
+      </div>
+
+      {/* Competitor Trend and Prediction Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Share of Voice Trend</h2>
+          {/* Show daily post counts per competitor.  If there is no data for the
+              selected ward, the component gracefully informs the user. */}
+          <CompetitorTrendChart data={filteredData} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Predicted Win Probabilities</h2>
+          {/* Provide a simple prediction summary based on sentiment ratios
+              and share of voice.  The selected ward is passed so the
+              component can cross‑reference the historical election results
+              from the wardData file. */}
+          <PredictionSummary analysisData={competitiveData} selectedWard={filters.city} />
+        </div>
+      </div>
+
+      {/* Topic Analysis (Trending Keywords) */}
+      <div className="grid grid-cols-1">
+        <TopicAnalysis data={filteredData} numTopics={5} />
+      </div>
+
+      {/* Actionable Intelligence Feed */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Actionable Intelligence Feed</h2>
+        <DataTable data={filteredData} />
       </div>
     </div>
   );

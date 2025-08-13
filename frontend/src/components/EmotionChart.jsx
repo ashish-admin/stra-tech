@@ -1,52 +1,64 @@
-import { Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, Title } from 'chart.js';
+import React from 'react';
+import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import emotionColors from '../theme';
 
-ChartJS.register(ArcElement, Tooltip, Legend, Title);
+// Register required chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
-function EmotionChart({ data }) {
+/**
+ * Renders a pie chart summarising the distribution of emotions.
+ * The colours for each emotion are pulled from a central theme file,
+ * ensuring consistency across the application.  An optional
+ * `handleChartClick` callback can be supplied to update filters when
+ * a segment is clicked.
+ */
+const EmotionChart = ({ data, handleChartClick }) => {
+  // If there is no data to display for the selected ward, show a friendly
+  // message instead of an infinite loading spinner.  This avoids confusing
+  // the user when a ward has no posts.
+  if (!data || data.length === 0) {
+    return <div>No sentiment data available for the selected ward.</div>;
+  }
+
+  // Compute counts per emotion
   const emotionCounts = data.reduce((acc, item) => {
     acc[item.emotion] = (acc[item.emotion] || 0) + 1;
     return acc;
   }, {});
 
+  const labels = Object.keys(emotionCounts);
+  const counts = Object.values(emotionCounts);
+
   const chartData = {
-    labels: Object.keys(emotionCounts),
+    labels,
     datasets: [
       {
         label: '# of Posts',
-        data: Object.values(emotionCounts),
-        backgroundColor: [
-          'rgba(26, 188, 156, 0.7)', // Hope (Teal)
-          'rgba(231, 76, 60, 0.7)',  // Anger (Red)
-          'rgba(52, 152, 219, 0.7)', // Joy (Blue)
-          'rgba(241, 196, 15, 0.7)', // Anxiety (Yellow)
-          'rgba(155, 89, 182, 0.7)', // Sadness (Purple)
-          'rgba(149, 165, 166, 0.7)' // Neutral (Grey)
-        ],
-        borderColor: [
-          'rgba(22, 160, 133, 1)',
-          'rgba(192, 57, 43, 1)',
-          'rgba(41, 128, 185, 1)',
-          'rgba(243, 156, 18, 1)',
-          'rgba(142, 68, 173, 1)',
-          'rgba(127, 140, 141, 1)'
-        ],
-        borderWidth: 1,
-      },
-    ],
+        data: counts,
+        backgroundColor: labels.map(label => emotionColors[label] || emotionColors.Neutral),
+        borderWidth: 1
+      }
+    ]
   };
 
   const options = {
-    responsive: true, // This makes the chart responsive
-    maintainAspectRatio: true, // Maintains aspect ratio while resizing
-    plugins: {
-      legend: {
-        position: 'top',
-      },
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const chartElement = elements[0];
+        const label = chartData.labels[chartElement.index];
+        if (handleChartClick) handleChartClick(label);
+      }
     },
+    responsive: true,
+    maintainAspectRatio: false
   };
 
-  return <Doughnut data={chartData} options={options} />;
-}
+  return (
+    <div style={{ height: '100%', position: 'relative' }}>
+      <Pie data={chartData} options={options} />
+    </div>
+  );
+};
 
 export default EmotionChart;
