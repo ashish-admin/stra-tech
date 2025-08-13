@@ -7,6 +7,8 @@ import CompetitiveAnalysis from './CompetitiveAnalysis';
 import TopicAnalysis from './TopicAnalysis';
 import TimeSeriesChart from './TimeSeriesChart';
 import CompetitorBenchmark from './CompetitorBenchmark';
+import CompetitorTrendChart from './CompetitorTrendChart';
+import PredictionSummary from './PredictionSummary';
 
 /**
  * Presents the core dashboard layout, including filter controls
@@ -119,6 +121,24 @@ function Dashboard({
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">Competitor Benchmark</h2>
           <CompetitorBenchmark analysisData={competitiveData} />
+        </div>
+      </div>
+
+      {/* Competitor Trend and Prediction Summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Share of Voice Trend</h2>
+          {/* Show daily post counts per competitor.  If there is no data for the
+              selected ward, the component gracefully informs the user. */}
+          <CompetitorTrendChart data={filteredData} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Predicted Win Probabilities</h2>
+          {/* Provide a simple prediction summary based on sentiment ratios
+              and share of voice.  The selected ward is passed so the
+              component can cross‑reference the historical election results
+              from the wardData file. */}
+          <PredictionSummary analysisData={competitiveData} selectedWard={filters.city} />
         </div>
       </div>
 

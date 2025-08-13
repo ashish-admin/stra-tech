@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import wardDemographics from '../wardDemographics';
+import wardData from '../wardData';
 
 /**
  * Provides the on‑demand "Area Pulse" feature.  Users can enter a ward name
@@ -124,17 +124,22 @@ const StrategicSummary = ({ selectedWard }) => {
       {!isFetching && briefing && (
         <div className="space-y-2 border rounded-md p-4 bg-gray-50">
           <h3 className="text-xl font-bold">Candidate Briefing: {ward}</h3>
-          {/* Display demographic/voter information if available for this ward.  We
-              normalise the ward name in the same way as the map so that
-              "Ward 8 Habsiguda" maps to "Habsiguda". */}
+          {/* Display voter and election information if available for this ward.
+              We normalise the ward name in the same way as the map so that
+              "Ward 8 Habsiguda" maps to "Habsiguda".  The wardData file
+              contains the number of registered electors in the 2020 GHMC
+              election, voter turnout percentage, votes cast and the
+              winning party. */}
           {(() => {
             // Normalise the ward to look up demographics: remove "Ward X " prefix
             const normalised = ward.replace(/^\s*Ward\s*\d+\s+/i, '').trim();
-            const info = wardDemographics[normalised];
+            const info = wardData[normalised];
             if (info) {
               return (
-                <div className="text-sm text-gray-700">
-                  <strong>Registered Voters (est.):</strong> {info.voters.toLocaleString()} &ndash; {info.description}
+                <div className="text-sm text-gray-700 space-y-1">
+                  <div><strong>Registered Electors:</strong> {info.voters.toLocaleString()}</div>
+                  <div><strong>Votes Cast (2020):</strong> {info.votesCast.toLocaleString()} ({info.turnout.toFixed(1)}% turnout)</div>
+                  <div><strong>2016/2020 Winner:</strong> {info.winnerParty || 'Unknown'}</div>
                 </div>
               );
             }

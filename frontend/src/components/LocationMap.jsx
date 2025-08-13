@@ -74,7 +74,7 @@ const LocationMap = ({ geoJsonData, setFilters }) => {
 
   return (
     <MapContainer
-      style={{ height: '400px', width: '100%' }}
+      style={{ height: '700px', width: '100%' }}
       // Define bounds around Hyderabad to keep the map centred
       bounds={[ [17.20, 78.30], [17.60, 78.80] ]}
       // Enable scroll wheel zooming so users can explore the map
