@@ -1,60 +1,61 @@
-// frontend/src/components/EmotionChart.jsx
-
 import React from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import emotionColors from '../theme';
 
+// Register required chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+/**
+ * Renders a pie chart summarising the distribution of emotions.
+ * The colours for each emotion are pulled from a central theme file,
+ * ensuring consistency across the application.  An optional
+ * `handleChartClick` callback can be supplied to update filters when
+ * a segment is clicked.
+ */
 const EmotionChart = ({ data, handleChartClick }) => {
-    if (!data || data.length === 0) {
-        return <div className="text-center text-gray-500">Loading chart data...</div>;
-    }
+  if (!data || data.length === 0) {
+    return <div>Loading chart data...</div>;
+  }
 
-    const emotionCounts = data.reduce((acc, item) => {
-        acc[item.emotion] = (acc[item.emotion] || 0) + 1;
-        return acc;
-    }, {});
+  // Compute counts per emotion
+  const emotionCounts = data.reduce((acc, item) => {
+    acc[item.emotion] = (acc[item.emotion] || 0) + 1;
+    return acc;
+  }, {});
 
-    const chartData = {
-        labels: Object.keys(emotionCounts),
-        datasets: [
-            {
-                label: '# of Posts',
-                data: Object.values(emotionCounts),
-                // FIX: New, more insightful color palette
-                backgroundColor: [
-                    '#10B981', // Green: Joy/Positivity
-                    '#EF4444', // Red: Anger/Frustration
-                    '#3B82F6', // Blue: Sadness
-                    '#8B5CF6', // Purple: Fear
-                    '#F59E0B', // Amber: Surprise
-                    '#6B7280', // Gray: Neutral
-                ],
-                borderWidth: 1,
-            },
-        ],
-    };
+  const labels = Object.keys(emotionCounts);
+  const counts = Object.values(emotionCounts);
 
-    const options = {
-        onClick: (event, elements) => {
-            if (elements.length > 0) {
-                const chartElement = elements[0];
-                const label = chartData.labels[chartElement.index];
-                if(handleChartClick) {
-                    handleChartClick(label);
-                }
-            }
-        },
-        responsive: true,
-        maintainAspectRatio: false,
-    };
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: '# of Posts',
+        data: counts,
+        backgroundColor: labels.map(label => emotionColors[label] || emotionColors.Neutral),
+        borderWidth: 1
+      }
+    ]
+  };
 
-    return (
-        <div style={{ height: '300px' }}>
-            <Pie data={chartData} options={options} />
-        </div>
-    );
+  const options = {
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const chartElement = elements[0];
+        const label = chartData.labels[chartElement.index];
+        if (handleChartClick) handleChartClick(label);
+      }
+    },
+    responsive: true,
+    maintainAspectRatio: false
+  };
+
+  return (
+    <div style={{ height: '100%', position: 'relative' }}>
+      <Pie data={chartData} options={options} />
+    </div>
+  );
 };
 
 export default EmotionChart;
