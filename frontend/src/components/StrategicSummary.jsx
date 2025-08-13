@@ -113,15 +113,9 @@ const StrategicSummary = () => {
                         </div>
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <h4 className="font-semibold text-blue-800">Recommended Actions (Next 24h)</h4>
-                            {/* --- THE FIX IS HERE --- */}
-                            {/* We now safely check if the data is an array and then render the specific properties of each object. */}
                             {Array.isArray(briefing.recommended_actions) && (
                                 <ul className="list-decimal list-outside ml-5 mt-2 space-y-2 text-blue-900">
-                                    {briefing.recommended_actions.map((item, index) => (
-                                        <li key={index}>
-                                            <span className="font-semibold">{item.action}:</span> {item.details}
-                                        </li>
-                                    ))}
+                                    {briefing.recommended_actions.map((action, index) => <li key={index}>{action}</li>)}
                                 </ul>
                             )}
                         </div>

@@ -52,7 +52,7 @@ def get_geojson():
 @main_bp.route('/competitive-analysis', methods=['GET'])
 @login_required
 def competitive_analysis():
-    """Calculates the sentiment breakdown per author, optionally filtered by city/ward."""
+    """Calculates the sentiment breakdown per author, now dynamically filtered by city/ward."""
     try:
         query = db.session.query(
             Author.name,
