@@ -1,105 +1,81 @@
-import React from 'react';
-import wardData from '../wardData';
-import { partyColors } from '../theme';
+import React, { useMemo } from "react";
 
-/**
- * Computes simple win probability estimates for each competitor (party)
- * based on sentiment data.  The probability is proportional to the
- * product of the competitor's positive sentiment ratio and their share
- * of voice (total posts) for the selected ward.  Because we lack
- * sophisticated polling or vote history, this heuristic offers a rough
- * indicator of momentum.  The component also displays the actual
- * winning party from the 2020 GHMC election for comparison.  If
- * analysisData is empty, nothing is rendered.
- */
-const PredictionSummary = ({ analysisData, selectedWard }) => {
-  if (!analysisData || Object.keys(analysisData).length === 0) {
-    return null;
-  }
+const POSITIVE = new Set(["joy", "hopeful", "admiration", "pride", "positive", "support", "confidence"]);
+const NEGATIVE = new Set(["anger", "frustration", "fear", "sadness", "disgust", "negative"]);
 
-  // Define positive and negative emotion sets for scoring
-  const positiveEmotions = [
-    'Joy',
-    'Positive',
-    'Hope',
-    'Pride/Positive affirmation',
-    'Hopeful/Optimistic',
-    'Confidence/Assurance',
-    'Pride/Approval'
-  ];
-  const negativeEmotions = [
-    'Anger',
-    'Frustration',
-    'Sadness',
-    'Fear',
-    'Disappointment',
-    'Confusion',
-    'Defensiveness'
-  ];
+function partyFromSource(p) {
+  const src = (p.source || p.author || p.publisher || "").toLowerCase();
+  if (/bjp|bharatiya/.test(src)) return "BJP";
+  if (/brs|trs\b|telangana rashtra/.test(src)) return "BRS";
+  if (/congress|inc\b|telangana congress/.test(src)) return "INC";
+  if (/aimim/.test(src)) return "AIMIM";
+  return "OTHER";
+}
+function emotionOf(p) {
+  return (p.emotion || p.detected_emotion || p.emotion_label || "").toLowerCase();
+}
 
-  // Compute scores for each competitor
-  const scores = {};
-  let totalScore = 0;
-  Object.entries(analysisData).forEach(([party, counts]) => {
-    let pos = 0;
-    let neg = 0;
-    let total = 0;
-    Object.entries(counts).forEach(([emotion, count]) => {
-      total += count;
-      if (positiveEmotions.some((p) => emotion.toLowerCase().includes(p.toLowerCase()))) {
-        pos += count;
-      } else if (negativeEmotions.some((n) => emotion.toLowerCase().includes(n.toLowerCase()))) {
-        neg += count;
-      }
+export default function PredictionSummary({ posts = [], ward = "All" }) {
+  const rows = useMemo(() => {
+    const by = {};
+    posts.forEach((p) => {
+      const party = partyFromSource(p);
+      by[party] = by[party] || { pos: 0, neg: 0, total: 0 };
+      by[party].total += 1;
+      const e = emotionOf(p);
+      if (POSITIVE.has(e)) by[party].pos += 1;
+      else if (NEGATIVE.has(e)) by[party].neg += 1;
     });
-    const ratio = total > 0 ? pos / (pos + neg) : 0;
-    const score = ratio * total;
-    scores[party] = { ratio, total, score };
-    totalScore += score;
-  });
 
-  // Derive probabilities (percentages) from scores
-  const probabilities = Object.keys(scores).map((party) => {
-    const { score } = scores[party];
-    const prob = totalScore > 0 ? (score / totalScore) * 100 : 0;
-    return { party, prob };
-  });
-  // Sort descending by probability
-  probabilities.sort((a, b) => b.prob - a.prob);
+    // simple score: pos*2 - neg, normalize to [0,1]
+    const scored = Object.entries(by).map(([party, v]) => {
+      const raw = v.pos * 2 - v.neg;
+      return { party, ...v, raw };
+    });
+    if (!scored.length) return [];
 
-  // Look up the actual winner from 2020 for context
-  const wardName = selectedWard && selectedWard.toLowerCase() !== 'all'
-    ? selectedWard.replace(/^\s*Ward\s*\d+\s+/i, '').trim()
-    : null;
-  const actualInfo = wardName && wardData[wardName];
-  const actualWinner = actualInfo ? actualInfo.winnerParty : null;
+    const min = Math.min(...scored.map((r) => r.raw));
+    const max = Math.max(...scored.map((r) => r.raw));
+    return scored.map((r) => ({
+      ...r,
+      prob: max === min ? 0.5 : (r.raw - min) / (max - min),
+    })).sort((a, b) => b.prob - a.prob);
+  }, [posts]);
 
+  if (!rows.length) return <div className="text-sm text-gray-500">Insufficient signals to estimate outlook.</div>;
+
+  const leader = rows[0];
   return (
-    <div className="space-y-2 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-      <h4 className="font-semibold text-green-800">Predicted Win Probabilities</h4>
-      <ul className="space-y-1">
-        {probabilities.map(({ party, prob }) => (
-          <li key={party} className="flex justify-between items-center">
-            <span className="flex items-center">
-              {/* Colour indicator */}
-              <span
-                className="inline-block w-3 h-3 rounded-full mr-2"
-                style={{ backgroundColor: partyColors[party] || '#6B7280' }}
-              ></span>
-              {party}
-              {actualWinner && actualWinner.toLowerCase() === party.toLowerCase() && (
-                <span className="text-xs bg-blue-100 text-blue-700 ml-2 px-1 rounded">2020 Winner</span>
-              )}
-            </span>
-            <span>{prob.toFixed(1)}%</span>
-          </li>
-        ))}
-      </ul>
-      {actualWinner && (
-        <div className="text-xs text-gray-600 mt-2">Actual winner in 2020: {actualWinner}</div>
-      )}
+    <div className="text-sm">
+      <div className="mb-2">
+        If the election were held today in <span className="font-semibold">{ward}</span>, the model
+        indicates a leading chance for <span className="font-semibold">{leader.party}</span>.
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="text-left text-gray-500">
+            <tr>
+              <th className="py-1">Party</th>
+              <th className="py-1">Signals</th>
+              <th className="py-1">Score</th>
+              <th className="py-1">Win Prob.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.party} className="border-t">
+                <td className="py-1">{r.party}</td>
+                <td className="py-1">{r.total}</td>
+                <td className="py-1">{(r.pos * 2 - r.neg)}</td>
+                <td className="py-1">{Math.round(r.prob * 100)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="text-xs text-gray-500 mt-2">
+        *Heuristic model using sentiment-derived signals. Calibrate with ward voters & historic outcomes for stronger accuracy.
+      </div>
     </div>
   );
-};
-
-export default PredictionSummary;
+}

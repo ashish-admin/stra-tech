@@ -1,102 +1,109 @@
-import React from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-import emotionColors from '../theme';
+import React, { useMemo } from "react";
 
-// Register Chart.js components for a line chart.  Without registering
-// these elements the chart will not render.  We use a line chart
-// because it clearly shows sentiment trends over time.
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-/**
- * Displays a multi‑line chart showing the trend of post counts by
- * emotion over time.  It accepts an array of posts (filtered by
- * city/emotion/searchTerm in the parent) and groups them by date
- * (YYYY‑MM‑DD) and emotion.  Each line represents an emotion and
- * uses the corresponding colour from the central theme.  If no
- * posts exist for the current filter, a friendly message is
- * displayed instead of a blank or infinite loading state.
- */
-const TimeSeriesChart = ({ data }) => {
-  // Guard against undefined or empty data
-  if (!Array.isArray(data) || data.length === 0) {
-    return <div>No historical trend data available for the selected ward.</div>;
+/** Flexible date parsing for mixed datasets (ISO, epoch, DD-MM-YYYY, DD/MM/YYYY, etc.) */
+function parseFlexibleDate(raw) {
+  if (!raw) return null;
+  // Numbers: epoch seconds/millis
+  if (typeof raw === "number") {
+    const d = new Date(raw < 1e12 ? raw * 1000 : raw);
+    return isNaN(+d) ? null : d;
   }
 
-  // Aggregate counts of posts by date and emotion
-  const dateSet = new Set();
-  const series = {};
-  data.forEach((post) => {
-    // Extract the date part from the created_at timestamp (YYYY‑MM‑DD)
-    if (!post.created_at || !post.emotion) return;
-    const date = post.created_at.slice(0, 10);
-    dateSet.add(date);
-    const emotion = post.emotion;
-    if (!series[emotion]) series[emotion] = {};
-    series[emotion][date] = (series[emotion][date] || 0) + 1;
-  });
+  const s = String(raw).trim();
 
-  // Sort the dates chronologically.  Sorting ensures the x‑axis is
-  // ordered correctly rather than by insertion order.
-  const dates = Array.from(dateSet).sort();
+  // ISO or "YYYY-MM-DD HH:mm:ss" — Date() handles these well
+  if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(s)) {
+    const d = new Date(s.replace(" ", "T"));
+    return isNaN(+d) ? null : d;
+  }
 
-  // Build datasets for each emotion, mapping dates to counts.  If an
-  // emotion has no posts on a particular date, we insert 0 so the
-  // line drops to the baseline rather than skipping that date.
-  const datasets = Object.keys(series).map((emotion) => ({
-    label: emotion,
-    data: dates.map((d) => series[emotion][d] || 0),
-    borderColor: emotionColors[emotion] || emotionColors.Neutral,
-    backgroundColor: 'rgba(0,0,0,0)',
-    tension: 0.3
-  }));
+  // DD-MM-YYYY or DD/MM/YYYY
+  const m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    const [_, dd, mm, yyyy, HH = "00", MM = "00", SS = "00"] = m;
+    const d = new Date(`${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}`);
+    return isNaN(+d) ? null : d;
+  }
 
-  const chartData = {
-    labels: dates,
-    datasets
-  };
+  // Fallback try
+  const d = new Date(s);
+  return isNaN(+d) ? null : d;
+}
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top' },
-      title: {
-        display: true,
-        text: 'Sentiment Trend Over Time'
+function getDateFromPost(p) {
+  const raw =
+    p.created_at ||
+    p.createdAt ||
+    p.timestamp ||
+    p.date ||
+    p.published_at ||
+    p.publishedAt ||
+    p.time ||
+    p.datetime ||
+    p.post_date ||
+    p.epaper_date ||
+    p.date_str;
+  return parseFlexibleDate(raw);
+}
+
+const fmtDay = (d) => d.toISOString().slice(0, 10);
+
+export default function TimeSeriesChart({ posts = [] }) {
+  const { points, synthetic, reason } = useMemo(() => {
+    const map = new Map();
+    let dated = 0;
+
+    posts.forEach((p, idx) => {
+      const d = getDateFromPost(p);
+      if (d) {
+        dated++;
+        const k = fmtDay(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        map.set(k, (map.get(k) || 0) + 1);
       }
-    },
-    scales: {
-      x: {
-        title: {
-          display: true,
-          text: 'Date'
-        }
-      },
-      y: {
-        title: {
-          display: true,
-          text: 'Number of Posts'
-        },
-        beginAtZero: true
-      }
+    });
+
+    if (dated > 0) {
+      const arr = Array.from(map.entries())
+        .map(([k, v]) => ({ date: k, value: v }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      return { points: arr, synthetic: false, reason: "" };
     }
-  };
+
+    // Soft fallback: build 7 synthetic buckets to still show momentum
+    const N = Math.min(posts.length, 140);
+    if (!N) return { points: [], synthetic: false, reason: "" };
+
+    const B = 7;
+    const per = Math.max(1, Math.floor(N / B));
+    const arr = Array.from({ length: B }, (_, i) => ({
+      date: `Day ${i + 1}`,
+      value: posts.slice(i * per, (i + 1) * per).length,
+    }));
+    return {
+      points: arr,
+      synthetic: true,
+      reason: "Posts lack usable timestamps; showing relative trend by ingestion order.",
+    };
+  }, [posts]);
+
+  if (!points.length) {
+    return <div className="text-sm text-gray-500">No historical trend data available for the selected ward.</div>;
+  }
+
+  const max = Math.max(...points.map((p) => p.value));
+  const w = 360, h = 80, pad = 6;
+  const xs = points.map((_, i) => pad + (i * (w - pad * 2)) / (points.length - 1 || 1));
+  const ys = points.map((p) => h - pad - (max ? (p.value / max) * (h - pad * 2) : 0));
+  const path = xs.map((x, i) => `${i ? "L" : "M"}${x},${ys[i]}`).join(" ");
 
   return (
-    <div style={{ height: '300px' }}>
-      <Line data={chartData} options={options} />
+    <div>
+      <svg width={w} height={h} aria-label="time series">
+        <path d={path} fill="none" stroke="#3b82f6" strokeWidth="2" />
+      </svg>
+      <div className="text-xs text-gray-500 mt-1">
+        {synthetic ? reason : `Last ${points.length} dated points • peak ${max}`}
+      </div>
     </div>
   );
-};
-
-export default TimeSeriesChart;
+}

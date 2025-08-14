@@ -1,120 +1,64 @@
-import React from 'react';
-import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-import { partyColors } from '../theme';
+import React, { useMemo } from "react";
 
-// Register Chart.js bar components.  Without these registrations the
-// benchmark chart will not render.
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+function partyFromSource(p) {
+  const src = (p.source || p.author || p.publisher || "").toLowerCase();
+  if (/bjp|bharatiya/.test(src)) return "BJP";
+  if (/brs|trs\b|telangana rashtra/.test(src)) return "BRS";
+  if (/congress|inc\b|telangana congress/.test(src)) return "INC";
+  if (/aimim/.test(src)) return "AIMIM";
+  return "OTHER";
+}
+const POSITIVE = new Set(["joy", "hopeful", "admiration", "pride", "positive", "support", "confidence"]);
+const NEGATIVE = new Set(["anger", "frustration", "fear", "sadness", "disgust", "negative"]);
+function emotionOf(p) {
+  return (p.emotion || p.detected_emotion || p.emotion_label || "").toLowerCase();
+}
 
-/**
- * Renders a horizontal bar chart indicating the proportion of positive
- * sentiment for each competitor.  Positive sentiment is defined as
- * the sum of counts for Joy, Positive, Hope and related emotions.
- * Negative sentiment includes Anger, Frustration, Sadness, Fear and
- * related categories.  The chart displays the percentage of
- * positive posts out of all sentiment‑bearing posts for each
- * competitor.  If no competitive data exists for the selected city,
- * the component returns null.
- */
-const CompetitorBenchmark = ({ analysisData }) => {
-  if (!analysisData || Object.keys(analysisData).length === 0) {
-    return null;
-  }
-
-  // Define which emotion labels count as positive or negative.  This
-  // simple classification can be refined as more granular sentiment
-  // categories are introduced.
-  const positiveEmotions = [
-    'Joy',
-    'Positive',
-    'Hope',
-    'Pride/Positive affirmation',
-    'Hopeful/Optimistic',
-    'Confidence/Assurance',
-    'Pride/Approval'
-  ];
-  const negativeEmotions = [
-    'Anger',
-    'Frustration',
-    'Sadness',
-    'Fear',
-    'Disappointment',
-    'Confusion',
-    'Defensiveness'
-  ];
-
-  const labels = Object.keys(analysisData);
-  // Compute positive ratio for each competitor
-  const ratios = labels.map((label) => {
-    const counts = analysisData[label];
-    let pos = 0;
-    let neg = 0;
-    Object.entries(counts).forEach(([emotion, count]) => {
-      // Check if the emotion name contains any positive category
-      if (positiveEmotions.some((posLabel) => emotion.toLowerCase().includes(posLabel.toLowerCase()))) {
-        pos += count;
-      } else if (negativeEmotions.some((negLabel) => emotion.toLowerCase().includes(negLabel.toLowerCase()))) {
-        neg += count;
-      }
+export default function CompetitorBenchmark({ posts = [] }) {
+  const rows = useMemo(() => {
+    const by = {};
+    posts.forEach((p) => {
+      const party = partyFromSource(p);
+      by[party] = by[party] || { total: 0, pos: 0, neg: 0 };
+      by[party].total += 1;
+      const e = emotionOf(p);
+      if (POSITIVE.has(e)) by[party].pos += 1;
+      else if (NEGATIVE.has(e)) by[party].neg += 1;
     });
-    const total = pos + neg;
-    const ratio = total > 0 ? (pos / total) * 100 : 0;
-    return { label, ratio };
-  });
+    return Object.entries(by)
+      .map(([party, v]) => {
+        const engagement = v.total ? (v.pos / (v.neg || 1)) : 0;
+        return { party, ...v, engagement };
+      })
+      .sort((a, b) => b.engagement - a.engagement);
+  }, [posts]);
 
-  const chartData = {
-    labels: ratios.map((r) => r.label),
-    datasets: [
-      {
-        label: 'Positive Sentiment (%)',
-        data: ratios.map((r) => r.ratio),
-        backgroundColor: ratios.map((r) => partyColors[r.label] || '#6366F1')
-      }
-    ]
-  };
-
-  const options = {
-    indexAxis: 'y',
-    scales: {
-      x: {
-        min: 0,
-        max: 100,
-        title: {
-          display: true,
-          text: 'Positive Sentiment (%)'
-        }
-      }
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => `${ctx.parsed.x.toFixed(1)}% positive`
-        }
-      },
-      title: {
-        display: true,
-        text: 'Competitor Benchmark (Positive Sentiment Ratio)'
-      }
-    },
-    responsive: true,
-    maintainAspectRatio: false
-  };
+  if (!rows.length) return <div className="text-sm text-gray-500">No competitive benchmark available for the selected ward.</div>;
 
   return (
-    <div style={{ height: '250px' }}>
-      <Bar data={chartData} options={options} />
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="text-left text-gray-500">
+          <tr>
+            <th className="py-1">Party</th>
+            <th className="py-1">Mentions</th>
+            <th className="py-1 text-green-600">Positive</th>
+            <th className="py-1 text-red-600">Negative</th>
+            <th className="py-1">Engagement Ratio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.party} className="border-t">
+              <td className="py-1">{r.party}</td>
+              <td className="py-1">{r.total}</td>
+              <td className="py-1">{r.pos}</td>
+              <td className="py-1">{r.neg}</td>
+              <td className="py-1">{r.engagement.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
-};
-
-export default CompetitorBenchmark;
+}
