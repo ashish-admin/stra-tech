@@ -1,3 +1,4 @@
+// frontend/src/components/Dashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
@@ -15,17 +16,17 @@ import PredictionSummary from "./PredictionSummary.jsx";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-// must be in sync with LocationMap
+/** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
   if (!label) return "";
   let s = String(label).trim();
   s = s.replace(/^ward\s*no\.?\s*\d+\s*/i, "");
   s = s.replace(/^ward\s*\d+\s*/i, "");
-  s = s.replace(/^\d+\s*-\s*/i, "");
-  s = s.replace(/^\d+\s+/i, "");
+  s = s.replace(/^\d+\s*[-–]?\s*/i, "");
   s = s.replace(/\s+/g, " ").trim();
   return s;
 }
+
 function displayName(props = {}) {
   return (
     props.name ||
@@ -54,28 +55,28 @@ export default function Dashboard() {
 
   const wardQuery = selectedWard && selectedWard !== "All" ? selectedWard : "";
 
-  // Fetch geojson ONCE so the map doesn't reset
+  /** Load GeoJSON once so the map does not reset on selection */
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const g = await axios.get(`${apiBase}/api/v1/geojson`, { withCredentials: true });
         if (cancelled) return;
+
         const gj = g.data || null;
         setGeojson(gj);
 
         if (gj && Array.isArray(gj.features)) {
-          const set = new Set();
+          const uniq = new Set();
           gj.features.forEach((f) => {
             const disp = displayName(f.properties || {});
             const norm = normalizeWardLabel(disp);
-            if (norm) set.add(norm);
+            if (norm) uniq.add(norm);
           });
-          const list = ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-          setWardOptions(list);
+          setWardOptions(["All", ...Array.from(uniq).sort((a, b) => a.localeCompare(b))]);
         }
       } catch (e) {
-        console.error("geojson load failed", e);
+        console.error("Failed to load geojson", e);
       }
     })();
     return () => {
@@ -83,26 +84,34 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Fetch ward-dependent data
+  /** Load ward-dependent data (posts + competitive aggregate) */
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError("");
       try {
+        // Posts
         const p = await axios.get(
           `${apiBase}/api/v1/posts${wardQuery ? `?city=${encodeURIComponent(wardQuery)}` : ""}`,
           { withCredentials: true }
         );
         if (cancelled) return;
-        const items = Array.isArray(p.data) ? p.data : (Array.isArray(p.data?.items) ? p.data.items : []);
+
+        const items = Array.isArray(p.data)
+          ? p.data
+          : Array.isArray(p.data?.items)
+          ? p.data.items
+          : [];
         setPosts(items || []);
 
+        // Competitive aggregate (server-side)
         const c = await axios.get(
           `${apiBase}/api/v1/competitive-analysis?city=${encodeURIComponent(selectedWard || "All")}`,
           { withCredentials: true }
         );
         if (cancelled) return;
+
         setCompAgg(c.data && typeof c.data === "object" ? c.data : {});
       } catch (e) {
         if (!cancelled) setError("Failed to load dashboard data.");
@@ -115,7 +124,7 @@ export default function Dashboard() {
     };
   }, [selectedWard]);
 
-  // Client-side filtering
+  /** Client-side filtering */
   const filteredPosts = useMemo(() => {
     let arr = Array.isArray(posts) ? posts : [];
     if (emotionFilter && emotionFilter !== "All") {
@@ -137,7 +146,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm text-gray-600 mb-1">Emotion</label>
-          <select className="w-full border rounded-md p-2" value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)}>
+          <select
+            className="w-full border rounded-md p-2"
+            value={emotionFilter}
+            onChange={(e) => setEmotionFilter(e.target.value)}
+          >
             <option>All</option>
             <option>Anger</option>
             <option>Joy</option>
@@ -155,17 +168,27 @@ export default function Dashboard() {
 
         <div>
           <label className="block text-sm text-gray-600 mb-1">Ward</label>
-          <select className="w-full border rounded-md p-2" value={selectedWard} onChange={(e) => setSelectedWard(e.target.value)}>
+          <select
+            className="w-full border rounded-md p-2"
+            value={selectedWard}
+            onChange={(e) => setSelectedWard(e.target.value)}
+          >
             {wardOptions.map((w) => (
-              <option key={w} value={w}>{w}</option>
+              <option key={w} value={w}>
+                {w}
+              </option>
             ))}
           </select>
         </div>
 
         <div>
           <label className="block text-sm text-gray-600 mb-1">Keyword Search</label>
-          <input className="w-full border rounded-md p-2" placeholder="e.g., roads, festival"
-                 value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+          <input
+            className="w-full border rounded-md p-2"
+            placeholder="e.g., roads, festival"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />
         </div>
       </div>
 
@@ -174,7 +197,11 @@ export default function Dashboard() {
         <div className="bg-white border rounded-md">
           <div className="p-2 font-medium">Geospatial Intelligence</div>
           <div className="p-2">
-            <LocationMap geojson={geojson} selectedWard={selectedWard} onWardSelect={setSelectedWard} />
+            <LocationMap
+              geojson={geojson}
+              selectedWard={selectedWard}
+              onWardSelect={setSelectedWard}
+            />
           </div>
         </div>
 
@@ -190,12 +217,15 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Sentiment Overview</div>
-          {loading ? <div className="text-sm text-gray-500">Loading chart data…</div> : <EmotionChart posts={filteredPosts} />}
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading chart data…</div>
+          ) : (
+            <EmotionChart posts={filteredPosts} />
+          )}
         </div>
 
         <div className="bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitive Analysis</div>
-          {/* pass server aggregate + posts as fallback */}
           {loading ? (
             <div className="text-sm text-gray-500">Loading analysis…</div>
           ) : (
@@ -208,8 +238,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Trend: Emotions & Share of Voice</div>
-          <TimeSeriesChart ward={selectedWard} posts={filteredPosts} />
+          {/* Uses /api/v1/trends under the hood */}
+          <TimeSeriesChart ward={selectedWard} days={30} />
         </div>
+
         <div className="bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Topic Analysis</div>
           <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
@@ -219,8 +251,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitor Trend</div>
-          <CompetitorTrendChart ward={selectedWard} posts={filteredPosts} />
+          {/* Uses /api/v1/trends under the hood */}
+          <CompetitorTrendChart ward={selectedWard} days={30} />
         </div>
+
         <div className="bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitive Benchmark</div>
           <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />

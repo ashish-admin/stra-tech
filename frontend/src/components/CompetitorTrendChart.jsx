@@ -1,106 +1,131 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Legend,
+} from "recharts";
 
-function parseFlexibleDate(raw) {
-  if (!raw) return null;
-  if (typeof raw === "number") {
-    const d = new Date(raw < 1e12 ? raw * 1000 : raw);
-    return isNaN(+d) ? null : d;
+const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+
+// parties we surface consistently
+const PARTIES = ["BRS", "BJP", "INC", "AIMIM", "Other"];
+
+const PARTY_COLORS = {
+  BRS: "#22c55e",
+  BJP: "#f97316",
+  INC: "#3b82f6",
+  AIMIM: "#10b981",
+  Other: "#6b7280",
+};
+
+function fmtDate(d) {
+  try {
+    return new Date(d + "T00:00:00Z").toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return d;
   }
-  const s = String(raw).trim();
-  if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(s)) {
-    const d = new Date(s.replace(" ", "T"));
-    return isNaN(+d) ? null : d;
-  }
-  const m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (m) {
-    const [_, dd, mm, yyyy, HH = "00", MM = "00", SS = "00"] = m;
-    const d = new Date(`${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}`);
-    return isNaN(+d) ? null : d;
-  }
-  const d = new Date(s);
-  return isNaN(+d) ? null : d;
-}
-function getDay(p) {
-  const raw =
-    p.created_at ||
-    p.createdAt ||
-    p.timestamp ||
-    p.date ||
-    p.published_at ||
-    p.publishedAt ||
-    p.time ||
-    p.datetime ||
-    p.post_date ||
-    p.epaper_date ||
-    p.date_str;
-  const d = parseFlexibleDate(raw);
-  return d ? d.toISOString().slice(0, 10) : null;
-}
-function partyFromSource(p) {
-  const src = (p.source || p.author || p.publisher || "").toLowerCase();
-  if (/bjp|bharatiya/.test(src)) return "BJP";
-  if (/brs|trs\b|telangana rashtra/.test(src)) return "BRS";
-  if (/congress|inc\b|telangana congress/.test(src)) return "INC";
-  if (/aimim/.test(src)) return "AIMIM";
-  return "OTHER";
 }
 
-export default function CompetitorTrendChart({ posts = [] }) {
-  const { series, synthetic, note } = useMemo(() => {
-    const hasDates = posts.some((p) => getDay(p));
-    const byParty = {};
+export default function CompetitorTrendChart({ ward = "All", days = 30 }) {
+  const [series, setSeries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
-    if (hasDates) {
-      posts.forEach((p) => {
-        const day = getDay(p);
-        if (!day) return;
-        const party = partyFromSource(p);
-        byParty[party] = byParty[party] || {};
-        byParty[party][day] = (byParty[party][day] || 0) + 1;
-      });
-      return { series: byParty, synthetic: false, note: "" };
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setErr("");
+      try {
+        const url = `${apiBase}/api/v1/trends?ward=${encodeURIComponent(
+          ward || "All"
+        )}&days=${days}`;
+        const res = await axios.get(url, { withCredentials: true });
+        if (cancelled) return;
+
+        const raw = Array.isArray(res.data?.series) ? res.data.series : [];
+
+        // Map per day -> share-of-voice % for each party
+        const shaped = raw.map((d) => {
+          const total = Number(d.mentions_total || 0);
+          const p = d.parties || {};
+          const row = { date: fmtDate(d.date) };
+          PARTIES.forEach((name) => {
+            const v = Number(p[name] || 0);
+            row[name] = total > 0 ? Math.round((v * 10000) / total) / 100 : 0;
+          });
+          return row;
+        });
+
+        setSeries(shaped);
+      } catch (e) {
+        console.error("CompetitorTrendChart error", e);
+        setErr("Could not load competitor trends.");
+        setSeries([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
-    // Fallback: 7 buckets in ingestion order per party
-    const B = 7;
-    posts.forEach((p, i) => {
-      const bucket = `Day ${Math.floor((i / Math.max(1, posts.length)) * B) + 1}`;
-      const party = partyFromSource(p);
-      byParty[party] = byParty[party] || {};
-      byParty[party][bucket] = (byParty[party][bucket] || 0) + 1;
-    });
-    return {
-      series: byParty,
-      synthetic: true,
-      note: "Posts lack usable timestamps; trend shown across synthetic day-buckets.",
+    run();
+    return () => {
+      cancelled = true;
     };
-  }, [posts]);
+  }, [ward, days]);
 
-  const parties = Object.keys(series);
-  if (!parties.length) {
-    return <div className="text-sm text-gray-500">No competitor trend data available for the selected ward.</div>;
+  const hasData = useMemo(
+    () => series.length && series.some((d) => PARTIES.some((p) => d[p] > 0)),
+    [series]
+  );
+
+  if (loading) {
+    return <div className="text-sm text-gray-500">Loading competitor trends…</div>;
+  }
+
+  if (err) {
+    return <div className="text-sm text-red-600">{err}</div>;
+  }
+
+  if (!hasData) {
+    return (
+      <div className="text-sm text-gray-500">
+        No competitor trend data for the selected ward.
+      </div>
+    );
   }
 
   return (
-    <div>
-      {synthetic && <div className="text-xs text-amber-600 mb-2">{note}</div>}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {parties.map((party) => {
-          const rows = Object.entries(series[party]).sort((a, b) => a[0].localeCompare(b[0]));
-          return (
-            <div key={party} className="border rounded p-2">
-              <div className="text-xs font-medium mb-2">{party}</div>
-              <div className="text-xs text-gray-600 space-y-1">
-                {rows.map(([day, n]) => (
-                  <div key={day} className="flex justify-between">
-                    <span>{day}</span><span>{n}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div className="w-full h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={series} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" minTickGap={20} />
+          <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+          <Tooltip formatter={(v) => `${v}%`} />
+          <Legend />
+          {PARTIES.map((p) => (
+            <Line
+              key={p}
+              type="monotone"
+              dataKey={p}
+              name={`${p} (share)`}
+              stroke={PARTY_COLORS[p]}
+              strokeWidth={2}
+              dot={false}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
