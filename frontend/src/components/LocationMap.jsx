@@ -1,92 +1,133 @@
-import React from 'react';
-import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 /**
- * Displays the GHMC ward boundaries.  Hovering a ward highlights it and
- * clicking a ward updates the selected city filter via the setFilters
- * callback.  If no geoJsonData is available a loading message is
- * displayed.
+ * Props:
+ *  - geojson: FeatureCollection (can be null while loading)
+ *  - selectedWard: string ("All" or normalized name, e.g., "Jubilee Hills")
+ *  - onWardSelect: (name: string) => void
  */
-const LocationMap = ({ geoJsonData, setFilters }) => {
-  /**
-   * Handler to update the dashboard filter when a ward is clicked.  Selecting
-   * a ward automatically updates the "Ward" dropdown and re‑filters the
-   * analytics and charts.  We shallow‑merge the existing filters and
-   * override the city value with the clicked ward name.
-   */
-  /**
-   * Normalise a ward name from the GeoJSON to match the city names used in
-   * the posts dataset.  Many ward names in the map include a prefix like
-   * "Ward 79 " or "Ward 8 ".  This function strips that numeric prefix so
-   * that clicking on "Ward 8 Habsiguda" will map to the city "Habsiguda".
-   */
-  const normalizeWardName = (name) => {
-    if (!name) return name;
-    // Match patterns like "Ward 79 Himayath Nagar" or "WARD 3 Kapra"
-    const match = name.match(/^\s*Ward\s*\d+\s+(.*)$/i);
-    if (match) {
-      return match[1].trim();
+export default function LocationMap({ geojson, selectedWard = "All", onWardSelect }) {
+  const mapRef = useRef(null);
+  const layerRef = useRef(null);
+  const containerRef = useRef(null);
+  const didFitRef = useRef(false); // ensure we only fit once per geojson load
+
+  // Extract a label from various property keys
+  function displayName(props = {}) {
+    return (
+      props.name ||
+      props.WARD_NAME ||
+      props.ward_name ||
+      props.WardName ||
+      props.Ward_Name ||
+      props.WARDLABEL ||
+      props.LABEL ||
+      "Unnamed Ward"
+    );
+  }
+
+  // Normalize label to match DB posts
+  function normalizeWardLabel(label) {
+    if (!label) return "";
+    let s = String(label).trim();
+    s = s.replace(/^ward\s*no\.?\s*\d+\s*/i, "");
+    s = s.replace(/^ward\s*\d+\s*/i, "");
+    s = s.replace(/^\d+\s*-\s*/i, "");
+    s = s.replace(/^\d+\s+/i, "");
+    s = s.replace(/\s+/g, " ").trim();
+    return s;
+  }
+
+  const baseStyle = { color: "#2b6cb0", weight: 1, fillColor: "#63b3ed", fillOpacity: 0.25 };
+  const hoverStyle = { color: "#dd6b20", weight: 2, fillColor: "#fbd38d", fillOpacity: 0.35 };
+  const selectedStyle = { color: "#d53f8c", weight: 3, fillColor: "#fbb6ce", fillOpacity: 0.45 };
+
+  // Init map once
+  useEffect(() => {
+    if (mapRef.current || !containerRef.current) return;
+    const map = L.map(containerRef.current, {
+      center: [17.40, 78.47],
+      zoom: 11,
+      scrollWheelZoom: true,
+      preferCanvas: true,
+    });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19,
+    }).addTo(map);
+    mapRef.current = map;
+  }, []);
+
+  // Draw polygons ONLY when geojson changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (layerRef.current) {
+      map.removeLayer(layerRef.current);
+      layerRef.current = null;
+      didFitRef.current = false;
     }
-    return name.trim();
-  };
+    if (!geojson || !Array.isArray(geojson.features) || geojson.features.length === 0) return;
 
-  const handleWardClick = (wardName) => {
-    // Normalise the ward name before updating filters.  Use the
-    // normalised name as the city filter so that the sentiment and
-    // competitive analysis APIs return data when available.
-    const normalized = normalizeWardName(wardName);
-    setFilters((prev) => ({ ...prev, city: normalized }));
-  };
+    function onEachFeature(feature, layer) {
+      const disp = displayName(feature.properties || {});
+      const norm = normalizeWardLabel(disp);
 
-  /**
-   * Define interactive behaviour for each ward polygon.  A tooltip with the
-   * ward name is permanently displayed in the centre.  Hovering a ward
-   * highlights it and clicking selects it.  If the GeoJSON has other
-   * property names (e.g. ward_name or name), those are used as fallbacks.
-   */
-  const onEachFeature = (feature, layer) => {
-    const wardName = feature.properties.ghmc_ward || feature.properties.ward_name || feature.properties.name;
-    if (wardName) {
-      layer.bindTooltip(wardName, { permanent: true, direction: 'center', className: 'ward-label' });
+      layer.bindTooltip(disp, { direction: "center", className: "ld-ward-label" });
+
       layer.on({
-        click: () => handleWardClick(wardName),
-        mouseover: (e) => {
-          e.target.setStyle({ weight: 3, color: '#F59E0B', fillOpacity: 0.7 });
-          e.target.bringToFront();
+        mouseover: () => layer.setStyle(hoverStyle),
+        mouseout: () => {
+          const thisNorm = normalizeWardLabel(displayName(layer.feature?.properties || {}));
+          layer.setStyle(
+            selectedWard !== "All" && thisNorm === selectedWard ? selectedStyle : baseStyle
+          );
         },
-        mouseout: (e) => e.target.setStyle({ weight: 1, color: 'white', fillOpacity: 0.5 })
+        click: () => {
+          if (typeof onWardSelect === "function") onWardSelect(norm);
+        },
       });
+
+      layer.setStyle(baseStyle);
     }
-  };
 
-  // Guard against missing GeoJSON data
-  if (!geoJsonData) return <div>Loading map...</div>;
+    const gj = L.geoJSON(geojson, { onEachFeature, style: baseStyle }).addTo(map);
+    layerRef.current = gj;
 
-  // Base style for all ward polygons
-  const geoJsonStyle = {
-    fillColor: '#3182CE',
-    weight: 1,
-    opacity: 1,
-    color: 'white',
-    fillOpacity: 0.5
-  };
+    if (!didFitRef.current) {
+      try {
+        map.fitBounds(gj.getBounds(), { padding: [12, 12] });
+        didFitRef.current = true; // do not re-fit on interaction
+      } catch {
+        /* no-op */
+      }
+    }
+  }, [geojson, onWardSelect]); // NOTE: not dependent on selectedWard
+
+  // Maintain highlight when selectedWard changes
+  useEffect(() => {
+    const group = layerRef.current;
+    if (!group) return;
+    group.eachLayer((layer) => {
+      const disp = displayName(layer?.feature?.properties || {});
+      const norm = normalizeWardLabel(disp);
+      if (selectedWard && selectedWard !== "All" && norm === selectedWard) {
+        layer.setStyle(selectedStyle);
+        if (layer.bringToFront) layer.bringToFront();
+      } else {
+        layer.setStyle(baseStyle);
+      }
+    });
+  }, [selectedWard]);
 
   return (
-    <MapContainer
-      style={{ height: '700px', width: '100%' }}
-      // Define bounds around Hyderabad to keep the map centred
-      bounds={[ [17.20, 78.30], [17.60, 78.80] ]}
-      // Enable scroll wheel zooming so users can explore the map
-      scrollWheelZoom={true}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <GeoJSON data={geoJsonData} style={geoJsonStyle} onEachFeature={onEachFeature} />
-    </MapContainer>
+    <div
+      ref={containerRef}
+      style={{ width: "100%", height: 350, borderRadius: 6 }}
+      aria-label="Ward map"
+    />
   );
-};
-
-export default LocationMap;
+}

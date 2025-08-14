@@ -1,67 +1,74 @@
-import React from 'react';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import emotionColors, { partyColors } from '../theme';
+import React, { useMemo } from "react";
 
-// Register necessary chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
-/**
- * Displays a stacked horizontal bar chart showing the sentiment breakdown
- * (share of voice) for each author.  Each bar is stacked by emotion
- * using colours defined in the theme.  Clicking on a bar invokes
- * handleCompetitorClick with the selected author.
- */
-const CompetitiveAnalysis = ({ analysisData, handleCompetitorClick }) => {
-  // If there is no competitive analysis data for the selected ward,
-  // display a message rather than leaving the user waiting.  This
-  // typically happens when there are no posts from that ward.
-  if (!analysisData || Object.keys(analysisData).length === 0) {
-    return <div>No competitive analysis available for the selected ward.</div>;
-  }
-
-  const labels = Object.keys(analysisData);
-  // Determine the union of all emotions present in the dataset
-  const emotions = Array.from(new Set(
-    labels.flatMap(label => Object.keys(analysisData[label]))
-  ));
-
-  // Construct a dataset for each emotion.  Instead of a single colour for the
-  // entire emotion series, we assign a colour per bar using the partyColours
-  // mapping.  This way each party's segment is consistently coloured while
-  // still showing the sentiment breakdown.
-  const chartData = {
-    labels,
-    datasets: emotions.map((emotion) => ({
-      label: emotion,
-      data: labels.map((label) => analysisData[label][emotion] || 0),
-      // Assign a colour per bar: use the party colour if defined, otherwise
-      // fall back to the emotion colour or neutral.
-      backgroundColor: labels.map(
-        (label) => partyColors[label] || emotionColors[emotion] || emotionColors.Neutral
-      )
-    }))
-  };
-
-  const options = {
-    indexAxis: 'y',
-    scales: { x: { stacked: true }, y: { stacked: true } },
-    responsive: true,
-    maintainAspectRatio: false,
-    onClick: (event, elements) => {
-      if (elements.length > 0) {
-        const chartElement = elements[0];
-        const label = chartData.labels[chartElement.index];
-        if (handleCompetitorClick) handleCompetitorClick(label);
-      }
-    }
-  };
-
-  return (
-    <div style={{ height: '100%', position: 'relative' }}>
-      <Bar data={chartData} options={options} />
-    </div>
-  );
+const PARTY_COLORS = {
+  BJP: "#f59e0b",
+  BRS: "#ec4899",
+  INC: "#3b82f6",
+  AIMIM: "#10b981",
+  OTHER: "#9ca3af",
 };
 
-export default CompetitiveAnalysis;
+function partyFromSource(p) {
+  const src = (p.source || p.author || p.publisher || "").toLowerCase();
+  if (/bjp|bharatiya/.test(src)) return "BJP";
+  if (/brs|trs\b|telangana rashtra/.test(src)) return "BRS";
+  if (/congress|inc\b|telangana congress/.test(src)) return "INC";
+  if (/aimim/.test(src)) return "AIMIM";
+  return "OTHER";
+}
+function emotionOf(p) {
+  return (p.emotion || p.detected_emotion || p.emotion_label || "").toLowerCase();
+}
+const POSITIVE = new Set(["joy", "hopeful", "admiration", "pride", "positive", "support", "confidence"]);
+const NEGATIVE = new Set(["anger", "frustration", "fear", "sadness", "disgust", "negative"]);
+
+export default function CompetitiveAnalysis({ data = {}, posts = [] }) {
+  // If server aggregate is empty, build from posts
+  const computed = useMemo(() => {
+    const byParty = {};
+    posts.forEach((p) => {
+      const party = partyFromSource(p);
+      byParty[party] = byParty[party] || { total: 0, positive: 0, negative: 0, other: 0 };
+      byParty[party].total += 1;
+      const e = emotionOf(p);
+      if (POSITIVE.has(e)) byParty[party].positive += 1;
+      else if (NEGATIVE.has(e)) byParty[party].negative += 1;
+      else byParty[party].other += 1;
+    });
+    return byParty;
+  }, [posts]);
+
+  const src = Object.keys(data || {}).length ? data : computed;
+  const parties = Object.keys(src);
+
+  if (!parties.length) {
+    return <div className="text-sm text-gray-500">No competitive analysis available for the selected ward.</div>;
+  }
+
+  // Render stacked bars: positive / negative / other
+  return (
+    <div className="space-y-3">
+      {parties.map((party) => {
+        const { total, positive, negative, other } = src[party];
+        const pPct = total ? Math.round((positive / total) * 100) : 0;
+        const nPct = total ? Math.round((negative / total) * 100) : 0;
+        const oPct = Math.max(0, 100 - pPct - nPct);
+        return (
+          <div key={party}>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="font-medium" style={{ color: PARTY_COLORS[party] || PARTY_COLORS.OTHER }}>
+                {party}
+              </span>
+              <span className="text-gray-500">{total} mentions</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded h-3 flex overflow-hidden">
+              <div className="h-3" style={{ width: `${pPct}%`, background: "#10b981" }} title={`Positive ${pPct}%`} />
+              <div className="h-3" style={{ width: `${nPct}%`, background: "#ef4444" }} title={`Negative ${nPct}%`} />
+              <div className="h-3" style={{ width: `${oPct}%`, background: "#a3a3a3" }} title={`Other ${oPct}%`} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

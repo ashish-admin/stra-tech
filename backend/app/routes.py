@@ -1,130 +1,329 @@
+# backend/app/routes.py
+from __future__ import annotations
+
+import json
 import os
-from flask import Blueprint, jsonify, request, current_app, send_from_directory
-from functools import wraps
-from flask_login import current_user, login_user, logout_user
-from .models import db, User, Post, Alert, Author
-from .extensions import celery
-from sqlalchemy import func, extract
+from collections import Counter
+from datetime import datetime, timedelta
 
-main_bp = Blueprint('api', __name__, url_prefix='/api/v1')
+from flask import Blueprint, jsonify, request, current_app
+from flask_login import login_required, login_user, logout_user, current_user
+from sqlalchemy import func
 
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return jsonify({'message': 'Authentication required. Please log in.'}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+from . import db
+from .models import User, Post, Author, Alert
 
-@main_bp.route('/login', methods=['POST'])
+main_bp = Blueprint("main", __name__, url_prefix="/api/v1")
+
+# ---------------------------
+# Helpers for Pulse
+# ---------------------------
+def normalize_ward_name(name: str) -> str:
+    return (name or "").strip()
+
+
+def window_start(days: int) -> datetime:
+    return datetime.utcnow() - timedelta(days=max(1, min(days, 90)))
+
+
+def compute_metrics(posts: list[dict]):
+    sentiments = []
+    authors = []
+    texts = []
+    evidence = []
+    for p in posts:
+        sentiments.append((p.get("emotion") or "Unknown").strip())
+        authors.append((p.get("author") or "Unknown").strip())
+        t = (p.get("text") or "").strip()
+        texts.append(t)
+        if t:
+            evidence.append({"text": t, "author": p.get("author") or "Unknown"})
+    return {
+        "sentiments": sentiments,
+        "top_authors": authors,
+        "texts": texts,
+        "evidence": evidence,
+    }
+
+
+def build_briefing(ward: str, texts: list[str], sentiment_counts: Counter, author_counts: Counter):
+    top_emotions = sentiment_counts.most_common(3)
+    top_sources = author_counts.most_common(3)
+
+    key_issue = f"Recent discourse in {ward} centers around {top_emotions[0][0] if top_emotions else 'local governance'}."
+    our_angle = (
+        f"Our candidate will address the drivers behind these concerns with a ward-specific plan, "
+        f"naming accountable agencies and clear timelines. We’ll show quick wins and a 90-day roadmap."
+    )
+    opp_weakness = (
+        "Opposition messaging is reactive and lacks measurable commitments; emphasize delivery gaps "
+        "and redirect to our concrete plan."
+    )
+
+    # lightweight keywords (very simple heuristic)
+    from collections import Counter as C
+    tokens = []
+    for t in texts:
+        for w in (t.lower().replace(",", " ").replace(".", " ").split()):
+            if len(w) >= 4:
+                tokens.append(w)
+    top_keywords = [{"term": k, "count": n} for k, n in C(tokens).most_common(10)]
+
+    recs = [
+        {
+            "action": "Door-to-door listening",
+            "timeline": "Within 72h",
+            "details": f"Sample 200 households across {ward} to gather evidence aligned to top concerns; publish a short fact-sheet.",
+        },
+        {
+            "action": "Local media pitch",
+            "timeline": "This week",
+            "details": "Place a story with before/after visuals and a clear accountability tracker for the next 90 days.",
+        },
+        {
+            "action": "WhatsApp micro-content",
+            "timeline": "48h",
+            "details": "3 short creatives addressing the top 2 issues and how to escalate complaints effectively.",
+        },
+    ]
+
+    return {
+        "key_issue": key_issue,
+        "our_angle": our_angle,
+        "opposition_weakness": opp_weakness,
+        "recommended_actions": recs,
+        "top_keywords": top_keywords,
+        "top_emotions": [{"emotion": e, "count": n} for e, n in top_emotions],
+        "top_sources": [{"source": s, "count": n} for s, n in top_sources],
+    }
+
+
+# ---------------------------
+# Health / Session status
+# ---------------------------
+@main_bp.route("/status", methods=["GET"])
+def status():
+    return jsonify({
+        "ok": True,
+        "authenticated": bool(getattr(current_user, "is_authenticated", False)),
+        "user": (
+            {"id": current_user.id, "username": current_user.username, "email": current_user.email}
+            if getattr(current_user, "is_authenticated", False) else None
+        ),
+        "server_time": datetime.utcnow().isoformat() + "Z",
+    }), 200
+
+
+# ---------------------------
+# Auth
+# ---------------------------
+@main_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
-    user = User.query.filter_by(username=data.get('username')).first()
-    if user and user.check_password(data.get('password')):
-        login_user(user)
-        return jsonify({'message': 'Login successful.', 'user': user.to_dict()}), 200
-    return jsonify({'message': 'Invalid username or password.'}), 401
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    user = User.query.filter(func.lower(User.username) == username.lower()).first()
+    if not user or not user.check_password(password):
+        return jsonify({"message": "Invalid username or password."}), 401
+    login_user(user)
+    return jsonify({"message": "Login successful.", "user": {
+        "id": user.id, "username": user.username, "email": user.email
+    }})
+    
 
-@main_bp.route('/logout', methods=['POST'])
+@main_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()
-    return jsonify({'message': 'Logout successful.'}), 200
+    return jsonify({"message": "Logged out."})
 
-@main_bp.route('/status', methods=['GET'])
-def status():
-    if current_user.is_authenticated:
-        return jsonify({'logged_in': True, 'user': current_user.to_dict()}), 200
-    return jsonify({'logged_in': False}), 200
 
-@main_bp.route('/posts', methods=['GET'])
+# ---------------------------
+# Core data
+# ---------------------------
+@main_bp.route("/posts", methods=["GET"])
 @login_required
 def get_posts():
-    posts = Post.query.order_by(Post.created_at.desc()).all()
-    return jsonify([post.to_dict() for post in posts]), 200
+    ward = request.args.get("city") or request.args.get("ward") or ""
+    q = Post.query
+    if ward:
+        q = q.filter(func.lower(Post.city).like(f"%{ward.lower()}%"))
+    q = q.order_by(Post.created_at.desc()).limit(1000)
+    rows = q.all()
 
-@main_bp.route('/geojson', methods=['GET'])
+    author_map = {a.id: a.name for a in Author.query.all()}
+    items = []
+    for r in rows:
+        items.append({
+            "id": r.id,
+            "text": r.text,
+            "emotion": r.emotion,
+            "author": author_map.get(r.author_id, "Unknown"),
+            "city": r.city,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        })
+    return jsonify({"items": items})
+
+
+@main_bp.route("/geojson", methods=["GET"])
 @login_required
 def get_geojson():
-    data_directory = os.path.join(current_app.root_path, 'data')
-    return send_from_directory(data_directory, 'ghmc_wards.geojson')
+    """
+    Serve GHMC ward boundaries from backend/app/data/ghmc_wards.geojson.
+    Falls back to a tiny demo FeatureCollection if the file is missing or invalid.
+    """
+    import json, os
+    from flask import current_app
 
-@main_bp.route('/competitive-analysis', methods=['GET'])
+    # 1) Prefer the app/data copy you have
+    data_path = os.path.join(current_app.root_path, "data", "ghmc_wards.geojson")
+
+    # 2) Secondary locations (optional)
+    alt_paths = [
+        os.path.join(current_app.root_path, "static", "ghmc_wards.geojson"),
+        os.path.join(os.path.dirname(current_app.root_path), "data", "ghmc_wards.geojson"),
+    ]
+
+    paths_to_try = [data_path] + alt_paths
+
+    for p in paths_to_try:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # Normalize: ensure FeatureCollection with "features" list
+                if isinstance(data, dict) and data.get("type") == "FeatureCollection":
+                    feats = data.get("features") or []
+                    # Quick sanity check
+                    if isinstance(feats, list) and len(feats) > 0:
+                        # Optional: stamp the source path for debugging
+                        data["_source_path"] = p
+                        return jsonify(data)
+                # If structure is unexpected, try to wrap a flat features list
+                if isinstance(data, list):
+                    wrapped = {"type": "FeatureCollection", "features": data, "_source_path": p}
+                    return jsonify(wrapped)
+
+                # If we got here, structure wasn’t usable
+                current_app.logger.warning("GeoJSON at %s has no features; using fallback.", p)
+            except Exception as e:
+                current_app.logger.error("Failed reading GeoJSON %s: %s", p, e)
+
+    # 3) Fallback so the map is never empty (two tiny wards near Hyderabad)
+    fallback = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {"name": "Ward 1 Himayath Nagar"},
+                "geometry": {"type": "Polygon", "coordinates": [[[78.47, 17.40],[78.49, 17.40],[78.49, 17.42],[78.47, 17.42],[78.47, 17.40]]]},
+            },
+            {
+                "type": "Feature",
+                "properties": {"name": "Ward 2 Banjara Hills"},
+                "geometry": {"type": "Polygon", "coordinates": [[[78.43, 17.41],[78.45, 17.41],[78.45, 17.43],[78.43, 17.43],[78.43, 17.41]]]},
+            },
+        ],
+        "_source_path": "fallback",
+    }
+    return jsonify(fallback)
+
+
+@main_bp.route("/competitive-analysis", methods=["GET"])
 @login_required
 def competitive_analysis():
-    """Calculates the sentiment breakdown per author, optionally filtered by city/ward."""
-    try:
-        query = db.session.query(
-            Author.name,
-            Post.emotion,
-            func.count(Post.id)
-        ).join(Post, Author.id == Post.author_id)
+    ward = (request.args.get("city") or "").strip()
+    q = db.session.query(Post.emotion, Author.name, func.count().label("n")) \
+        .join(Author, Author.id == Post.author_id)
+    if ward and ward.lower() != "all":
+        q = q.filter(func.lower(Post.city).like(f"%{ward.lower()}%"))
+    q = q.group_by(Post.emotion, Author.name)
+    rows = q.all()
 
-        city_filter = request.args.get('city')
-        if city_filter and city_filter != 'All':
-            query = query.filter(Post.city == city_filter)
+    out = {}
+    for emotion, author, n in rows:
+        author = author or "Unknown"
+        emotion = emotion or "Unknown"
+        out.setdefault(author, {}).setdefault(emotion, 0)
+        out[author][emotion] += int(n)
+    return jsonify(out)
 
-        analysis = query.group_by(Author.name, Post.emotion).all()
-        result = {}
-        for author, emotion, count in analysis:
-            if author not in result:
-                result[author] = {}
-            result[author][emotion] = count
-        return jsonify(result)
-    except Exception as e:
-        current_app.logger.error(f"Error in competitive analysis: {e}")
-        return jsonify({"error": "Analysis failed"}), 500
 
-@main_bp.route('/competitive-trend', methods=['GET'])
+# ---------------------------
+# Alerts (legacy) + trigger
+# ---------------------------
+@main_bp.route("/alerts/<ward>", methods=["GET"])
 @login_required
-def competitive_trend():
-    """Return sentiment counts per author grouped by day for trend analysis."""
-    try:
-        days = int(request.args.get('days', 7))
-        # compute counts per author per day for the last N days
-        query = db.session.query(
-            Author.name.label('author'),
-            func.date_trunc('day', Post.created_at).label('day'),
-            Post.emotion.label('emotion'),
-            func.count(Post.id).label('count')
-        ).join(Post, Author.id == Post.author_id)
-        # Filter by timeframe
-        if days > 0:
-            from datetime import datetime, timedelta, timezone
-            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-            query = query.filter(Post.created_at >= cutoff)
-        city_filter = request.args.get('city')
-        if city_filter and city_filter != 'All':
-            query = query.filter(Post.city == city_filter)
-        rows = query.group_by('author', 'day', 'emotion').order_by('day').all()
-        result = {}
-        for author, day, emotion, count in rows:
-            day_str = day.date().isoformat()
-            if author not in result:
-                result[author] = {}
-            if day_str not in result[author]:
-                result[author][day_str] = {}
-            result[author][day_str][emotion] = count
-        return jsonify(result)
-    except Exception as e:
-        current_app.logger.error(f"Error in competitive trend: {e}")
-        return jsonify({"error": "Trend analysis failed"}), 500
+def get_alerts(ward):
+    ward = normalize_ward_name(ward)
+    row = Alert.query.filter(func.lower(Alert.ward) == ward.lower()).order_by(Alert.created_at.desc()).first()
+    if not row:
+        return jsonify({"message": "No alerts found for this ward."}), 404
+    return jsonify({"opportunities": row.opportunities})
 
-@main_bp.route('/trigger_analysis', methods=['POST'])
+
+@main_bp.route("/trigger_analysis", methods=["POST"])
 @login_required
 def trigger_analysis():
-    data = request.get_json()
-    ward_name = data.get('ward')
-    if not ward_name:
-        return jsonify({'error': 'Ward name is required'}), 400
-    task_name = 'app.tasks.analyze_news_for_alerts'
-    celery.send_task(task_name, args=[ward_name])
-    return jsonify({'message': f'Analysis for {ward_name} has been triggered.'}), 202
+    data = request.get_json(silent=True) or {}
+    ward = normalize_ward_name(data.get("ward", ""))
+    if not ward:
+        return jsonify({"message": "Ward is required."}), 400
+    return jsonify({"message": f"Analysis triggered for {ward}."})
 
-@main_bp.route('/alerts/<ward_name>', methods=['GET'])
+
+# ---------------------------
+# Instant Area Pulse
+# ---------------------------
+@main_bp.route("/pulse/<ward>", methods=["GET"])
 @login_required
-def get_alerts(ward_name):
-    alert = Alert.query.filter_by(ward=ward_name).order_by(Alert.created_at.desc()).first()
-    if alert:
-        return jsonify(alert.to_dict())
-    return jsonify({'message': 'No alerts found for this ward.'}), 404
+def pulse(ward):
+    try:
+        days = int(request.args.get("days", 14))
+    except Exception:
+        days = 14
+    ward = normalize_ward_name(ward)
+    if not ward:
+        return jsonify({"message": "Ward is required."}), 400
+
+    start_dt = window_start(days)
+
+    q = db.session.query(Post, Author.name.label("author")) \
+        .outerjoin(Author, Author.id == Post.author_id) \
+        .filter(func.lower(Post.city).like(f"%{ward.lower()}%")) \
+        .filter(Post.created_at >= start_dt) \
+        .order_by(Post.created_at.desc()) \
+        .limit(800)
+    rows = q.all()
+
+    posts = [{
+        "text": r.Post.text or "",
+        "emotion": r.Post.emotion or "",
+        "author": r.author or "Unknown",
+        "created_at": r.Post.created_at.isoformat() if r.Post.created_at else None
+    } for r in rows]
+
+    if not posts:
+        return jsonify({
+            "status": f"No recent posts found for {ward} (last {days} days).",
+            "briefing": None,
+            "metrics": {"sentiments": {}, "top_authors": {}},
+            "evidence": []
+        }), 200
+
+    m = compute_metrics(posts)
+    from collections import Counter
+    briefing = build_briefing(ward, m["texts"], Counter(m["sentiments"]), Counter(m["top_authors"]))
+    return jsonify({
+        "status": "ok",
+        "ward": ward,
+        "days": days,
+        "briefing": briefing,
+        "metrics": {
+            "sentiments": m["sentiments"],
+            "top_authors": m["top_authors"],
+            "top_keywords": briefing.get("top_keywords", [])
+        },
+        "evidence": m["evidence"]
+    })

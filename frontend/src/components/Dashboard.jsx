@@ -1,159 +1,243 @@
-import React from 'react';
-import EmotionChart from './EmotionChart';
-import LocationMap from './LocationMap';
-import DataTable from './DataTable';
-import StrategicSummary from './StrategicSummary';
-import CompetitiveAnalysis from './CompetitiveAnalysis';
-import TopicAnalysis from './TopicAnalysis';
-import TimeSeriesChart from './TimeSeriesChart';
-import CompetitorBenchmark from './CompetitorBenchmark';
-import CompetitorTrendChart from './CompetitorTrendChart';
-import PredictionSummary from './PredictionSummary';
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 
-/**
- * Presents the core dashboard layout, including filter controls
- * (emotion, ward, keyword), the map, the Area Pulse panel,
- * the sentiment overview pie chart, competitive analysis bar chart,
- * and the actionable intelligence feed.
- */
-function Dashboard({
-  filteredData,
-  allData,
-  geoJsonData,
-  competitiveData,
-  filters,
-  setFilters,
-  searchTerm,
-  setSearchTerm,
-  handleChartClick
-}) {
-  const emotions = ['All', ...new Set(allData.map((item) => item.emotion))];
-  const cities = ['All', ...new Set(allData.map((item) => item.city))];
+import LocationMap from "./LocationMap.jsx";
+import StrategicSummary from "./StrategicSummary.jsx";
+import EmotionChart from "./EmotionChart.jsx";
+import CompetitiveAnalysis from "./CompetitiveAnalysis.jsx";
+import AlertsPanel from "./AlertsPanel.jsx";
 
-  const handleFilterChange = (e) => {
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [e.target.name]: e.target.value
-    }));
-  };
+import TimeSeriesChart from "./TimeSeriesChart.jsx";
+import TopicAnalysis from "./TopicAnalysis.jsx";
+import CompetitorTrendChart from "./CompetitorTrendChart.jsx";
+import CompetitorBenchmark from "./CompetitorBenchmark.jsx";
+import PredictionSummary from "./PredictionSummary.jsx";
 
+const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+
+// must be in sync with LocationMap
+function normalizeWardLabel(label) {
+  if (!label) return "";
+  let s = String(label).trim();
+  s = s.replace(/^ward\s*no\.?\s*\d+\s*/i, "");
+  s = s.replace(/^ward\s*\d+\s*/i, "");
+  s = s.replace(/^\d+\s*-\s*/i, "");
+  s = s.replace(/^\d+\s+/i, "");
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+function displayName(props = {}) {
   return (
-    <div className="space-y-6">
-      {/* Filter Controls Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Emotion</label>
-          <select
-            name="emotion"
-            value={filters.emotion}
-            onChange={handleFilterChange}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            {emotions.map((e, idx) => (
-              <option key={idx} value={e}>{e}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Ward</label>
-          <select
-            name="city"
-            value={filters.city}
-            onChange={handleFilterChange}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            {cities.map((c, idx) => (
-              <option key={idx} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Keyword Search</label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="e.g., roads, festival"
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Geospatial Intelligence */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Geospatial Intelligence</h2>
-          <LocationMap geoJsonData={geoJsonData} setFilters={setFilters} />
-        </div>
-        {/* On‑Demand Strategic Summary */}
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">On‑Demand Strategic Summary</h2>
-          {/* Pass the selected ward from filters into the StrategicSummary.
-              When the ward changes via the map or dropdown, the summary will
-              automatically load the latest briefing for that ward. */}
-          <StrategicSummary selectedWard={filters.city} />
-        </div>
-      </div>
-
-      {/* Sentiment Overview and Competitive Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Sentiment Overview</h2>
-          <div style={{ height: '300px' }}>
-            <EmotionChart data={filteredData} handleChartClick={handleChartClick} />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Competitive Analysis</h2>
-          <div style={{ height: '300px' }}>
-            <CompetitiveAnalysis analysisData={competitiveData} handleCompetitorClick={(label) => setFilters((prev) => ({ ...prev, competitor: label }))} />
-          </div>
-        </div>
-      </div>
-
-      {/* Sentiment Trend and Competitor Benchmark */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Sentiment Trend</h2>
-          <TimeSeriesChart data={filteredData} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Competitor Benchmark</h2>
-          <CompetitorBenchmark analysisData={competitiveData} />
-        </div>
-      </div>
-
-      {/* Competitor Trend and Prediction Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Share of Voice Trend</h2>
-          {/* Show daily post counts per competitor.  If there is no data for the
-              selected ward, the component gracefully informs the user. */}
-          <CompetitorTrendChart data={filteredData} />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Predicted Win Probabilities</h2>
-          {/* Provide a simple prediction summary based on sentiment ratios
-              and share of voice.  The selected ward is passed so the
-              component can cross‑reference the historical election results
-              from the wardData file. */}
-          <PredictionSummary analysisData={competitiveData} selectedWard={filters.city} />
-        </div>
-      </div>
-
-      {/* Topic Analysis (Trending Keywords) */}
-      <div className="grid grid-cols-1">
-        <TopicAnalysis data={filteredData} numTopics={5} />
-      </div>
-
-      {/* Actionable Intelligence Feed */}
-      <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Actionable Intelligence Feed</h2>
-        <DataTable data={filteredData} />
-      </div>
-    </div>
+    props.name ||
+    props.WARD_NAME ||
+    props.ward_name ||
+    props.WardName ||
+    props.Ward_Name ||
+    props.WARDLABEL ||
+    props.LABEL ||
+    "Unnamed Ward"
   );
 }
 
-export default Dashboard;
+export default function Dashboard() {
+  const [selectedWard, setSelectedWard] = useState("All");
+  const [keyword, setKeyword] = useState("");
+  const [emotionFilter, setEmotionFilter] = useState("All");
+
+  const [posts, setPosts] = useState([]);
+  const [geojson, setGeojson] = useState(null);
+  const [compAgg, setCompAgg] = useState({});
+  const [wardOptions, setWardOptions] = useState(["All"]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const wardQuery = selectedWard && selectedWard !== "All" ? selectedWard : "";
+
+  // Fetch geojson ONCE so the map doesn't reset
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const g = await axios.get(`${apiBase}/api/v1/geojson`, { withCredentials: true });
+        if (cancelled) return;
+        const gj = g.data || null;
+        setGeojson(gj);
+
+        if (gj && Array.isArray(gj.features)) {
+          const set = new Set();
+          gj.features.forEach((f) => {
+            const disp = displayName(f.properties || {});
+            const norm = normalizeWardLabel(disp);
+            if (norm) set.add(norm);
+          });
+          const list = ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+          setWardOptions(list);
+        }
+      } catch (e) {
+        console.error("geojson load failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fetch ward-dependent data
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const p = await axios.get(
+          `${apiBase}/api/v1/posts${wardQuery ? `?city=${encodeURIComponent(wardQuery)}` : ""}`,
+          { withCredentials: true }
+        );
+        if (cancelled) return;
+        const items = Array.isArray(p.data) ? p.data : (Array.isArray(p.data?.items) ? p.data.items : []);
+        setPosts(items || []);
+
+        const c = await axios.get(
+          `${apiBase}/api/v1/competitive-analysis?city=${encodeURIComponent(selectedWard || "All")}`,
+          { withCredentials: true }
+        );
+        if (cancelled) return;
+        setCompAgg(c.data && typeof c.data === "object" ? c.data : {});
+      } catch (e) {
+        if (!cancelled) setError("Failed to load dashboard data.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWard]);
+
+  // Client-side filtering
+  const filteredPosts = useMemo(() => {
+    let arr = Array.isArray(posts) ? posts : [];
+    if (emotionFilter && emotionFilter !== "All") {
+      arr = arr.filter((p) => {
+        const e = (p.emotion || p.detected_emotion || p.emotion_label || "").toString().toLowerCase();
+        return e === emotionFilter.toLowerCase();
+      });
+    }
+    if (keyword) {
+      const k = keyword.toLowerCase();
+      arr = arr.filter((p) => (p.text || p.content || "").toLowerCase().includes(k));
+    }
+    return arr;
+  }, [posts, emotionFilter, keyword]);
+
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Emotion</label>
+          <select className="w-full border rounded-md p-2" value={emotionFilter} onChange={(e) => setEmotionFilter(e.target.value)}>
+            <option>All</option>
+            <option>Anger</option>
+            <option>Joy</option>
+            <option>Hopeful</option>
+            <option>Frustration</option>
+            <option>Fear</option>
+            <option>Sadness</option>
+            <option>Disgust</option>
+            <option>Positive</option>
+            <option>Negative</option>
+            <option>Admiration</option>
+            <option>Pride</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Ward</label>
+          <select className="w-full border rounded-md p-2" value={selectedWard} onChange={(e) => setSelectedWard(e.target.value)}>
+            {wardOptions.map((w) => (
+              <option key={w} value={w}>{w}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Keyword Search</label>
+          <input className="w-full border rounded-md p-2" placeholder="e.g., roads, festival"
+                 value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+        </div>
+      </div>
+
+      {/* Map + Strategic Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white border rounded-md">
+          <div className="p-2 font-medium">Geospatial Intelligence</div>
+          <div className="p-2">
+            <LocationMap geojson={geojson} selectedWard={selectedWard} onWardSelect={setSelectedWard} />
+          </div>
+        </div>
+
+        <div className="bg-white border rounded-md">
+          <div className="p-2 font-medium">On-Demand Strategic Summary</div>
+          <div className="p-2">
+            <StrategicSummary selectedWard={selectedWard} />
+          </div>
+        </div>
+      </div>
+
+      {/* Core analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white border rounded-md p-2">
+          <div className="font-medium mb-2">Sentiment Overview</div>
+          {loading ? <div className="text-sm text-gray-500">Loading chart data…</div> : <EmotionChart posts={filteredPosts} />}
+        </div>
+
+        <div className="bg-white border rounded-md p-2">
+          <div className="font-medium mb-2">Competitive Analysis</div>
+          {/* pass server aggregate + posts as fallback */}
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading analysis…</div>
+          ) : (
+            <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
+          )}
+        </div>
+      </div>
+
+      {/* Advanced analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white border rounded-md p-2">
+          <div className="font-medium mb-2">Trend: Emotions & Share of Voice</div>
+          <TimeSeriesChart ward={selectedWard} posts={filteredPosts} />
+        </div>
+        <div className="bg-white border rounded-md p-2">
+          <div className="font-medium mb-2">Topic Analysis</div>
+          <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white border rounded-md p-2">
+          <div className="font-medium mb-2">Competitor Trend</div>
+          <CompetitorTrendChart ward={selectedWard} posts={filteredPosts} />
+        </div>
+        <div className="bg-white border rounded-md p-2">
+          <div className="font-medium mb-2">Competitive Benchmark</div>
+          <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-md p-2">
+        <div className="font-medium mb-2">Predictive Outlook</div>
+        <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+      </div>
+
+      {/* Intelligence feed */}
+      <div className="bg-white border rounded-md p-2">
+        <AlertsPanel posts={filteredPosts} ward={selectedWard} />
+      </div>
+
+      {error && <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
+    </div>
+  );
+}
