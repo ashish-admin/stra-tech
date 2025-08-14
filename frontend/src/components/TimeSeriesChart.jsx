@@ -1,109 +1,160 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Legend,
+} from "recharts";
 
-/** Flexible date parsing for mixed datasets (ISO, epoch, DD-MM-YYYY, DD/MM/YYYY, etc.) */
-function parseFlexibleDate(raw) {
-  if (!raw) return null;
-  // Numbers: epoch seconds/millis
-  if (typeof raw === "number") {
-    const d = new Date(raw < 1e12 ? raw * 1000 : raw);
-    return isNaN(+d) ? null : d;
-  }
+const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
-  const s = String(raw).trim();
+// keep labels consistent with your app’s emotions
+const EMOTIONS = [
+  "Positive",
+  "Anger",
+  "Negative",
+  "Hopeful",
+  "Pride",
+  "Admiration",
+  "Frustration",
+];
 
-  // ISO or "YYYY-MM-DD HH:mm:ss" — Date() handles these well
-  if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(s)) {
-    const d = new Date(s.replace(" ", "T"));
-    return isNaN(+d) ? null : d;
-  }
+// modest color palette (recharts 3 is fine with hex)
+const EMOTION_COLORS = {
+  Positive: "#16a34a",
+  Anger: "#ef4444",
+  Negative: "#a3a3a3",
+  Hopeful: "#22c55e",
+  Pride: "#60a5fa",
+  Admiration: "#06b6d4",
+  Frustration: "#f59e0b",
+};
 
-  // DD-MM-YYYY or DD/MM/YYYY
-  const m = s.match(/^(\d{2})[-/](\d{2})[-/](\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-  if (m) {
-    const [_, dd, mm, yyyy, HH = "00", MM = "00", SS = "00"] = m;
-    const d = new Date(`${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}`);
-    return isNaN(+d) ? null : d;
-  }
-
-  // Fallback try
-  const d = new Date(s);
-  return isNaN(+d) ? null : d;
-}
-
-function getDateFromPost(p) {
-  const raw =
-    p.created_at ||
-    p.createdAt ||
-    p.timestamp ||
-    p.date ||
-    p.published_at ||
-    p.publishedAt ||
-    p.time ||
-    p.datetime ||
-    p.post_date ||
-    p.epaper_date ||
-    p.date_str;
-  return parseFlexibleDate(raw);
-}
-
-const fmtDay = (d) => d.toISOString().slice(0, 10);
-
-export default function TimeSeriesChart({ posts = [] }) {
-  const { points, synthetic, reason } = useMemo(() => {
-    const map = new Map();
-    let dated = 0;
-
-    posts.forEach((p, idx) => {
-      const d = getDateFromPost(p);
-      if (d) {
-        dated++;
-        const k = fmtDay(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-        map.set(k, (map.get(k) || 0) + 1);
-      }
+function fmtDate(d) {
+  try {
+    return new Date(d + "T00:00:00Z").toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
     });
+  } catch {
+    return d;
+  }
+}
 
-    if (dated > 0) {
-      const arr = Array.from(map.entries())
-        .map(([k, v]) => ({ date: k, value: v }))
-        .sort((a, b) => a.date.localeCompare(b.date));
-      return { points: arr, synthetic: false, reason: "" };
+export default function TimeSeriesChart({ ward = "All", days = 30 }) {
+  const [series, setSeries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setErr("");
+      try {
+        const url = `${apiBase}/api/v1/trends?ward=${encodeURIComponent(
+          ward || "All"
+        )}&days=${days}`;
+        const res = await axios.get(url, { withCredentials: true });
+        if (cancelled) return;
+
+        const raw = Array.isArray(res.data?.series) ? res.data.series : [];
+        // shape each day into: { date, mentions, Positive, Anger, ... }
+        const shaped = raw.map((d) => {
+          const out = {
+            date: fmtDate(d.date),
+            mentions: Number(d.mentions_total || 0),
+          };
+          const em = d.emotions || {};
+          EMOTIONS.forEach((k) => {
+            out[k] = Number(em[k] || 0);
+          });
+          return out;
+        });
+
+        setSeries(shaped);
+      } catch (e) {
+        console.error("TimeSeriesChart trends error", e);
+        setErr("Could not load trend data.");
+        setSeries([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
-    // Soft fallback: build 7 synthetic buckets to still show momentum
-    const N = Math.min(posts.length, 140);
-    if (!N) return { points: [], synthetic: false, reason: "" };
-
-    const B = 7;
-    const per = Math.max(1, Math.floor(N / B));
-    const arr = Array.from({ length: B }, (_, i) => ({
-      date: `Day ${i + 1}`,
-      value: posts.slice(i * per, (i + 1) * per).length,
-    }));
-    return {
-      points: arr,
-      synthetic: true,
-      reason: "Posts lack usable timestamps; showing relative trend by ingestion order.",
+    run();
+    return () => {
+      cancelled = true;
     };
-  }, [posts]);
+  }, [ward, days]);
 
-  if (!points.length) {
-    return <div className="text-sm text-gray-500">No historical trend data available for the selected ward.</div>;
+  const hasData = useMemo(() => {
+    if (!series.length) return false;
+    // at least one non-zero emotion or mentions
+    return series.some(
+      (d) =>
+        (d.mentions && d.mentions > 0) ||
+        EMOTIONS.some((k) => Number(d[k] || 0) > 0)
+    );
+  }, [series]);
+
+  if (loading) {
+    return <div className="text-sm text-gray-500">Loading trend data…</div>;
   }
 
-  const max = Math.max(...points.map((p) => p.value));
-  const w = 360, h = 80, pad = 6;
-  const xs = points.map((_, i) => pad + (i * (w - pad * 2)) / (points.length - 1 || 1));
-  const ys = points.map((p) => h - pad - (max ? (p.value / max) * (h - pad * 2) : 0));
-  const path = xs.map((x, i) => `${i ? "L" : "M"}${x},${ys[i]}`).join(" ");
+  if (err) {
+    return <div className="text-sm text-red-600">{err}</div>;
+  }
+
+  if (!hasData) {
+    return (
+      <div className="text-sm text-gray-500">
+        No historical trend data available for the selected ward.
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <svg width={w} height={h} aria-label="time series">
-        <path d={path} fill="none" stroke="#3b82f6" strokeWidth="2" />
-      </svg>
-      <div className="text-xs text-gray-500 mt-1">
-        {synthetic ? reason : `Last ${points.length} dated points • peak ${max}`}
-      </div>
+    <div className="w-full h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={series} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" minTickGap={20} />
+          <YAxis yAxisId="left" />
+          <YAxis yAxisId="right" orientation="right" />
+          <Tooltip />
+          <Legend />
+          {/* Mentions on right axis */}
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="mentions"
+            stroke="#64748b"
+            strokeWidth={2}
+            dot={false}
+            name="Mentions (total)"
+          />
+          {/* A few key emotions by default; you can turn on all if you like */}
+          {["Positive", "Anger", "Negative"].map((k) => (
+            <Line
+              key={k}
+              yAxisId="left"
+              type="monotone"
+              dataKey={k}
+              stroke={EMOTION_COLORS[k]}
+              strokeWidth={2}
+              dot={false}
+              name={k}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }

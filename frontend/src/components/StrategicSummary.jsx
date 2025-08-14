@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
-// ✅ import from the new data folder
 import wardDataRaw from "../data/wardData.js";
-import wardVotersRaw from "../data/wardVoters.js";
+import wardVotersRaw from "../data/wardVoters.js"; // keep as empty {} if not used
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -39,12 +38,11 @@ function buildWardMeta() {
 }
 const WARD_META = buildWardMeta();
 
-const STOP = new Set([
-  "the","a","an","and","or","but","of","to","in","for","on","with","at","from","by","this","that","is","are","am","be",
-  "as","it","its","was","were","will","we","our","you","your","they","their","he","she","his","her","them","us","i",
-  "about","into","after","before","over","under","again","more","most","very","can","cannot","could","would","should",
-  "has","have","had","do","does","did","not","no","yes"
-]);
+const STOP = new Set(
+  "the a an and or but of to in for on with at from by this that is are am be as it its was were will we our you your they their he she his her them us i about into after before over under again more most very can cannot could would should has have had do does did not no yes"
+    .split(" ")
+);
+
 function tokens(text) {
   return String(text || "")
     .toLowerCase()
@@ -66,87 +64,91 @@ export default function StrategicSummary({ selectedWard = "All" }) {
     return WARD_META.get(key) || {};
   }, [wardInput]);
 
-  const loadSummary = async (ward) => {
-    const wardClean = normalizeWard(ward);
-    setStatus("");
-    setBriefing(null);
+  async function fetchPulse(ward) {
+    const url = `${apiBase}/api/v1/pulse/${encodeURIComponent(ward)}?days=14`;
+    const res = await axios.get(url, { withCredentials: true });
+    const data = res?.data || {};
+    return data?.briefing ? data : null;
+  }
 
+  async function buildLocalBriefing(ward) {
     try {
-      const res = await axios.get(`${apiBase}/api/v1/alerts/${encodeURIComponent(wardClean)}`, {
-        withCredentials: true,
-      });
-      if (res?.data?.opportunities) {
-        try {
-          const parsed = JSON.parse(res.data.opportunities);
-          if (parsed?.briefing) {
-            setBriefing(parsed.briefing);
-            return;
-          }
-        } catch {}
-      }
-      await buildLocalBriefing(wardClean);
-    } catch {
-      await buildLocalBriefing(wardClean);
-    }
-  };
-
-  const buildLocalBriefing = async (ward) => {
-    try {
-      const postsRes = await axios.get(
+      const res = await axios.get(
         `${apiBase}/api/v1/posts?city=${encodeURIComponent(ward)}`,
         { withCredentials: true }
       );
-      const items = Array.isArray(postsRes.data) ? postsRes.data : (postsRes.data?.items || []);
+      const items = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.items || []);
+
       if (!items.length) {
         setStatus(`No recent posts found for ${ward} (last 14 days).`);
         setBriefing(null);
         return;
       }
+
       const bag = new Map();
       items.slice(0, 200).forEach((p) => {
-        const text = p.text || p.content || "";
-        tokens(text).forEach((t) => bag.set(t, (bag.get(t) || 0) + 1));
+        (tokens(p.text || p.content || "")).forEach((t) =>
+          bag.set(t, (bag.get(t) || 0) + 1)
+        );
       });
-      const keywords = Array.from(bag.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k]) => k);
-      const keyIssue = keywords.length
+
+      const keywords = Array.from(bag.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([k]) => k);
+
+      const key_issue = keywords.length
         ? `Local sentiment centers on: ${keywords.slice(0, 3).join(", ")}.`
-        : "Local sentiment is diffuse across several issues without a single dominant topic.";
+        : "Local sentiment is diffuse without a single dominant topic.";
 
-      const ourAngle =
-        `We position our candidate as the proactive problem-solver in ${ward}, focusing on ${keywords.slice(0,2).join(" & ") || "pressing civic issues"}, ` +
-        `with clear delivery milestones, public progress checks, and responsive ward-level grievance handling.`;
+      const our_angle =
+        `We position our candidate as the proactive problem-solver in ${ward}, focusing on ${keywords.slice(0,2).join(" & ") || "pressing civic issues"}, with clear delivery milestones, public progress checks, and responsive grievance handling.`;
 
-      const oppositionWeakness =
-        `Opposition narratives show gaps on execution and consistency in ${ward}. We contrast their reactive posture ` +
-        `with our measurable plan, ward micro-budgets, and transparent delivery.`;
+      const opposition_weakness =
+        `Opposition narratives show gaps on execution and consistency in ${ward}. We contrast their reactive posture with our measurable plan and transparent delivery.`;
 
       const recommended_actions = [
-        { action: "Micro-townhalls", timeline: "72h", details: `Hold 3 street-corner meetings in ${ward} focused on top concerns (${keywords.slice(0,3).join(", ")}). Capture testimonials.` },
-        { action: "Before/After proof", timeline: "7 days", details: "Publish visual evidence (maps, photos) of solved complaints; open new issues board with 48h SLA." },
-        { action: "Narrative contrast", timeline: "48h", details: "Release a 90-second video explaining the execution plan vs. opponent's reactive stance." }
+        { action: "Micro-townhalls", timeline: "72h", details: `Run 3 meets in ${ward} on top concerns (${keywords.slice(0,3).join(", ") || "roads, drainage, services"}).` },
+        { action: "Before/After proof", timeline: "7 days", details: "Publish evidence of solved complaints; open issues board with 48h SLA." },
+        { action: "Narrative contrast", timeline: "48h", details: "Release a short video on execution vs. reactive stance." },
       ];
 
-      setBriefing({ key_issue: keyIssue, our_angle: ourAngle, opposition_weakness: oppositionWeakness, recommended_actions });
+      setBriefing({ key_issue, our_angle, opposition_weakness, recommended_actions });
       setStatus("");
     } catch {
       setStatus(`No recent posts found for ${ward} (last 14 days).`);
       setBriefing(null);
     }
-  };
+  }
 
-  const handlePulse = async () => {
+  async function loadSummary(ward) {
+    const wardClean = normalizeWard(ward);
+    setStatus("");
+    setBriefing(null);
+
+    try {
+      const pulse = await fetchPulse(wardClean);
+      if (pulse?.briefing) {
+        setBriefing(pulse.briefing);
+        return;
+      }
+    } catch { /* fall back */ }
+
+    await buildLocalBriefing(wardClean);
+  }
+
+  async function handlePulse() {
     const wardClean = normalizeWard(wardInput);
     setIsLoading(true);
     setStatus("");
     try {
-      try {
-        await axios.post(`${apiBase}/api/v1/trigger_analysis`, { ward: wardClean }, { withCredentials: true });
-      } catch {}
       await loadSummary(wardClean);
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
     <div className="space-y-3">
