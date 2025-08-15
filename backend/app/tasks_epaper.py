@@ -4,7 +4,7 @@ from datetime import datetime, timezone, date
 from typing import Iterable, Dict, Any, Optional
 from celery import shared_task
 from sqlalchemy.exc import IntegrityError
-
+from .tasks import ingest_epaper_jsonl as _impl
 from .extensions import db
 from .models import Author, Post
 
@@ -102,3 +102,6 @@ def ingest_epaper_jsonl(self, jsonl_path: str) -> str:
     msg = f"ingest_epaper_jsonl: inserted {n} Post rows from {jsonl_path}"
     log.info(msg)
     return msg
+@shared_task(bind=True, name="app.tasks_epaper.ingest_epaper_jsonl")
+def ingest_epaper_jsonl(self, jsonl_path: str):
+    return _impl.apply(args=(jsonl_path, True)).get()

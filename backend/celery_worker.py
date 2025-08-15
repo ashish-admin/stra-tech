@@ -25,7 +25,7 @@ celery.conf.beat_schedule = {
     "ingest-epaper-jsonl-6am": {
         "task": "app.tasks.ingest_epaper_jsonl",
         "schedule": crontab(hour=6, minute=0),
-        "args": ("data/epaper/inbox/articles.jsonl",),
+        "args": ("data/epaper/inbox/articles.jsonl", True),
     },
     # Example: run archive+mirror nightly at 2am using app.tasks
     # "ingest-epaper-jsonl-2am": {

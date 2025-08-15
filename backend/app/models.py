@@ -46,6 +46,7 @@ class User(UserMixin, db.Model):
 # from flask_login import UserMixin   # already present
 # from .extensions import db          # already present
 
+# --- Epaper (raw archive) ---
 class Epaper(db.Model):
     __tablename__ = "epaper"
 
@@ -53,9 +54,14 @@ class Epaper(db.Model):
     publication_name = db.Column(db.String(100), nullable=False)
     publication_date = db.Column(db.Date, nullable=False, index=True)
     raw_text = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, index=True)  # server_default optional
-    # NOTE: keep nullable=True for now; after backfill+constraint, we can switch to False
-    sha256 = db.Column(db.String(64), nullable=False, index=True, unique=True)
+    created_at = db.Column(db.DateTime, index=True)  # ok to be naive for now
+    sha256 = db.Column(db.String(64), nullable=False, unique=True, index=True)
+
+    # Optional helper to access mirrored posts
+    posts = db.relationship("Post", backref="epaper", lazy=True)
+
+    def __repr__(self):
+        return f"<Epaper {self.publication_name} {self.publication_date}>"
 
 class Author(db.Model):
     """Content author for posts; optional party affiliation."""
@@ -69,23 +75,19 @@ class Author(db.Model):
 
 
 class Post(db.Model):
-    """Ingested post or news item with optional metadata."""
+    __tablename__ = "post"
 
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Text, nullable=False)
-    epaper_id = db.Column(db.Integer, db.ForeignKey('epaper.id'))
-    epaper = db.relationship('Epaper', backref='posts')
     author_id = db.Column(db.Integer, db.ForeignKey('author.id'))
     author = db.relationship('Author', backref='posts')
-    # The city/ward this post pertains to (e.g. "Jubilee Hills").
     city = db.Column(db.String(120))
-    # Emotion detected in the text (e.g. "Positive", "Angry").
     emotion = db.Column(db.String(64))
-    # Party associated with the source (optional).
     party = db.Column(db.String(64))
-    # Creation timestamp.
     created_at = db.Column(db.DateTime, nullable=False, index=True,
-                           default=func.now())
+                           default=lambda: datetime.now(timezone.utc))
+    # NEW: FK to Epaper
+    epaper_id = db.Column(db.Integer, db.ForeignKey("epaper.id"), index=True)
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Post {self.id} city={self.city}>"
@@ -261,3 +263,4 @@ class WardFeatures(db.Model):
     def __repr__(self) -> str:  # pragma: no cover
         return f"<WardFeatures {self.ward_id}>"
 
+    

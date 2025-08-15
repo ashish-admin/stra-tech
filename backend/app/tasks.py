@@ -1,5 +1,7 @@
+# app/tasks.py
 import os
 import json
+import hashlib
 import logging
 from datetime import datetime, timezone, date
 from typing import Optional, Iterable, Dict, Any
@@ -19,7 +21,6 @@ except Exception:  # pragma: no cover
     HAS_EPAPER = False
 
 log = logging.getLogger(__name__)
-
 
 # ----------------------------- helpers --------------------------------- #
 
@@ -55,7 +56,16 @@ def _iter_jsonl(path: str) -> Iterable[Dict[str, Any]]:
                 continue
             yield json.loads(line)
 
-def _upsert_author(name: str, party: Optional[str] = None):
+def _norm(s: Optional[str]) -> str:
+    return " ".join((s or "").strip().split()).lower()
+
+def _epaper_key(publication_name: str, publication_date: date, raw_text: str) -> str:
+    return f"{_norm(publication_name)}|{publication_date.isoformat()}|{_norm(raw_text)}"
+
+def _epaper_sha(publication_name: str, publication_date: date, raw_text: str) -> str:
+    return hashlib.sha256(_epaper_key(publication_name, publication_date, raw_text).encode("utf-8")).hexdigest()
+
+def _upsert_author(name: str, party: Optional[str] = None) -> Author:
     a = Author.query.filter_by(name=name).first()
     if not a:
         a = Author(name=name, party=party)
@@ -63,18 +73,25 @@ def _upsert_author(name: str, party: Optional[str] = None):
         db.session.flush()  # ensure a.id exists
     return a
 
-def _add_post(*, text: str, author, city: Optional[str],
-              party: Optional[str], created_at: Optional[datetime]):
+def _add_post(
+    *,
+    text: str,
+    author: Author,
+    city: Optional[str],
+    party: Optional[str],
+    created_at: Optional[datetime],
+    epaper_id: Optional[int] = None,
+) -> Post:
     p = Post(
-        text=(text or "")[:10000],  # hard cap to protect DB
+        text=(text or "")[:10000],  # protect DB
         author=author,
         city=city,
         party=party,
         created_at=created_at or _now_utc(),
+        epaper_id=epaper_id,
     )
     db.session.add(p)
     return p
-
 
 # ------------------------------ tasks ---------------------------------- #
 
@@ -91,9 +108,10 @@ def ingest_epaper_jsonl(self, jsonl_path: str, also_create_posts: bool = True) -
         "party": "INC"           # optional
       }
 
-    - If Epaper model exists: save a row to `Epaper` for each line.
-    - If also_create_posts=True (default): mirror to `Post` so features/UI see it.
-    - If Epaper model is missing: directly create `Post` rows (defensive fallback).
+    - If Epaper model exists: upsert by sha256; one Epaper row per unique article.
+    - Mirror to Post (also_create_posts=True by default) and link Post.epaper_id.
+    - Avoid duplicate Posts for the same epaper (idempotent re-ingest).
+    - If Epaper model is missing: create only Post rows (fallback).
     """
     if not os.path.exists(jsonl_path):
         msg = f"ingest_epaper_jsonl: file not found: {jsonl_path}"
@@ -101,12 +119,14 @@ def ingest_epaper_jsonl(self, jsonl_path: str, also_create_posts: bool = True) -
         return msg
 
     inserted_epaper = 0
+    reused_epaper = 0
     inserted_posts = 0
+    skipped_posts = 0
 
     try:
         for row in _iter_jsonl(jsonl_path):
             publication = (row.get("publication_name") or "Unknown Publication").strip()
-            pub_date = _parse_date(row.get("publication_date"))
+            pub_date = _parse_date(row.get("publication_date")) or _now_utc().date()
             title = row.get("title")
             body = row.get("body")
             city = row.get("city")
@@ -114,35 +134,75 @@ def ingest_epaper_jsonl(self, jsonl_path: str, also_create_posts: bool = True) -
             text = _compose_text(title, body)
             created_at = _created_at_from(pub_date)
 
-            # Always ensure an Author exists (used for Post mirror)
+            epaper_id = None
+
+            # Prepare/Upsert Epaper (if model available)
+            if HAS_EPAPER:
+                sha = _epaper_sha(publication, pub_date, text)
+                ep = Epaper.query.filter_by(sha256=sha).first()
+                if ep is None:
+                    ep = Epaper(
+                        publication_name=publication,
+                        publication_date=pub_date,
+                        raw_text=text,
+                        created_at=_now_utc(),
+                        sha256=sha,
+                    )
+                    db.session.add(ep)
+                    try:
+                        db.session.flush()  # assign ep.id
+                        inserted_epaper += 1
+                    except IntegrityError:
+                        # Another worker inserted the same row; rollback the failed insert
+                        db.session.rollback()
+                        ep = Epaper.query.filter_by(sha256=sha).first()
+                        if ep is None:
+                            # extremely unlikely; bubble up
+                            raise
+                        reused_epaper += 1
+                        # IMPORTANT: After rollback the session is clean; make sure Author exists again below
+                else:
+                    reused_epaper += 1
+
+                epaper_id = ep.id
+
+            # Ensure Author (do this *after* any rollback above)
             author = _upsert_author(publication)
 
-            # Store raw archive if Epaper is available
-            if HAS_EPAPER:
-                ep = Epaper(
-                    publication_name=publication,
-                    publication_date=pub_date or _now_utc().date(),
-                    raw_text=text,
-                    created_at=_now_utc(),
-                )
-                db.session.add(ep)
-                inserted_epaper += 1
-
-            # Mirror to Post (recommended so downstream features work)
+            # Mirror to Post unless disabled (or always if Epaper is absent)
             if also_create_posts or not HAS_EPAPER:
-                _add_post(
-                    text=text,
-                    author=author,
-                    city=city,
-                    party=party,
-                    created_at=created_at,
-                )
-                inserted_posts += 1
+                # Idempotency guard: if we already mirrored a Post for this epaper, don't add another
+                if epaper_id is not None:
+                    existing_post = Post.query.filter_by(epaper_id=epaper_id).first()
+                    if existing_post:
+                        skipped_posts += 1
+                    else:
+                        _add_post(
+                            text=text,
+                            author=author,
+                            city=city,
+                            party=party,
+                            created_at=created_at,
+                            epaper_id=epaper_id,
+                        )
+                        inserted_posts += 1
+                else:
+                    # No Epaper model or epaper_id -> create a plain Post (best effort)
+                    _add_post(
+                        text=text,
+                        author=author,
+                        city=city,
+                        party=party,
+                        created_at=created_at,
+                        epaper_id=None,
+                    )
+                    inserted_posts += 1
 
         db.session.commit()
         msg = (
-            f"ingest_epaper_jsonl: epaper_rows={inserted_epaper} "
-            f"post_rows={inserted_posts} from {jsonl_path} (HAS_EPAPER={HAS_EPAPER})"
+            f"ingest_epaper_jsonl: epaper_new={inserted_epaper} "
+            f"epaper_reused={reused_epaper} posts={inserted_posts} "
+            f"posts_skipped={skipped_posts} from {jsonl_path} (HAS_EPAPER={HAS_EPAPER})"
         )
         log.info(msg)
         return msg
@@ -151,37 +211,35 @@ def ingest_epaper_jsonl(self, jsonl_path: str, also_create_posts: bool = True) -
         log.exception("ingest_epaper_jsonl failed")
         return f"ingest_epaper_jsonl: ERROR {e!r}"
 
-
 @shared_task(bind=True, name="app.tasks.ingest_epaper_dir")
 def ingest_epaper_dir(self, dir_path: str, also_create_posts: bool = True) -> str:
-    """
-    Ingest all *.jsonl files in a directory (non-recursive), sorted by name.
-    """
+    """Ingest all *.jsonl files in a directory (non-recursive), sorted by name."""
     if not os.path.isdir(dir_path):
         msg = f"ingest_epaper_dir: not a directory: {dir_path}"
         log.error(msg)
         return msg
 
     files = sorted(fn for fn in os.listdir(dir_path) if fn.lower().endswith(".jsonl"))
-    total_epaper = 0
-    total_posts = 0
+    total_new = total_reused = total_posts = total_skipped = 0
+
     for fn in files:
         res = ingest_epaper_jsonl.apply(args=(os.path.join(dir_path, fn), also_create_posts)).get()
-        # Parse counts back out of the message string (simple/robust)
-        # Format: "ingest_epaper_jsonl: epaper_rows=X post_rows=Y from ..."
+        # Example msg: "ingest_epaper_jsonl: epaper_new=1 epaper_reused=0 posts=1 posts_skipped=0 from ..."
         try:
-            parts = res.split()
-            x = int(parts[2].split("=")[1])
-            y = int(parts[3].split("=")[1])
-            total_epaper += x
-            total_posts += y
+            parts = dict(kv.split("=") for kv in (p for p in res.split() if "=" in p))
+            total_new += int(parts.get("epaper_new", 0))
+            total_reused += int(parts.get("epaper_reused", 0))
+            total_posts += int(parts.get("posts", 0))
+            total_skipped += int(parts.get("posts_skipped", 0))
         except Exception:
             log.warning("ingest_epaper_dir: could not parse child result: %s", res)
 
-    msg = f"ingest_epaper_dir: epaper_rows={total_epaper} post_rows={total_posts} from {dir_path}"
+    msg = (
+        f"ingest_epaper_dir: epaper_new={total_new} epaper_reused={total_reused} "
+        f"posts={total_posts} posts_skipped={total_skipped} from {dir_path}"
+    )
     log.info(msg)
     return msg
-
 
 @shared_task(bind=True, name="app.tasks.ping")
 def ping(self) -> Dict[str, Any]:
