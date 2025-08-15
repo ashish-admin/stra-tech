@@ -1,81 +1,189 @@
-# backend/app/tasks.py
 import os
 import json
-from datetime import date
-import google.generativeai as genai
+import logging
+from datetime import datetime, timezone, date
+from typing import Optional, Iterable, Dict, Any
+
 from celery import shared_task
+from sqlalchemy.exc import IntegrityError
 
-from app.extensions import db
-from app.models import Alert, Epaper, Post
+from .extensions import db
 
-@shared_task(bind=True)
-def analyze_news_for_alerts(self, ward_name):
-    """Analyze news and store a ward-specific briefing in Alert."""
-    alert = Alert.query.filter_by(ward=ward_name).first() or Alert(ward=ward_name)
+# Try to import Epaper; if it's unavailable we still ingest directly into Post.
+try:
+    from .models import Epaper, Author, Post
+    HAS_EPAPER = True
+except Exception:  # pragma: no cover
+    from .models import Author, Post
+    Epaper = None
+    HAS_EPAPER = False
+
+log = logging.getLogger(__name__)
+
+
+# ----------------------------- helpers --------------------------------- #
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+def _parse_date(s: Optional[str]) -> Optional[date]:
+    if not s:
+        return None
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+def _compose_text(title: Optional[str], body: Optional[str]) -> str:
+    title = (title or "").strip()
+    body = (body or "").strip()
+    return f"{title}\n\n{body}".strip() if title and body else (title or body)
+
+def _created_at_from(pub_date: Optional[date]) -> Optional[datetime]:
+    if not pub_date:
+        return None
+    # set created_at to midnight UTC of publication date
+    return datetime(pub_date.year, pub_date.month, pub_date.day, tzinfo=timezone.utc)
+
+def _iter_jsonl(path: str) -> Iterable[Dict[str, Any]]:
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            yield json.loads(line)
+
+def _upsert_author(name: str, party: Optional[str] = None):
+    a = Author.query.filter_by(name=name).first()
+    if not a:
+        a = Author(name=name, party=party)
+        db.session.add(a)
+        db.session.flush()  # ensure a.id exists
+    return a
+
+def _add_post(*, text: str, author, city: Optional[str],
+              party: Optional[str], created_at: Optional[datetime]):
+    p = Post(
+        text=(text or "")[:10000],  # hard cap to protect DB
+        author=author,
+        city=city,
+        party=party,
+        created_at=created_at or _now_utc(),
+    )
+    db.session.add(p)
+    return p
+
+
+# ------------------------------ tasks ---------------------------------- #
+
+@shared_task(bind=True, name="app.tasks.ingest_epaper_jsonl")
+def ingest_epaper_jsonl(self, jsonl_path: str, also_create_posts: bool = True) -> str:
+    """
+    Ingest a JSONL file where each line looks like:
+      {
+        "publication_name": "Eenadu",
+        "publication_date": "2025-08-10",
+        "title": "Headline",
+        "body": "Full article text...",
+        "city": "Hyderabad",
+        "party": "INC"           # optional
+      }
+
+    - If Epaper model exists: save a row to `Epaper` for each line.
+    - If also_create_posts=True (default): mirror to `Post` so features/UI see it.
+    - If Epaper model is missing: directly create `Post` rows (defensive fallback).
+    """
+    if not os.path.exists(jsonl_path):
+        msg = f"ingest_epaper_jsonl: file not found: {jsonl_path}"
+        log.error(msg)
+        return msg
+
+    inserted_epaper = 0
+    inserted_posts = 0
+
     try:
-        from newsapi import NewsApiClient
-        newsapi = NewsApiClient(api_key=os.environ.get('NEWS_API_KEY'))
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        for row in _iter_jsonl(jsonl_path):
+            publication = (row.get("publication_name") or "Unknown Publication").strip()
+            pub_date = _parse_date(row.get("publication_date"))
+            title = row.get("title")
+            body = row.get("body")
+            city = row.get("city")
+            party = row.get("party")
+            text = _compose_text(title, body)
+            created_at = _created_at_from(pub_date)
 
-        query = f'"{ward_name}" OR "Hyderabad" AND ("GHMC" OR "civic" OR "development" OR "politics" OR "infrastructure")'
-        resp = newsapi.get_everything(q=query, language='en', sort_by='publishedAt', page_size=20)
-        articles = resp.get('articles', [])
+            # Always ensure an Author exists (used for Post mirror)
+            author = _upsert_author(publication)
 
-        if not articles:
-            alert.opportunities = json.dumps({"status": "No ward-specific intelligence in today’s news cycle."})
-            db.session.add(alert); db.session.commit()
-            return "Task complete: no articles"
+            # Store raw archive if Epaper is available
+            if HAS_EPAPER:
+                ep = Epaper(
+                    publication_name=publication,
+                    publication_date=pub_date or _now_utc().date(),
+                    raw_text=text,
+                    created_at=_now_utc(),
+                )
+                db.session.add(ep)
+                inserted_epaper += 1
 
-        article_texts = "\n\n".join(
-            [f"Title: {a.get('title','')}\nURL: {a.get('url','')}\nDescription: {a.get('description','')}" for a in articles]
+            # Mirror to Post (recommended so downstream features work)
+            if also_create_posts or not HAS_EPAPER:
+                _add_post(
+                    text=text,
+                    author=author,
+                    city=city,
+                    party=party,
+                    created_at=created_at,
+                )
+                inserted_posts += 1
+
+        db.session.commit()
+        msg = (
+            f"ingest_epaper_jsonl: epaper_rows={inserted_epaper} "
+            f"post_rows={inserted_posts} from {jsonl_path} (HAS_EPAPER={HAS_EPAPER})"
         )
-        prompt = f"""
-You are a political strategist for {ward_name} ward, Hyderabad. From the articles below, extract ward-relevant intelligence.
-If relevant items exist, return JSON with a "briefing" object:
-- status: "Actionable intelligence found."
-- key_issue
-- our_angle
-- opposition_weakness
-- recommended_actions: array of 2-3 items (action, timeline, details)
-If none are relevant, return: {{ "status": "No ward-specific intelligence in today's news cycle." }}
-
-Articles:
-{article_texts}
-"""
-        out = model.generate_content(prompt)
-        text = (out.text or "").strip().replace("```json", "").replace("```", "")
-        data = json.loads(text)
-
-        alert.opportunities = json.dumps(data)
-        alert.threats = None
-        alert.actionable_alerts = None
-        alert.source_articles = json.dumps([a.get("url") for a in articles])
-        db.session.add(alert); db.session.commit()
-        return f"Briefing generated for {ward_name}"
-
-    except Exception as e:
+        log.info(msg)
+        return msg
+    except Exception as e:  # pragma: no cover
         db.session.rollback()
-        alert.opportunities = json.dumps({"status": f"Analysis error: {e}"})
-        db.session.add(alert); db.session.commit()
-        raise
+        log.exception("ingest_epaper_jsonl failed")
+        return f"ingest_epaper_jsonl: ERROR {e!r}"
 
-@shared_task(bind=True)
-def ingest_and_analyze_epaper(self):
-    """Download daily e-papers, extract text, then analyze per ward discovered in Post.city."""
-    try:
-        today = date.today()
-        # ... Epaper ingestion/extraction remains as you have it ...
 
-        wards = [w[0] for w in db.session.query(Post.city).distinct().all() if w[0]]
-        if not wards:
-            print("No wards found in Post.city; skipping.")
-            return "No wards"
+@shared_task(bind=True, name="app.tasks.ingest_epaper_dir")
+def ingest_epaper_dir(self, dir_path: str, also_create_posts: bool = True) -> str:
+    """
+    Ingest all *.jsonl files in a directory (non-recursive), sorted by name.
+    """
+    if not os.path.isdir(dir_path):
+        msg = f"ingest_epaper_dir: not a directory: {dir_path}"
+        log.error(msg)
+        return msg
 
-        for ward in wards:
-            analyze_news_for_alerts.apply_async(args=[ward])
+    files = sorted(fn for fn in os.listdir(dir_path) if fn.lower().endswith(".jsonl"))
+    total_epaper = 0
+    total_posts = 0
+    for fn in files:
+        res = ingest_epaper_jsonl.apply(args=(os.path.join(dir_path, fn), also_create_posts)).get()
+        # Parse counts back out of the message string (simple/robust)
+        # Format: "ingest_epaper_jsonl: epaper_rows=X post_rows=Y from ..."
+        try:
+            parts = res.split()
+            x = int(parts[2].split("=")[1])
+            y = int(parts[3].split("=")[1])
+            total_epaper += x
+            total_posts += y
+        except Exception:
+            log.warning("ingest_epaper_dir: could not parse child result: %s", res)
 
-    except Exception as e:
-        print(f"CRITICAL ERROR in e-paper ingestion task: {e}")
-        db.session.rollback()
-    return "E-paper ingestion and analysis scheduled."
+    msg = f"ingest_epaper_dir: epaper_rows={total_epaper} post_rows={total_posts} from {dir_path}"
+    log.info(msg)
+    return msg
+
+
+@shared_task(bind=True, name="app.tasks.ping")
+def ping(self) -> Dict[str, Any]:
+    """Simple health check task."""
+    return {"pong": True, "at": _now_utc().isoformat()}

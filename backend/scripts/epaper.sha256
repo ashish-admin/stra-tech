@@ -1,0 +1,22 @@
+import hashlib
+from app import create_app
+from app.extensions import db
+from app.models import Epaper
+
+def _norm(s: str) -> str:
+    return " ".join((s or "").strip().split()).lower()
+
+def compute_key(e: Epaper) -> str:
+    return f"{_norm(e.publication_name)}|{e.publication_date.isoformat()}|{_norm(e.raw_text)}"
+
+def main():
+    app = create_app()
+    with app.app_context():
+        rows = Epaper.query.filter((Epaper.sha256 == None) | (Epaper.sha256 == '')).all()  # noqa: E711
+        print(f"Backfilling sha256 for {len(rows)} epaper rows...")
+        for e in rows:
+            e.sha256 = hashlib.sha256(compute_key(e).encode("utf-8")).hexdigest()
+        db.session.commit()
+        print("Done.")
+if __name__ == "__main__":
+    main()

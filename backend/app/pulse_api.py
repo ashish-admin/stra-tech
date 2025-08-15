@@ -1,6 +1,6 @@
 # backend/app/pulse_api.py
 from flask import Blueprint, request, jsonify
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 
 from .models import Post
