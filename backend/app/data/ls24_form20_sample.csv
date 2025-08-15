@@ -1,0 +1,5 @@
+ps_id,ward_id,ward_name,ac_id,pc_id,party,candidate,votes,total_polled,rejected
+PS-0001,WARD_001,Jubilee Test,AC-01,PC-01,BJP,Cand A,320,500,5
+PS-0001,WARD_001,Jubilee Test,AC-01,PC-01,INC,Cand B,360,500,5
+PS-0001,WARD_001,Jubilee Test,AC-01,PC-01,BRS,Cand C,280,500,5
+PS-0001,WARD_001,Jubilee Test,AC-01,PC-01,AIMIM,Cand D,40,500,5

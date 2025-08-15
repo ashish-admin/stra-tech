@@ -1,5 +1,5 @@
 # backend/app/trends_api.py
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 import re
 
