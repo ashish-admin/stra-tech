@@ -14,7 +14,8 @@ import CompetitorTrendChart from "./CompetitorTrendChart.jsx";
 import CompetitorBenchmark from "./CompetitorBenchmark.jsx";
 import PredictionSummary from "./PredictionSummary.jsx";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+import WardMetaPanel from "./WardMetaPanel";
+import { joinApi } from "../lib/api";
 
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
@@ -55,12 +56,22 @@ export default function Dashboard() {
 
   const wardQuery = selectedWard && selectedWard !== "All" ? selectedWard : "";
 
+  /** Derive a wardId for WardMetaPanel (expects codes like WARD_001). */
+  const wardIdForMeta = useMemo(() => {
+    const s = selectedWard || "";
+    if (/^WARD_\d+$/i.test(s)) return s.toUpperCase();
+    // Fallback to a known seeded ward; adjust if your data model differs.
+    return "WARD_001";
+  }, [selectedWard]);
+
   /** Load GeoJSON once so the map does not reset on selection */
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const g = await axios.get(`${apiBase}/api/v1/geojson`, { withCredentials: true });
+        const g = await axios.get(joinApi("api/v1/geojson"), {
+          withCredentials: true,
+        });
         if (cancelled) return;
 
         const gj = g.data || null;
@@ -93,7 +104,9 @@ export default function Dashboard() {
       try {
         // Posts
         const p = await axios.get(
-          `${apiBase}/api/v1/posts${wardQuery ? `?city=${encodeURIComponent(wardQuery)}` : ""}`,
+          joinApi(
+            `api/v1/posts${wardQuery ? `?city=${encodeURIComponent(wardQuery)}` : ""}`
+          ),
           { withCredentials: true }
         );
         if (cancelled) return;
@@ -107,7 +120,9 @@ export default function Dashboard() {
 
         // Competitive aggregate (server-side)
         const c = await axios.get(
-          `${apiBase}/api/v1/competitive-analysis?city=${encodeURIComponent(selectedWard || "All")}`,
+          joinApi(
+            `api/v1/competitive-analysis?city=${encodeURIComponent(selectedWard || "All")}`
+          ),
           { withCredentials: true }
         );
         if (cancelled) return;
@@ -129,7 +144,9 @@ export default function Dashboard() {
     let arr = Array.isArray(posts) ? posts : [];
     if (emotionFilter && emotionFilter !== "All") {
       arr = arr.filter((p) => {
-        const e = (p.emotion || p.detected_emotion || p.emotion_label || "").toString().toLowerCase();
+        const e = (p.emotion || p.detected_emotion || p.emotion_label || "")
+          .toString()
+          .toLowerCase();
         return e === emotionFilter.toLowerCase();
       });
     }
@@ -191,6 +208,9 @@ export default function Dashboard() {
           />
         </div>
       </div>
+
+      {/* Ward Meta Panel */}
+      <WardMetaPanel wardId={wardIdForMeta} />
 
       {/* Map + Strategic Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -271,7 +291,9 @@ export default function Dashboard() {
         <AlertsPanel posts={filteredPosts} ward={selectedWard} />
       </div>
 
-      {error && <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
+      {error && (
+        <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>
+      )}
     </div>
   );
 }
