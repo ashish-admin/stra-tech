@@ -15,6 +15,7 @@ import CompetitorBenchmark from "./CompetitorBenchmark.jsx";
 import PredictionSummary from "./PredictionSummary.jsx";
 
 import WardMetaPanel from "./WardMetaPanel";
+import EpaperFeed from "./EpaperFeed.jsx";         // ✅ import the feed
 import { joinApi } from "../lib/api";
 
 /** Keep this in sync with LocationMap normalization */
@@ -285,6 +286,9 @@ export default function Dashboard() {
         <div className="font-medium mb-2">Predictive Outlook</div>
         <PredictionSummary ward={selectedWard} posts={filteredPosts} />
       </div>
+
+      {/* Latest Epaper Headlines */}
+      <EpaperFeed ward={selectedWard} limit={10} />
 
       {/* Intelligence feed */}
       <div className="bg-white border rounded-md p-2">

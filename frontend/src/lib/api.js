@@ -63,8 +63,6 @@ export async function fetchJson(path, init = {}) {
     throw err;
   }
 
-  // empty 204
-  if (res.status === 204) return null;
-
+  if (res.status === 204) return null; // empty
   return res.json();
 }
