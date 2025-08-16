@@ -22,6 +22,14 @@ import app.tasks_epaper     # (optional) post-only legacy task
 # Beat schedule (optional)
 from celery.schedules import crontab
 celery.conf.beat_schedule = {
+    "ingest-epaper-dir-6am": {
+        "task": "app.tasks.ingest_epaper_dir",
+        "schedule": crontab(hour=6, minute=0),
+        "args": ("data/epaper/inbox", True),
+    },
+
+from celery.schedules import crontab
+celery.conf.beat_schedule = {
     "ingest-epaper-jsonl-6am": {
         "task": "app.tasks.ingest_epaper_jsonl",
         "schedule": crontab(hour=6, minute=0),
