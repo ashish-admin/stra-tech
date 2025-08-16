@@ -12,3 +12,9 @@
 .DS_Store
 # local patches
 changes*.patch
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
