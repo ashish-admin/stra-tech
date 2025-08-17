@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./index.css";
+
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import LoginPage from "./components/LoginPage.jsx";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || "";
+import { WardProvider } from "./context/WardContext.jsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { joinApi } from "./lib/api";
+
+const queryClient = new QueryClient();
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
@@ -14,7 +19,9 @@ export default function App() {
 
   async function checkSession() {
     try {
-      const r = await axios.get(`${apiBase}/api/v1/status`, { withCredentials: true });
+      const r = await axios.get(joinApi("api/v1/status"), {
+        withCredentials: true,
+      });
       setIsAuthed(!!r.data?.authenticated);
       setUser(r.data?.user || null);
     } catch {
@@ -32,7 +39,7 @@ export default function App() {
 
   async function handleLogin({ username, password }) {
     await axios.post(
-      `${apiBase}/api/v1/login`,
+      joinApi("api/v1/login"),
       { username, password },
       { withCredentials: true }
     );
@@ -48,11 +55,22 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto p-4">
-      <h1 className="text-xl font-semibold mb-4">LokDarpan: Political War Room</h1>
-      <ErrorBoundary>
-        <Dashboard currentUser={user} />
-      </ErrorBoundary>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <WardProvider>
+        <div className="mx-auto px-3 sm:px-4 lg:px-6 max-w-screen-2xl">
+          <header className="py-4">
+            <h1 className="text-xl font-semibold">LokDarpan: Political War Room</h1>
+            {user && (
+              <div className="text-xs text-gray-500 mt-1">
+                Signed in as <span className="font-medium">{user.username || "user"}</span>
+              </div>
+            )}
+          </header>
+          <ErrorBoundary>
+            <Dashboard currentUser={user} />
+          </ErrorBoundary>
+        </div>
+      </WardProvider>
+    </QueryClientProvider>
   );
 }

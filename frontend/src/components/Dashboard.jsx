@@ -1,5 +1,4 @@
-// frontend/src/components/Dashboard.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
 import LocationMap from "./LocationMap.jsx";
@@ -15,8 +14,9 @@ import CompetitorBenchmark from "./CompetitorBenchmark.jsx";
 import PredictionSummary from "./PredictionSummary.jsx";
 
 import WardMetaPanel from "./WardMetaPanel";
-import EpaperFeed from "./EpaperFeed.jsx";         // ✅ import the feed
+import EpaperFeed from "./EpaperFeed.jsx";
 import { joinApi } from "../lib/api";
+import { useWard } from "../context/WardContext.jsx";
 
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
@@ -28,7 +28,6 @@ function normalizeWardLabel(label) {
   s = s.replace(/\s+/g, " ").trim();
   return s;
 }
-
 function displayName(props = {}) {
   return (
     props.name ||
@@ -43,7 +42,9 @@ function displayName(props = {}) {
 }
 
 export default function Dashboard() {
-  const [selectedWard, setSelectedWard] = useState("All");
+  // global ward selection (map, dropdown, etc. stay in sync)
+  const { ward: selectedWard, setWard: setSelectedWard } = useWard();
+
   const [keyword, setKeyword] = useState("");
   const [emotionFilter, setEmotionFilter] = useState("All");
 
@@ -61,9 +62,11 @@ export default function Dashboard() {
   const wardIdForMeta = useMemo(() => {
     const s = selectedWard || "";
     if (/^WARD_\d+$/i.test(s)) return s.toUpperCase();
-    // Fallback to a known seeded ward; adjust if your data model differs.
     return "WARD_001";
   }, [selectedWard]);
+
+  // keep map height matched to the Strategic Summary card
+  const summaryRef = useRef(null);
 
   /** Load GeoJSON once so the map does not reset on selection */
   useEffect(() => {
@@ -85,7 +88,10 @@ export default function Dashboard() {
             const norm = normalizeWardLabel(disp);
             if (norm) uniq.add(norm);
           });
-          setWardOptions(["All", ...Array.from(uniq).sort((a, b) => a.localeCompare(b))]);
+          setWardOptions([
+            "All",
+            ...Array.from(uniq).sort((a, b) => a.localeCompare(b)),
+          ]);
         }
       } catch (e) {
         console.error("Failed to load geojson", e);
@@ -213,20 +219,21 @@ export default function Dashboard() {
       {/* Ward Meta Panel */}
       <WardMetaPanel wardId={wardIdForMeta} />
 
-      {/* Map + Strategic Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border rounded-md">
+      {/* Map + Strategic Summary (responsive 12-col layout on large screens) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 xl:col-span-8 bg-white border rounded-md">
           <div className="p-2 font-medium">Geospatial Intelligence</div>
           <div className="p-2">
             <LocationMap
               geojson={geojson}
               selectedWard={selectedWard}
               onWardSelect={setSelectedWard}
+              matchHeightRef={summaryRef}   // auto-size map to match the summary card height
             />
           </div>
         </div>
 
-        <div className="bg-white border rounded-md">
+        <div className="lg:col-span-5 xl:col-span-4 bg-white border rounded-md" ref={summaryRef}>
           <div className="p-2 font-medium">On-Demand Strategic Summary</div>
           <div className="p-2">
             <StrategicSummary selectedWard={selectedWard} />
@@ -235,8 +242,8 @@ export default function Dashboard() {
       </div>
 
       {/* Core analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border rounded-md p-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Sentiment Overview</div>
           {loading ? (
             <div className="text-sm text-gray-500">Loading chart data…</div>
@@ -245,7 +252,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="bg-white border rounded-md p-2">
+        <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitive Analysis</div>
           {loading ? (
             <div className="text-sm text-gray-500">Loading analysis…</div>
@@ -256,27 +263,25 @@ export default function Dashboard() {
       </div>
 
       {/* Advanced analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border rounded-md p-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Trend: Emotions & Share of Voice</div>
-          {/* Uses /api/v1/trends under the hood */}
           <TimeSeriesChart ward={selectedWard} days={30} />
         </div>
 
-        <div className="bg-white border rounded-md p-2">
+        <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Topic Analysis</div>
           <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border rounded-md p-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitor Trend</div>
-          {/* Uses /api/v1/trends under the hood */}
           <CompetitorTrendChart ward={selectedWard} days={30} />
         </div>
 
-        <div className="bg-white border rounded-md p-2">
+        <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitive Benchmark</div>
           <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
         </div>
