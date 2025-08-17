@@ -21,7 +21,8 @@ from .trends_api import trends_bp
 from .pulse_api import pulse_bp
 from .ward_api import ward_bp
 from .epaper_api import bp_epaper  # NEW: epaper endpoints
-
+from .summary_api import summary_bp      # NEW: summary endpoints
+from .models_ai import Embedding, Leader, LeaderMention, IssueCluster, Summary  # ensure models are imported
 
 def _cors_origins_from_env():
     """
@@ -76,5 +77,5 @@ def create_app(config_class: str = "config.Config") -> Flask:
         app.register_blueprint(pulse_bp)
         app.register_blueprint(ward_bp)
         app.register_blueprint(bp_epaper)  # NEW registrations
-
+        app.register_blueprint(summary_bp)   # NEW
         return app
