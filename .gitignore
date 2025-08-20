@@ -97,3 +97,4 @@ coverage*.xml
 
 # Virtual environment (root level)  
 /venv/
+backend/celerybeat-schedule*
