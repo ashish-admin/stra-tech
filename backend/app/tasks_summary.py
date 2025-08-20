@@ -79,7 +79,7 @@ def generate_summary(ward: str, window: str = "P7D"):
 
     # Save
     db.session.execute(text("""
-      INSERT INTO summary (ward, window, sections, citations, confidence, model, cost_cents)
+      INSERT INTO summary (ward, "window", sections, citations, confidence, model, cost_cents)
       VALUES (:ward, :window, :sections::jsonb, :cites::jsonb, :conf, :model, :cost)
     """), {
         "ward": ward,

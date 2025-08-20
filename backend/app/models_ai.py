@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, UniqueConstraint
+    Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, UniqueConstraint, JSON
 )
 from .extensions import db
 
@@ -18,7 +18,7 @@ class Embedding(db.Model):
     # vec column is created in Alembic as "vector(768)"
     # here we just declare a placeholder to keep ORM happy for selects
     vec = Column(Text, nullable=True)  # not used by ORM; pgvector handled via SQL
-    meta = Column(JSONB, nullable=True, default=dict)
+    meta = Column(JSON, nullable=True, default=dict)
 
     __table_args__ = (
         UniqueConstraint("source_type", "source_id", name="uq_embedding_source"),
@@ -53,7 +53,7 @@ class IssueCluster(db.Model):
     id = Column(Integer, primary_key=True)
     ward = Column(String(64), index=True, nullable=False)
     label = Column(String(160), nullable=False)
-    keywords = Column(JSONB, nullable=True, default=list)
+    keywords = Column(JSON, nullable=True, default=list)
     sentiment = Column(Float, nullable=True)
     volume = Column(Integer, nullable=True, default=0)
     momentum = Column(Float, nullable=True)  # growth vs prior window
@@ -67,8 +67,8 @@ class Summary(db.Model):
     id = Column(Integer, primary_key=True)
     ward = Column(String(64), index=True, nullable=False)
     window = Column(String(16), nullable=False, default="P7D")
-    sections = Column(JSONB, nullable=False, default=dict)   # angle, weakness, actions_24h, actions_7d, risks
-    citations = Column(JSONB, nullable=True, default=list)   # list of {source_type, source_id, title, date}
+    sections = Column(JSON, nullable=False, default=dict)   # angle, weakness, actions_24h, actions_7d, risks
+    citations = Column(JSON, nullable=True, default=list)   # list of {source_type, source_id, title, date}
     confidence = Column(Float, nullable=True, default=0.0)
     model = Column(String(64), nullable=True)
     cost_cents = Column(Integer, nullable=True, default=0)
