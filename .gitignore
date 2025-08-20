@@ -83,3 +83,17 @@ htmlcov/
 
 # Documentation builds
 docs/_build/
+
+# Quality gates and reports
+reports/
+test-results/
+coverage/
+junit-*.xml
+coverage*.xml
+
+# Node modules (root level)
+/node_modules/
+/package-lock.json
+
+# Virtual environment (root level)  
+/venv/
