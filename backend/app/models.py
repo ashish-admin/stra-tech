@@ -26,18 +26,56 @@ schema to avoid regressions in current functionality.  See the project
 documentation for more details about the meaning of each field.
 """
 
-from datetime import datetime  # kept (harmless if unused)
+from datetime import datetime, timezone, timedelta
 from flask_login import UserMixin
 from sqlalchemy.sql import func
+from werkzeug.security import check_password_hash, generate_password_hash
 from .extensions import db
 
 class User(UserMixin, db.Model):
-    """Basic user account."""
+    """Basic user account with secure password handling."""
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_login = db.Column(db.DateTime, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    failed_login_attempts = db.Column(db.Integer, nullable=False, default=0)
+    last_failed_login = db.Column(db.DateTime, nullable=True)
+
+    def set_password(self, password: str) -> None:
+        """Set password hash."""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        """Check password against hash."""
+        return check_password_hash(self.password_hash, password)
+    
+    def is_account_locked(self) -> bool:
+        """Check if account is locked due to failed login attempts."""
+        if self.failed_login_attempts >= 5:
+            # Lock for 15 minutes after 5 failed attempts
+            if self.last_failed_login:
+                lockout_time = datetime.now(timezone.utc) - timedelta(minutes=15)
+                # Handle timezone-naive datetime from SQLite
+                last_failed = self.last_failed_login
+                if last_failed.tzinfo is None:
+                    last_failed = last_failed.replace(tzinfo=timezone.utc)
+                return last_failed > lockout_time
+        return False
+    
+    def record_failed_login(self) -> None:
+        """Record a failed login attempt."""
+        self.failed_login_attempts += 1
+        self.last_failed_login = datetime.now(timezone.utc)
+    
+    def record_successful_login(self) -> None:
+        """Record a successful login and reset failed attempts."""
+        self.failed_login_attempts = 0
+        self.last_failed_login = None
+        self.last_login = datetime.now(timezone.utc)
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<User {self.username}>"
@@ -54,7 +92,7 @@ class Epaper(db.Model):
     publication_name = db.Column(db.String(100), nullable=False)
     publication_date = db.Column(db.Date, nullable=False, index=True)
     raw_text = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, index=True)  # ok to be naive for now
+    created_at = db.Column(db.DateTime, index=True, default=lambda: datetime.now(timezone.utc))
     sha256 = db.Column(db.String(64), nullable=False, unique=True, index=True)
 
     # Optional helper to access mirrored posts

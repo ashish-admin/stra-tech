@@ -389,3 +389,177 @@ def create_test_user_data():
         'email': 'test@example.com',
         'password': 'SecurePassword123!'
     }
+
+
+# Political Strategist test fixtures
+
+@pytest.fixture
+def mock_ai_services():
+    """Mock AI service APIs for strategist testing."""
+    with patch('strategist.reasoner.ultra_think.genai') as mock_genai:
+        with patch('strategist.retriever.perplexity_client.aiohttp') as mock_aiohttp:
+            with patch('strategist.nlp.pipeline.openai') as mock_openai:
+                
+                # Mock Gemini
+                mock_model = Mock()
+                mock_model.generate_content_async.return_value = Mock(
+                    text='{"strategic_overview": "Test AI response", "confidence_score": 0.8}'
+                )
+                mock_genai.GenerativeModel.return_value = mock_model
+                
+                # Mock Perplexity
+                mock_session = Mock()
+                mock_response = Mock()
+                mock_response.json.return_value = {
+                    "choices": [{"message": {"content": "Test Perplexity response"}}]
+                }
+                mock_session.post.return_value.__aenter__.return_value = mock_response
+                mock_aiohttp.ClientSession.return_value.__aenter__.return_value = mock_session
+                
+                # Mock OpenAI
+                mock_openai.Embedding.create.return_value = {
+                    "data": [{"embedding": [0.1, 0.2, 0.3]}]
+                }
+                
+                yield {
+                    'genai': mock_genai,
+                    'aiohttp': mock_aiohttp,
+                    'openai': mock_openai
+                }
+
+
+@pytest.fixture
+def mock_strategist_components():
+    """Mock all strategist components for isolated testing."""
+    from unittest.mock import AsyncMock
+    
+    # Mock Strategic Planner
+    mock_planner = AsyncMock()
+    mock_planner.create_analysis_plan.return_value = {
+        "status": "success",
+        "plan": {
+            "queries": ["test query 1", "test query 2"],
+            "analysis_depth": "standard",
+            "confidence_threshold": 0.7
+        }
+    }
+    mock_planner.generate_briefing.return_value = {
+        "status": "success",
+        "briefing": {
+            "strategic_overview": "Mock strategic briefing",
+            "key_intelligence": [],
+            "confidence_score": 0.85
+        }
+    }
+    
+    # Mock Perplexity Retriever  
+    mock_retriever = AsyncMock()
+    mock_retriever.gather_intelligence.return_value = {
+        "status": "success",
+        "intelligence": {
+            "queries_processed": 2,
+            "key_developments": [],
+            "sentiment_trends": {"positive": 0.6, "neutral": 0.3, "negative": 0.1}
+        }
+    }
+    
+    # Mock NLP Processor
+    mock_nlp = Mock()
+    mock_nlp.extract_entities.return_value = {
+        "political_parties": ["BJP", "TRS", "Congress"],
+        "politicians": ["Test Leader"],
+        "locations": ["Test Ward"],
+        "issues": ["development", "infrastructure"]
+    }
+    mock_nlp.analyze_sentiment.return_value = {
+        "compound": 0.5,
+        "positive": 0.6,
+        "neutral": 0.3,
+        "negative": 0.1
+    }
+    
+    # Mock Credibility Scorer
+    mock_credibility = Mock()
+    mock_credibility.score_source.return_value = {
+        "overall_score": 0.85,
+        "factors": {"source_reputation": 0.9},
+        "recommendation": "high_credibility"
+    }
+    
+    return {
+        "planner": mock_planner,
+        "retriever": mock_retriever,
+        "nlp": mock_nlp,
+        "credibility": mock_credibility
+    }
+
+
+@pytest.fixture
+def mock_redis_cache():
+    """Mock Redis for strategist cache testing."""
+    with patch('strategist.cache.r') as mock_r:
+        mock_r.ping.return_value = True
+        mock_r.get.return_value = None
+        mock_r.setex.return_value = True
+        mock_r.delete.return_value = 1
+        mock_r.keys.return_value = []
+        mock_r.info.return_value = {
+            'used_memory_human': '1MB',
+            'connected_clients': 1,
+            'total_commands_processed': 100,
+            'keyspace_hits': 80,
+            'keyspace_misses': 20
+        }
+        yield mock_r
+
+
+@pytest.fixture
+def strategist_test_data():
+    """Sample data for strategist testing."""
+    return {
+        "ward": "Test Ward",
+        "briefing": {
+            "strategic_overview": "Test strategic overview",
+            "key_intelligence": [
+                {
+                    "category": "public_sentiment",
+                    "content": "Test intelligence",
+                    "impact_level": "high",
+                    "confidence": 0.9
+                }
+            ],
+            "opportunities": [
+                {
+                    "description": "Test opportunity",
+                    "timeline": "48h",
+                    "priority": 1
+                }
+            ],
+            "threats": [
+                {
+                    "description": "Test threat",
+                    "severity": "medium",
+                    "mitigation_strategy": "Test mitigation"
+                }
+            ],
+            "recommended_actions": [
+                {
+                    "category": "immediate",
+                    "description": "Test action",
+                    "timeline": "24h",
+                    "priority": 1
+                }
+            ],
+            "confidence_score": 0.85,
+            "source_citations": [
+                {
+                    "source_type": "news",
+                    "title": "Test Article",
+                    "url": "https://example.com/test",
+                    "relevance": 0.8
+                }
+            ],
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "internal_use_only": True
+        }
+    }

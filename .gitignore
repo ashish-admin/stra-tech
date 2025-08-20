@@ -1,20 +1,85 @@
+# Security - Credentials and secrets
+*.env
+*.env.*
+!*.env.example
+.env.local
+.env.production
+.env.staging
+.env.development
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+cookies.txt
+auth_tokens.txt
+
 # Python backend
 /backend/venv/
 /backend/__pycache__/
-/backend/.env
+/backend/.env*
+/backend/instance/
+/backend/logs/
+/backend/temp/
 
 # Node frontend
 /frontend/node_modules/
 /frontend/dist/
 /frontend/.env*
+/frontend/build/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database_dumps/
+
+# Logs and monitoring
+logs/
+*.log
+*.log.*
 
 # OS files
 .DS_Store
-# local patches
+.Thumbs.db
+.vscode/
+.idea/
+
+# Local patches and development
 changes*.patch
+*.patch
+.history/
 
 # Python caches
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# Celery
+celerybeat-schedule*
+celerybeat-schedule.*
+
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+
+# Documentation builds
+docs/_build/
