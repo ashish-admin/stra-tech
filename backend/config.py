@@ -41,10 +41,12 @@ class Config:
     SESSION_COOKIE_NAME = 'lokdarpan_session'
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour
 
-    # CORS Configuration
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    # CORS Configuration - Allow multiple frontend ports and host formats
+    default_origins = 'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176,http://127.0.0.1:5177,http://127.0.0.1:5178'
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', default_origins).split(',')
     CORS_ALLOW_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With']
     CORS_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    CORS_SUPPORTS_CREDENTIALS = True
 
     # Rate Limiting
     RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'True').lower() == 'true'

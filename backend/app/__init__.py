@@ -82,7 +82,7 @@ def create_app(config_class: str = "config.Config") -> Flask:
     CORS(
         app,
         resources={r"/api/*": {"origins": cors_origins}},
-        supports_credentials=True,
+        supports_credentials=app.config.get('CORS_SUPPORTS_CREDENTIALS', True),
         allow_headers=app.config.get('CORS_ALLOW_HEADERS', ["Content-Type", "Authorization", "X-Requested-With"]),
         methods=app.config.get('CORS_METHODS', ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]),
         expose_headers=["Content-Type", "X-RateLimit-Remaining", "X-RateLimit-Reset"],

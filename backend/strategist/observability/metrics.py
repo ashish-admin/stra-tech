@@ -13,6 +13,24 @@ from collections import defaultdict, deque
 from functools import wraps
 import json
 
+# Optional Redis import for cache health checks
+try:
+    import redis
+    from flask import current_app
+    def get_redis_client():
+        """Get Redis client from app config if available."""
+        try:
+            if current_app:
+                redis_url = current_app.config.get('REDIS_URL') or current_app.config.get('CELERY_BROKER_URL')
+                if redis_url:
+                    return redis.from_url(redis_url)
+        except:
+            pass
+        return None
+except ImportError:
+    def get_redis_client():
+        return None
+
 logger = logging.getLogger(__name__)
 
 class MetricsCollector:
@@ -217,16 +235,17 @@ class HealthMonitor:
         }
         
         # Check Redis cache
-        if r:
+        redis_client = get_redis_client()
+        if redis_client:
             try:
-                r.ping()
+                redis_client.ping()
                 health["components"]["cache"] = {"status": "healthy", "type": "redis"}
             except Exception as e:
                 health["components"]["cache"] = {"status": "unhealthy", "error": str(e)}
                 health["status"] = "degraded"
         else:
-            health["components"]["cache"] = {"status": "unavailable"}
-            health["status"] = "degraded"
+            health["components"]["cache"] = {"status": "unavailable", "message": "Redis not configured"}
+            # Don't mark as degraded if Redis is intentionally not configured
             
         # Check AI service response times
         metrics = _metrics.get_metrics_summary()
