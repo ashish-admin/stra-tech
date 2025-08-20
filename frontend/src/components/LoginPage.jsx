@@ -4,9 +4,9 @@ import axios from 'axios';
 /**
  * Simple login page component.  It sends a username and password to the
  * `/api/v1/login` endpoint.  On successful authentication it calls
- * `setIsLoggedIn(true)` on the parent.  Errors are displayed to the user.
+ * `onLogin` callback.  Errors are displayed to the user.
  */
-const LoginPage = ({ setIsLoggedIn }) => {
+const LoginPage = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -14,17 +14,19 @@ const LoginPage = ({ setIsLoggedIn }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    
     try {
-      const res = await axios.post(`${apiUrl}/api/v1/login`, {
-        username,
-        password
-      });
-      if (res.status === 200) {
-        setIsLoggedIn(true);
-      }
+      await onLogin({ username, password });
+      // Success handled by parent component
     } catch (err) {
-      setError('Invalid username or password.');
+      // Handle different error types
+      if (err.response?.status === 429) {
+        setError('Too many login attempts. Please wait a moment and try again.');
+      } else if (err.response?.status === 423) {
+        setError('Account is temporarily locked. Please try again later.');
+      } else {
+        setError('Invalid username or password.');
+      }
     }
   };
 

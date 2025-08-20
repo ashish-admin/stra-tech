@@ -4,6 +4,10 @@ import axios from "axios";
 import wardDataRaw from "../data/wardData.js";
 import wardVotersRaw from "../data/wardVoters.js"; // keep as empty {} if not used
 
+// Political Strategist components
+import PoliticalStrategist from "../features/strategist/components/PoliticalStrategist";
+import { useFeatureFlag } from "../features/strategist/hooks/useStrategist";
+
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
 function normalizeWard(label) {
@@ -51,7 +55,8 @@ function tokens(text) {
     .filter((t) => t && t.length > 2 && !STOP.has(t));
 }
 
-export default function StrategicSummary({ selectedWard = "All" }) {
+// Legacy Strategic Summary Component
+function LegacyStrategicSummary({ selectedWard = "All" }) {
   const [wardInput, setWardInput] = useState(selectedWard);
   const [briefing, setBriefing] = useState(null);
   const [status, setStatus] = useState("");
@@ -208,4 +213,15 @@ export default function StrategicSummary({ selectedWard = "All" }) {
       )}
     </div>
   );
+}
+
+// Main Strategic Summary Component with AI Integration
+export default function StrategicSummary({ selectedWard = "All" }) {
+  const useAIMode = useFeatureFlag('ai-strategist') && selectedWard !== 'All';
+  
+  if (useAIMode) {
+    return <PoliticalStrategist selectedWard={selectedWard} />;
+  }
+  
+  return <LegacyStrategicSummary selectedWard={selectedWard} />;
 }
