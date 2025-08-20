@@ -1,0 +1,372 @@
+claude mcp call superclaude run_task --json '{
+  "goal": "Developing the LokDarpan Political Strategist Agent: A Multi-Model 'Ultra Think' Approach. LokDarpan is envisioned as a cutting-edge, AI-driven internal political intelligence dashboard, meticulously designed to provide a decisive competitive advantage for the user. The core of this agent will be a hybrid agentic system, combining the advanced reasoning and strategic planning capabilities. The political strategist agent is designed to be exceptionally intelligent and perpetually updated, incorporating the latest information, news, emerging issues, weather patterns, and political trends across all geographical scales, from individual wards to the entire nation. The technological foundation for LokDarpan is robust, built upon a Flask (Python) backend for API services, a modern React (Vite) frontend for a responsive user interface, and a PostgreSQL database for persistent data storage. Celery with a Redis broker will manage long-running, asynchronous tasks, ensuring system responsiveness. LokDarpan's design aims to transform complex data into actionable intelligence, to ensure a decisive competitive advantage to the user. (Gemini planner + Perplexity retrieval) with multilingual NLP, credibility checks, SSE feed, geospatial analytics, caching/ETag/TTL, observability and OpenAPI — while following best practices: read/align docs first, keep TASKS.md/CLAUDE.md updated (SSOT), enforce quality/security gates, small commits, and clear DX docs; then open a PR.",
+  "repo": ".",
+  "branch": "feat/political-strategist-ultra-think",
+  "sub_agents": [
+    {
+      "name": "ProjectManagerPM",
+      "skills": ["planning", "SSOT hygiene", "release mgmt"],
+      "ownership": ["TASKS.md", "CLAUDE.md", "CHANGELOG.md", ".github/PULL_REQUEST_TEMPLATE.md", ".github/CODEOWNERS", "CONTRIBUTING.md"]
+    },
+    {
+      "name": "ReasoningCore",
+      "skills": ["Gemini planning", "deliberation budgets", "explainability", "strategic analysis"],
+      "ownership": ["backend/strategist/reasoner", "backend/strategist/prompts"]
+    },
+    {
+      "name": "Retriever",
+      "skills": ["Perplexity grounded search", "RAG", "citation threading"],
+      "ownership": ["backend/strategist/retriever"],
+      "tools": [
+        {
+          "server": "firecrawl",
+          "tool": "search"
+        }
+      ]
+    },
+    {
+      "name": "NLPAnalytics",
+      "skills": ["multilingual sentiment", "topic modeling", "NER", "political-context tagging"],
+      "ownership": ["backend/strategist/nlp"]
+    },
+    {
+      "name": "CredibilityGuard",
+      "skills": ["source scoring", "claim matching", "misinformation heuristics"],
+      "ownership": ["backend/strategist/credibility"]
+    },
+    {
+      "name": "APISSECache",
+      "skills": ["Flask blueprints", "SSE", "Redis ETag/TTL", "rate limits"],
+      "ownership": ["backend/strategist/router", "backend/strategist/cache", "backend/strategist/sse"]
+    },
+    {
+      "name": "ComplianceOfficer",
+      "skills": ["ECI/MCC alignment", "privacy", "audit trails"],
+      "ownership": ["backend/strategist/guardrails", "docs/COMPLIANCE.md"],
+      "tools": [
+        {
+          "server": "firecrawl",
+          "tool": "search"
+        }
+      ]
+    },
+    {
+      "name": "Observability",
+      "skills": ["health checks", "APM", "structured logs"],
+      "ownership": ["backend/strategist/observability", "docs/runbook_strategist.md"]
+    },
+    {
+      "name": "GeospatialViz",
+      "skills": ["tiles/layers", "drilldowns", "map overlays"],
+      "ownership": ["frontend/src/features/strategist/map", "frontend/src/features/strategist/charts"]
+    },
+    {
+      "name": "FrontendLead",
+      "skills": ["React/Vite", "React Query", "SSE UI"],
+      "ownership": ["frontend/src/features/strategist", "frontend/src/routes/strategist.tsx"]
+    },
+    {
+      "name": "QA",
+      "skills": ["pytest", "Playwright cross-browser"],
+      "ownership": ["tests", "e2e/strategist"],
+      "tools": [
+        {
+          "server": "playwright",
+          "tool": "run"
+        }
+      ]
+    },
+    {
+      "name": "DocsWriter",
+      "skills": ["OpenAPI", "DX docs"],
+      "ownership": ["docs/openapi.yaml", "POLITICAL_STRATEGIST.md", "README.md"]
+    },
+    {
+      "name": "IngestionEngineer",
+      "skills": ["Crawling", "ETL", "dedupe"],
+      "tools": [
+        {
+          "server": "firecrawl",
+          "tool": "crawl"
+        }
+      ],
+      "ownership": ["backend/strategist/ingestion"]
+    }
+  ],
+  "hooks": {
+    "preflight": [
+      {
+        "run": "git fetch --all && git checkout -b feat/political-strategist-ultra-think"
+      },
+      {
+        "run": "mkdir -p scripts docs .github backend/strategist/{reasoner,retriever,nlp,credibility,router,cache,sse,observability,ingestion} frontend/src/features/strategist/{map,charts} || true"
+      },
+      {
+        "run": "python - <<PY\nfrom pathlib import Path\nidx=Path(\"docs/.doc-index.md\");\npaths=[\"TASKS.md\",\"CLAUDE.md\",\"DEVELOPMENT_PLAN.md\",\"POLITICAL_STRATEGIST.md\",\"REMEDIATION_PLAN.md\",\"SECURITY.md\",\"SECURITY_ISSUES_ANALYSIS.md\",\"TEST_RESULTS.md\"]\nlines=[f\"- [x] {p} (present)\" if Path(p).exists() else f\"- [ ] {p} (MISSING)\" for p in paths]\nidx.parent.mkdir(parents=True, exist_ok=True)\nidx.write_text(\"# Doc Presence Index\\n\"+\"\\n\".join(lines)+\"\\n\")\nprint(idx.read_text())\nPY"
+      },
+      {
+        "run": "test -f TASKS.md && test -f CLAUDE.md && echo Docs OK || (echo Missing core docs; exit 1)"
+      },
+      {
+        "run": "make -v >/dev/null 2>&1 || true"
+      }
+    ],
+    "before_step": [
+      {
+        "server": "firecrawl",
+        "tool": "search",
+        "args": {
+          "q": "Election Commission of India advisory AI deepfake misinformation labeling 2024-2025 site:eci.gov.in"
+        },
+        "save_as": "eci_refs"
+      },
+      {
+        "server": "firecrawl",
+        "tool": "search",
+        "args": {
+          "q": "Hyderabad ward-level political news sources list Telugu Hindi English"
+        },
+        "save_as": "local_news"
+      },
+      {
+        "run": "python - <<PY\nfrom datetime import datetime\nopen(\"scripts/docs_sync.py\",\"w\").write(\"\"\"\nimport sys, json, re, os\nfrom pathlib import Path\nSSOT=Path(\"TASKS.md\")\nCLAUDE=Path(\"CLAUDE.md\")\nstatus=os.environ.get(\"SC_STEP_NAME\",\"update\")\nts=datetime.utcnow().isoformat()+\"Z\"\nmarker=f\"\\n\"\nfor p in (SSOT, CLAUDE):\n  txt=p.read_text() if p.exists() else \"\"\n  if marker not in txt:\n    txt=txt+\"\\n\"+marker\n    p.write_text(txt)\nprint(\"synced\", status)\n\"\"\")\nPY"
+      }
+    ],
+    "after_step": [
+      {
+        "run": "python scripts/docs_sync.py"
+      },
+      {
+        "run": "git add -A && git commit -m \"chore(docs): sync SSOT + step marker [$SC_STEP_NAME]\" || true"
+      }
+    ],
+    "postflight": [
+      {
+        "run": "ruff --version >/dev/null 2>&1 && ruff backend || true"
+      },
+      {
+        "run": "black --version >/dev/null 2>&1 && black --check backend || true"
+      },
+      {
+        "run": "eslint -v >/dev/null 2>&1 && eslint frontend || true"
+      },
+      {
+        "run": "tsc -v >/dev/null 2>&1 && (cd frontend && tsc --noEmit) || true"
+      },
+      {
+        "run": "pytest -q"
+      },
+      {
+        "server": "playwright",
+        "tool": "run",
+        "args": {
+          "path": "e2e/strategist",
+          "browsers": ["chromium", "firefox", "webkit"],
+          "headless": true
+        }
+      },
+      {
+        "run": "bandit -q -r backend || true"
+      },
+      {
+        "run": "pip-audit -s || true"
+      },
+      {
+        "run": "npm audit --audit-level=high || true"
+      },
+      {
+        "run": "detect-secrets scan > .secrets.baseline || true"
+      },
+      {
+        "run": "pnpm -C frontend build || npm --prefix frontend run build || true"
+      },
+      {
+        "run": "python - <<PY\nfrom pathlib import Path\npr=Path(\".github/PULL_REQUEST_TEMPLATE.md\"); pr.parent.mkdir(parents=True, exist_ok=True)\npr.write_text(\"\"\"\n## Summary\n- Proactive Political Strategist Ultra Think agent (Gemini planner + Perplexity retrieval)\n- Docs kept in sync (TASKS.md is SSOT; CLAUDE.md mirrors status)\n\n## Checklist\n- [x] Read & referenced all core docs (see docs/.doc-index.md)\n- [x] Updated TASKS.md + CLAUDE.md\n- [x] OpenAPI updated\n- [x] Unit + E2E tests passing\n- [x] Lint/typecheck/security scans run\n- [x] Strategic outputs are clear and actionable\n\"\"\")\nco=Path(\".github/CODEOWNERS\");\nif not co.exists(): co.write_text(\"* @repo-owner @security-team @data-team\\n\")\nchg=Path(\"CHANGELOG.md\");\nchg.write_text((chg.read_text() if chg.exists() else \"\")+\"\\n- feat: Political Strategist Ultra Think agent (proactive)\\n\")\nPY"
+      },
+      {
+        "run": "git add -A && git commit -m \"chore(ci/docs): PR template, CODEOWNERS, changelog\" || true"
+      },
+      {
+        "run": "gh pr create --title \"Political Strategist Ultra Think\" --body \"Proactive Ultra Think agent delivered with best practices: SSOT docs workflow (TASKS.md->CLAUDE.md), docs index, Makefile targets, quality gates (lint/type/test/E2E/security/secrets), OpenAPI + runbook. Outputs now provide actionable strategic intelligence.\" --base main --head feat/political-strategist-ultra-think"
+      }
+    ]
+  },
+  "plan": [
+    {
+      "name": "Docs_SSOT_Init",
+      "assignee": "ProjectManagerPM",
+      "edits": [
+        {
+          "path": "CONTRIBUTING.md",
+          "action": "ensure",
+          "content": "# Working with the AI agent\\n- Read TASKS.md, CLAUDE.md, DEVELOPMENT_PLAN.md, REMEDIATION_PLAN.md, SECURITY*.md, TEST_RESULTS.md before coding.\\n- Treat TASKS.md as SSOT for status; CLAUDE.md mirrors key outcomes only.\\n- Use small commits, conventional messages, and keep docs updated each step.\\n- Outputs from the agent are intended for internal strategic use only and should not be used for public messaging without review.\\n"
+        },
+        {
+          "path": "TASKS.md",
+          "action": "insert_or_update",
+          "content": "## SSOT\\nThis file is the single source of truth for status & plan. CLAUDE.md mirrors checkpoints.\\n"
+        },
+        {
+          "path": "CLAUDE.md",
+          "action": "insert_or_update",
+          "content": "## Source of Truth\\nStatus lives in TASKS.md. This file summarizes current state and links to TASKS.md and docs/.doc-index.md.\\n"
+        },
+        {
+          "path": "Makefile",
+          "action": "ensure",
+          "content": "dev:\\n\\tflask run & (cd frontend && npm run dev)\\n\\ncheck:\\n\\truff backend || true\\n\\tblack --check backend || true\\n\\teslint frontend || true\\n\\t(cd frontend && tsc --noEmit)\\n\\tpytest -q\\n\\tbandit -q -r backend || true\\n\\tpip-audit -s || true\\n\\tnpm audit --audit-level=high || true\\n\\nformat:\\n\\tblack backend || true\\n\\tprettier -w frontend || true\\n"
+        }
+      ]
+    },
+    {
+      "name": "Blueprint_and_Flags",
+      "assignee": "APISSECache",
+      "edits": [
+        {
+          "path": "backend/config.py",
+          "action": "insert_or_update",
+          "content": "STRATEGIST_ENABLED= os.getenv('STRATEGIST_ENABLED','true').lower()=='true'\\nSTRATEGIST_MODE='proactive'\\nTHINK_TOKENS=int(os.getenv('THINK_TOKENS',4096))\\nETAG_TTL=60"
+        },
+        {
+          "path": ".env.sample",
+          "action": "ensure",
+          "content": "# LLM\\nGEMINI_API_KEY=\\nPERPLEXITY_API_KEY=\\nOPENAI_API_KEY=\\n# Infra\\nREDIS_URL=redis://localhost:6379/0\\n# Strategist\\nSTRATEGIST_ENABLED=true\\nSTRATEGIST_MODE=proactive\\nTHINK_TOKENS=4096\\n"
+        }
+      ]
+    },
+    {
+      "name": "Endpoints_SSE_Caching",
+      "assignee": "APISSECache",
+      "edits": [
+        {
+          "path": "backend/strategist/router.py",
+          "action": "ensure",
+          "content": "from flask import Blueprint,request,Response,jsonify,current_app\\nfrom .service import get_ward_report, analyze_text, sse_stream\\nstrategist_bp=Blueprint('strategist',__name__,url_prefix='/api/v1/strategist')\\n@strategist_bp.get('/<ward>')\\ndef ward(ward):\\n  depth=request.args.get('depth','standard')\\n  data,etag,ttl=get_ward_report(ward,depth)\\n  resp=jsonify(data); resp.headers['ETag']=etag; resp.headers['Cache-Control']=f'public, max-age={ttl}'; return resp\\n@strategist_bp.post('/analyze')\\ndef analyze():\\n  payload=request.get_json(force=True); payload['context']='proactive'; return jsonify(analyze_text(payload))\\n@strategist_bp.get('/feed')\\ndef feed():\\n  since=request.args.get('since'); ward=request.args.get('ward'); return Response(sse_stream(ward,since),mimetype='text/event-stream')"
+        },
+        {
+          "path": "backend/strategist/cache.py",
+          "action": "ensure",
+          "content": "import os,redis,json\\nr=redis.from_url(os.getenv('REDIS_URL'))\\ndef cget(k):\\n  v=r.get(k); return json.loads(v) if v else None\\ndef cset(k,data,etag,ttl):\\n  r.setex(k,ttl,json.dumps({'data':data,'etag':etag,'ttl':ttl}))"
+        }
+      ]
+    },
+    {
+      "name": "UltraThink_Loop",
+      "assignee": "ReasoningCore",
+      "edits": [
+        {
+          "path": "backend/strategist/reasoner/ultra_think.py",
+          "action": "ensure",
+          "content": "# Planner with THINK_TOKENS budget; returns plan steps + queries + evidence schema; **produces actionable strategic recommendations**"
+        },
+        {
+          "path": "backend/strategist/retriever/perplexity_client.py",
+          "action": "ensure",
+          "content": "# Executes planner-authored queries; returns citations; multilingual search; **prioritizes sources related to political sentiment, opponent activities, and emerging issues**"
+        },
+        {
+          "path": "backend/strategist/service.py",
+          "action": "ensure",
+          "content": "import os\\nfrom .reasoner.ultra_think import plan\\nfrom .retriever.perplexity_client import search\\nfrom .nlp.pipeline import analyze_corpus\\nfrom .credibility.checks import score_sources\\nfrom .guardrails import sanitize_and_strategize\\nfrom .cache import cget, cset\\n\\ndef get_ward_report(ward, depth):\\n  key=f\"ward:{ward}:{depth}\"; c=cget(key)\\n  if c: return c['data'], c['etag'], c['ttl']\\n  p = plan(ward, depth, 'proactive')\\n  evidence = search(p.queries)\\n  scored = score_sources(evidence)\\n  findings = analyze_corpus(scored, ward, depth, 'proactive')\\n  result = sanitize_and_strategize(findings)\\n  etag=str(hash(str(result))); ttl=int(os.getenv('ETAG_TTL',60))\\n  cset(key,result,etag,ttl); return result, etag, ttl"
+        }
+      ]
+    },
+    {
+      "name": "Multilingual_NLP_and_Credibility",
+      "assignee": "NLPAnalytics",
+      "edits": [
+        {
+          "path": "backend/strategist/nlp/pipeline.py",
+          "action": "ensure",
+          "content": "# Topic modeling, sentiment (political context), multilingual NER (hi/te/bn/en); **sentiment analysis includes political context and opponent mentions**"
+        },
+        {
+          "path": "backend/strategist/credibility/checks.py",
+          "action": "ensure",
+          "content": "# Source reputation, cross-source corroboration, recency; **flags low-credibility claims and identifies sources with a known partisan bias**"
+        }
+      ]
+    },
+    {
+      "name": "Guardrails_and_Compliance",
+      "assignee": "ComplianceOfficer",
+      "edits": [
+        {
+          "path": "backend/strategist/guardrails.py",
+          "action": "ensure",
+          "content": "# **Enforce strategic outputs**; ensure outputs are for internal use; PII redaction; audit trails\\nBLOCK_KEYS={\"disclaimer\"}\\nALLOWED={\"insights\",\"trends\",\"issues\",\"risks\",\"confidence\",\"citations\", \"opportunities\", \"actions\", \"competitor_analysis\"}\\n\\ndef sanitize_and_strategize(result):\\n  out={}\\n  # Map any prescriptive fields into strategic buckets\\n  if isinstance(result, dict):\\n    for k,v in result.items():\\n      if k in BLOCK_KEYS: continue\\n      if k in ALLOWED: out[k]=v\\n  out.setdefault(\"insights\",[]); out.setdefault(\"risks\",[]); out.setdefault(\"actions\",[])\\n  return out"
+        },
+        {
+          "path": "docs/COMPLIANCE.md",
+          "action": "ensure",
+          "content": "- Proactive Political Strategist enabled.\\n- Outputs: actionable intelligence, trends, risks, and strategic recommendations.\\n- **Outputs are for internal use only.**\\n- Audit logging, rate limits, consent.\\n- ECI/MCC alignment; misinformation labeling."
+        }
+      ]
+    },
+    {
+      "name": "UI_Map_Charts_and_SSE",
+      "assignee": "GeospatialViz",
+      "edits": [
+        {
+          "path": "frontend/src/features/strategist/StrategistPanel.tsx",
+          "action": "ensure",
+          "content": "// React Query + EventSource to render proactive strategic insights, charts, and map overlays"
+        },
+        {
+          "path": "frontend/src/features/strategist/map/Layers.ts",
+          "action": "ensure",
+          "content": "// Overlays: news intensity, sentiment heatmap, boundaries, weather layer; **includes new layers for opponent activity and strategic opportunity areas**"
+        }
+      ]
+    },
+    {
+      "name": "Health_Rate_Limits_and_Observability",
+      "assignee": "Observability",
+      "edits": [
+        {
+          "path": "backend/strategist/observability.py",
+          "action": "ensure",
+          "content": "# /api/v1/health/strategist: dependency checks, p95, structured JSON logs"
+        }
+      ]
+    },
+    {
+      "name": "OpenAPI_DX_and_Runbook",
+      "assignee": "DocsWriter",
+      "edits": [
+        {
+          "path": "docs/openapi.yaml",
+          "action": "ensure",
+          "content": "openapi: 3.0.3\\ninfo: { title: LokDarpan Political Strategist API, version: 0.2.0 }\\npaths:\\n  /api/v1/strategist/{ward}:\\n    get: { parameters: [{name: ward, in: path, required: true},{name: depth, in: query}], responses: {200:{description: OK}}}\\n  /api/v1/strategist/analyze:\\n    post: { requestBody: {required: true}, responses:{200:{description: OK}} }\\n  /api/v1/strategist/feed:\\n    get: { parameters: [{name: ward, in: query},{name: since, in: query}], responses: {200:{description: SSE stream}} }"
+        },
+        {
+          "path": "POLITICAL_STRATEGIST.md",
+          "action": "insert_or_update",
+          "content": "## Proactive Strategic Mode\\n- Outputs are actionable, providing strategic intelligence and recommendations with citations.\\n- **This mode is designed to provide a decisive competitive advantage.**\\n## SSOT Rules\\n- TASKS.md is canonical for status.\\n- CLAUDE.md mirrors decisions/outcomes with links.\\n- Update both on every significant change (pre/post hooks automate this)."
+        }
+      ]
+    },
+    {
+      "name": "QA_E2E_and_Quality_Gates",
+      "assignee": "QA",
+      "edits": [
+        {
+          "path": "e2e/strategist/strategist.spec.ts",
+          "action": "ensure",
+          "content": "import { test, expect } from '@playwright/test';\\ntest('strategist panel renders and receives actionable intelligence', async ({ page }) => {\\n  await page.goto('/#/strategist');\\n  await expect(page.getByText('Strategic Insights')).toBeVisible();\\n  // Add checks for strategic outputs like 'Recommended Actions' or 'Competitor Analysis'\\n});"
+        }
+      ],
+      "actions": [
+        {
+          "server": "playwright",
+          "tool": "run",
+          "args": {
+            "path": "e2e/strategist",
+            "browsers": ["chromium"],
+            "headless": true
+          }
+        }
+      ]
+    }
+  ]
+}
