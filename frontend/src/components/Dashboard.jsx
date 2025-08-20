@@ -18,6 +18,17 @@ import EpaperFeed from "./EpaperFeed.jsx";
 import { joinApi } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 
+// Enhanced error boundary system
+import ComponentErrorBoundary from "./ComponentErrorBoundary.jsx";
+import DashboardHealthIndicator from "./DashboardHealthIndicator.jsx";
+import { 
+  MapFallback, 
+  ChartFallback, 
+  StrategistFallback, 
+  AlertsFallback, 
+  GenericFallback 
+} from "./ErrorFallback.jsx";
+
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
   if (!label) return "";
@@ -166,6 +177,9 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Dashboard Health Indicator */}
+      <DashboardHealthIndicator />
+
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -217,26 +231,41 @@ export default function Dashboard() {
       </div>
 
       {/* Ward Meta Panel */}
-      <WardMetaPanel wardId={wardIdForMeta} />
+      <ComponentErrorBoundary
+        componentName="Ward Meta Panel"
+        fallbackMessage="Ward demographic information is temporarily unavailable."
+      >
+        <WardMetaPanel wardId={wardIdForMeta} />
+      </ComponentErrorBoundary>
 
       {/* Map + Strategic Summary (responsive 12-col layout on large screens) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 xl:col-span-8 bg-white border rounded-md">
           <div className="p-2 font-medium">Geospatial Intelligence</div>
           <div className="p-2">
-            <LocationMap
-              geojson={geojson}
-              selectedWard={selectedWard}
-              onWardSelect={setSelectedWard}
-              matchHeightRef={summaryRef}   // auto-size map to match the summary card height
-            />
+            <ComponentErrorBoundary
+              componentName="Interactive Map"
+              fallbackMessage="The interactive ward map is temporarily unavailable. Use the ward dropdown above for area selection."
+            >
+              <LocationMap
+                geojson={geojson}
+                selectedWard={selectedWard}
+                onWardSelect={setSelectedWard}
+                matchHeightRef={summaryRef}   // auto-size map to match the summary card height
+              />
+            </ComponentErrorBoundary>
           </div>
         </div>
 
         <div className="lg:col-span-5 xl:col-span-4 bg-white border rounded-md" ref={summaryRef}>
           <div className="p-2 font-medium">On-Demand Strategic Summary</div>
           <div className="p-2">
-            <StrategicSummary selectedWard={selectedWard} />
+            <ComponentErrorBoundary
+              componentName="Strategic Analysis"
+              fallbackMessage={`AI-powered strategic analysis for ${selectedWard || 'the selected ward'} is temporarily unavailable. Core analytics below remain functional.`}
+            >
+              <StrategicSummary selectedWard={selectedWard} />
+            </ComponentErrorBoundary>
           </div>
         </div>
       </div>
@@ -248,7 +277,12 @@ export default function Dashboard() {
           {loading ? (
             <div className="text-sm text-gray-500">Loading chart data…</div>
           ) : (
-            <EmotionChart posts={filteredPosts} />
+            <ComponentErrorBoundary
+              componentName="Sentiment Chart"
+              fallbackMessage="Sentiment visualization is temporarily unavailable."
+            >
+              <EmotionChart posts={filteredPosts} />
+            </ComponentErrorBoundary>
           )}
         </div>
 
@@ -257,7 +291,12 @@ export default function Dashboard() {
           {loading ? (
             <div className="text-sm text-gray-500">Loading analysis…</div>
           ) : (
-            <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
+            <ComponentErrorBoundary
+              componentName="Competitive Analysis"
+              fallbackMessage="Party comparison analysis is temporarily unavailable."
+            >
+              <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
+            </ComponentErrorBoundary>
           )}
         </div>
       </div>
@@ -266,38 +305,73 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Trend: Emotions & Share of Voice</div>
-          <TimeSeriesChart ward={selectedWard} days={30} />
+          <ComponentErrorBoundary
+            componentName="Time Series Chart"
+            fallbackMessage="Historical trend analysis is temporarily unavailable."
+          >
+            <TimeSeriesChart ward={selectedWard} days={30} />
+          </ComponentErrorBoundary>
         </div>
 
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Topic Analysis</div>
-          <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
+          <ComponentErrorBoundary
+            componentName="Topic Analysis"
+            fallbackMessage="Topic clustering analysis is temporarily unavailable."
+          >
+            <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
+          </ComponentErrorBoundary>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitor Trend</div>
-          <CompetitorTrendChart ward={selectedWard} days={30} />
+          <ComponentErrorBoundary
+            componentName="Competitor Trend Chart"
+            fallbackMessage="Competitor timeline analysis is temporarily unavailable."
+          >
+            <CompetitorTrendChart ward={selectedWard} days={30} />
+          </ComponentErrorBoundary>
         </div>
 
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitive Benchmark</div>
-          <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
+          <ComponentErrorBoundary
+            componentName="Competitive Benchmark"
+            fallbackMessage="Performance benchmarking is temporarily unavailable."
+          >
+            <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
+          </ComponentErrorBoundary>
         </div>
       </div>
 
       <div className="bg-white border rounded-md p-2">
         <div className="font-medium mb-2">Predictive Outlook</div>
-        <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+        <ComponentErrorBoundary
+          componentName="Predictive Analysis"
+          fallbackMessage="Electoral prediction analysis is temporarily unavailable."
+        >
+          <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+        </ComponentErrorBoundary>
       </div>
 
       {/* Latest Epaper Headlines */}
-      <EpaperFeed ward={selectedWard} limit={10} />
+      <ComponentErrorBoundary
+        componentName="Latest Headlines"
+        fallbackMessage="Latest news headlines are temporarily unavailable."
+      >
+        <EpaperFeed ward={selectedWard} limit={10} />
+      </ComponentErrorBoundary>
 
       {/* Intelligence feed */}
       <div className="bg-white border rounded-md p-2">
-        <AlertsPanel posts={filteredPosts} ward={selectedWard} />
+        <ComponentErrorBoundary
+          componentName="Intelligence Alerts"
+          fallbackMessage="Real-time intelligence alerts are temporarily unavailable. Check back shortly for political updates."
+        >
+          <AlertsPanel posts={filteredPosts} ward={selectedWard} />
+        </ComponentErrorBoundary>
       </div>
 
       {error && (

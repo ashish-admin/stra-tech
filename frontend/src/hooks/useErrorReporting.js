@@ -1,0 +1,123 @@
+import { useEffect } from 'react';
+
+// Error reporting hook for component monitoring
+export const useErrorReporting = () => {
+  useEffect(() => {
+    // Set up global error reporting function
+    window.reportError = (errorData) => {
+      // Log to console for development
+      console.error('LokDarpan Component Error Report:', {
+        ...errorData,
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        timestamp: new Date().toISOString()
+      });
+
+      // In production, send to monitoring service
+      if (process.env.NODE_ENV === 'production') {
+        // Example: Send to monitoring service
+        try {
+          fetch('/api/v1/errors/report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              ...errorData,
+              userAgent: navigator.userAgent,
+              url: window.location.href,
+              timestamp: new Date().toISOString()
+            }),
+            credentials: 'include'
+          }).catch(err => {
+            console.error('Failed to report error to monitoring service:', err);
+          });
+        } catch (err) {
+          console.error('Error reporting failed:', err);
+        }
+      }
+    };
+
+    // Global error handler for uncaught errors
+    const handleGlobalError = (event) => {
+      window.reportError({
+        component: 'Global',
+        error: event.error?.message || 'Unknown error',
+        stack: event.error?.stack || 'No stack trace',
+        type: 'uncaught_error'
+      });
+    };
+
+    // Global unhandled promise rejection handler
+    const handleUnhandledRejection = (event) => {
+      window.reportError({
+        component: 'Global',
+        error: event.reason?.message || 'Unhandled promise rejection',
+        stack: event.reason?.stack || 'No stack trace',
+        type: 'unhandled_rejection'
+      });
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      delete window.reportError;
+    };
+  }, []);
+};
+
+// Error metrics hook for tracking error rates
+export const useErrorMetrics = () => {
+  useEffect(() => {
+    // Initialize error tracking
+    if (!window.errorMetrics) {
+      window.errorMetrics = {
+        errors: new Map(),
+        totalErrors: 0,
+        sessionStart: Date.now()
+      };
+    }
+
+    // Function to track component errors
+    window.trackComponentError = (componentName) => {
+      const metrics = window.errorMetrics;
+      const current = metrics.errors.get(componentName) || 0;
+      metrics.errors.set(componentName, current + 1);
+      metrics.totalErrors++;
+
+      // Log error rate if it gets too high
+      const sessionDuration = (Date.now() - metrics.sessionStart) / 1000 / 60; // minutes
+      const errorRate = metrics.totalErrors / Math.max(sessionDuration, 1);
+      
+      if (errorRate > 5) { // More than 5 errors per minute
+        console.warn(`High error rate detected: ${errorRate.toFixed(1)} errors/minute`);
+        window.reportError({
+          component: 'System',
+          error: `High error rate: ${errorRate.toFixed(1)} errors/minute`,
+          type: 'error_rate_warning',
+          metrics: Object.fromEntries(metrics.errors)
+        });
+      }
+    };
+
+    return () => {
+      delete window.trackComponentError;
+    };
+  }, []);
+
+  return {
+    getErrorMetrics: () => window.errorMetrics,
+    clearErrorMetrics: () => {
+      if (window.errorMetrics) {
+        window.errorMetrics.errors.clear();
+        window.errorMetrics.totalErrors = 0;
+        window.errorMetrics.sessionStart = Date.now();
+      }
+    }
+  };
+};
+
+export default useErrorReporting;

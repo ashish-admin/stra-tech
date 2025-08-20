@@ -10,12 +10,19 @@ import { WardProvider } from "./context/WardContext.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { joinApi } from "./lib/api";
 
+// Enhanced error reporting system
+import { useErrorReporting, useErrorMetrics } from "./hooks/useErrorReporting.js";
+
 const queryClient = new QueryClient();
 
 export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Initialize error reporting and metrics
+  useErrorReporting();
+  useErrorMetrics();
 
   async function checkSession() {
     try {
