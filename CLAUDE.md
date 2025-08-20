@@ -344,6 +344,9 @@ psql "$DATABASE_URL" -c "SELECT count(*) FROM post;"
 
 # Frontend error checking
 cd frontend && npm run build
+
+# Strategist system health check
+curl -f http://localhost:5000/api/v1/strategist/health
 ```
 
 ### Configuration Issues & Solutions
@@ -375,6 +378,89 @@ pkill -f "vite\|npm.*dev\|flask.*run"
 # Start in correct order
 cd backend && source venv/bin/activate && flask run &
 cd frontend && npm run dev
+```
+
+### Political Strategist Troubleshooting
+
+**AI Service Connection Issues**:
+```bash
+# Verify API keys
+echo $GEMINI_API_KEY | cut -c1-10  # Should show first 10 chars
+echo $PERPLEXITY_API_KEY | cut -c1-10
+
+# Test Gemini API connectivity
+curl -H "Authorization: Bearer $GEMINI_API_KEY" \
+  "https://generativelanguage.googleapis.com/v1/models"
+
+# Check strategist service status
+curl -s http://localhost:5000/api/v1/strategist/status | jq
+```
+
+**SSE Streaming Issues**:
+```bash
+# Test SSE endpoint directly
+curl -N -H "Accept: text/event-stream" \
+  "http://localhost:5000/api/v1/strategist/feed?ward=Jubilee%20Hills"
+
+# Check for proxy configuration issues (production)
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Cache and Redis Issues**:
+```bash
+# Check Redis connectivity
+redis-cli ping
+
+# Clear strategist cache
+redis-cli FLUSHDB
+
+# Monitor Redis memory usage
+redis-cli info memory
+```
+
+**Performance Issues**:
+```bash
+# Monitor Celery workers
+celery -A celery_worker.celery inspect active
+celery -A celery_worker.celery inspect stats
+
+# Check system resources
+htop
+df -h
+free -h
+
+# Monitor AI API usage
+tail -f /var/log/lokdarpan/app.log | grep "AI_SERVICE"
+```
+
+### Error Code Reference
+
+**Strategist API Error Codes**:
+- `STRATEGIST_001`: AI service unavailable
+- `STRATEGIST_002`: Analysis timeout
+- `STRATEGIST_003`: Invalid ward parameter
+- `STRATEGIST_004`: Rate limit exceeded
+- `STRATEGIST_005`: Content filtering triggered
+- `STRATEGIST_006`: Authentication required
+- `STRATEGIST_007`: Cache operation failed
+- `STRATEGIST_008`: SSE connection error
+
+**Resolution Steps**:
+```bash
+# For STRATEGIST_001 (AI service unavailable)
+curl -f https://generativelanguage.googleapis.com/v1/models
+systemctl restart lokdarpan-api
+
+# For STRATEGIST_002 (Analysis timeout)
+# Check system resources and increase timeout in config
+grep "ANALYSIS.*TIMEOUT" backend/.env
+
+# For STRATEGIST_004 (Rate limit exceeded)
+redis-cli DEL "rate_limit:strategist:*"
+
+# For STRATEGIST_007 (Cache operation failed)
+redis-cli FLUSHALL
+systemctl restart redis-server
 ```
 
 ## File Organization Notes
