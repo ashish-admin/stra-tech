@@ -8,7 +8,7 @@ LokDarpan is a high-stakes, AI-driven political intelligence dashboard designed 
 
 **Architecture**: Flask + PostgreSQL + Redis + Celery backend with React + Vite frontend, designed around ward-centric electoral data and real-time news analysis.
 
-**Current Development Phase**: Phase 3 (Automated Strategic Response) - implementing proactive alerts engine with AI-powered strategic analysis.
+**Current Development Phase**: Phase 3 (Automated Strategic Response) - implementing Political Strategist system with multi-model AI architecture, SSE streaming, and advanced strategic analysis capabilities.
 
 ## Claude's Role as LokDarpan Architect
 
@@ -104,8 +104,18 @@ npm run preview  # preview production build
 - `tasks_epaper.py`: Legacy ingestion reference
 - `electoral_tasks.py`: Form20 processing and electoral features
 - `tasks_embeddings.py`: Vector embeddings for RAG
-- `tasks_summary.py`: AI summary generation
+- `tasks_summary.py`: AI summary generation and strategic analysis
 - Beat schedule: Daily epaper ingestion (7 AM), embeddings (6 AM), summaries (6:30 AM)
+
+**Political Strategist Module** (Phase 3):
+- `strategist/service.py`: Core AI orchestration and analysis engine
+- `strategist/router.py`: Flask blueprint with SSE streaming support
+- `strategist/nlp/pipeline.py`: Political text processing and sentiment analysis
+- `strategist/retriever/perplexity_client.py`: External AI service integration
+- `strategist/reasoner/ultra_think.py`: Advanced strategic reasoning engine
+- `strategist/credibility/checks.py`: Source credibility and fact verification
+- `strategist/observability/`: Metrics, monitoring, and performance tracking
+- `strategist/guardrails.py`: Safety checks and content filtering
 
 ### Frontend Architecture
 
@@ -175,25 +185,38 @@ class ErrorBoundary extends React.Component {
 ### Authentication
 - `POST /api/v1/login` - Session-based auth with secure cookies
 - `GET /api/v1/status` - Check auth status and user info
+- `POST /api/v1/logout` - Session termination
 
 ### Core Data
 - `GET /api/v1/geojson` - Ward boundary polygons  
 - `GET /api/v1/posts?city=<ward>` - Filtered posts by ward
 - `GET /api/v1/competitive-analysis?city=<ward>` - Party mention aggregates
 
-### Analytics
+### Analytics & Intelligence
 - `GET /api/v1/trends?ward=<ward>&days=<n>` - Time-series data (emotions, party mentions)
 - `GET /api/v1/pulse/<ward>?days=<n>` - Strategic briefing with evidence
 - `GET /api/v1/ward/meta/<ward_id>` - Ward profile and demographics
 - `GET /api/v1/prediction/<ward_id>` - Electoral predictions
+- `GET /api/v1/alerts/<ward>` - Intelligence alerts and notifications
+
+### Political Strategist (Phase 3) 🚧
+- `GET /api/v1/strategist/<ward>` - Comprehensive strategic analysis with depth control
+- Strategic depth parameters: `quick|standard|deep`
+- Strategic context modes: `defensive|neutral|offensive`
+- SSE streaming support for real-time analysis updates
+
+### Epaper & Content Management
+- `POST /api/v1/epaper/ingest` - Manual epaper ingestion trigger
+- Epaper blueprint endpoints for content processing
 
 ### Background Processing
 - `POST /api/v1/trigger_analysis` - Kick Celery news analysis task
 
 ### AI Services (Phase 3)
-- AI Analysis Service integration with Gemini 2.5 Pro and Perplexity AI
-- Multi-model political context analysis
+- Multi-model AI architecture: Gemini 2.5 Pro + Perplexity AI
+- Political context analysis with credibility scoring
 - Intent profiling and strategic recommendation generation
+- Real-time sentiment analysis and trend detection
 
 ## Environment Configuration
 

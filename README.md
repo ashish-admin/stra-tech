@@ -114,13 +114,28 @@ flask run  # http://localhost:5000
 
 API endpoints
 -------------
+### Core Endpoints
 - GET /api/v1/pulse/<ward>
 - GET /api/v1/alerts/<ward>
 - GET /api/v1/ward/meta/<ward_id>    (includes top-level `updated_at`)
 - GET /api/v1/prediction/<ward_id>
+- GET /api/v1/trends?ward=<ward>&days=<n>
+- GET /api/v1/competitive-analysis?city=<ward>
+
+### Authentication
+- POST /api/v1/login
+- GET /api/v1/status
+- POST /api/v1/logout
+
+### Political Strategist (Phase 3)
+- GET /api/v1/strategist/<ward>?depth=<quick|standard|deep>&context=<defensive|neutral|offensive>
+
+### Epaper Management
+- POST /api/v1/epaper/ingest
 
 Example:
 curl -s http://localhost:5000/api/v1/ward/meta/WARD_001 | jq
+curl -s http://localhost:5000/api/v1/trends?ward=All&days=30 | jq
 
 ------------------------------------------------------------------
 
