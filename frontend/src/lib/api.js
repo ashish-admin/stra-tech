@@ -23,15 +23,20 @@ function normalizeApiBase(u) {
 const RAW_BASE =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:5555";
+  "";
 
 export const apiBase = normalizeApiBase(RAW_BASE);
 
 /** Join base + path safely.
  *  Usage: joinApi("api/v1/ward/meta/WARD_001")
+ *  When apiBase is empty, use relative paths for Vite proxy
  */
 export function joinApi(path) {
   const p = String(path || "").replace(/^\/+/, "");
+  if (!apiBase) {
+    // Use relative path for Vite proxy when no base URL is configured
+    return `/${p}`;
+  }
   return `${apiBase}/${p}`;
 }
 
