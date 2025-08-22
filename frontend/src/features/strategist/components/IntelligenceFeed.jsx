@@ -11,7 +11,8 @@ import {
   Wifi,
   WifiOff,
   Eye,
-  TrendingUp
+  TrendingUp,
+  ArrowRight
 } from 'lucide-react';
 
 export default function IntelligenceFeed({ 
@@ -105,7 +106,7 @@ export default function IntelligenceFeed({
           ) : (
             <div className="divide-y">
               {filteredIntelligence.map((item, index) => (
-                <IntelligenceItem key={`${item.id || index}-${item.timestamp}`} item={item} />
+                <IntelligenceItem key={`${item.id || index}-${item.timestamp}`} item={item} ward={ward} />
               ))}
             </div>
           )}
@@ -139,7 +140,7 @@ export default function IntelligenceFeed({
   );
 }
 
-function IntelligenceItem({ item }) {
+function IntelligenceItem({ item, ward }) {
   const [showDetails, setShowDetails] = useState(false);
 
   const isAlert = item.isAlert || item.type === 'alert';

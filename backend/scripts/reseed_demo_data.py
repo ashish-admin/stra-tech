@@ -17,7 +17,7 @@ from app.models import Post, Author  # use only columns that actually exist
 WARDS = [
     "Jubilee Hills", "Kapra", "Gandhinagar", "Himayath Nagar", "Banjara Hills",
     "Ramnathpur", "Khairatabad", "Asif Nagar", "Habsiguda", "Malkajgiri",
-    "Marredpally", "Begumpet",
+    "Marredpally", "Begumpet", "Fateh Nagar", "Langar Houz",
 ]
 PARTIES = ["BJP", "BRS", "INC", "AIMIM"]
 EMOTIONS = ["Anger", "Pride", "Positive", "Frustration", "Hopeful", "Admiration", "Negative"]
@@ -27,12 +27,20 @@ POSITIVE_LINES = [
     "Water-logging hotspots fixed; drainage upgrade underway.",
     "Community clinic inaugurated; great turnout today.",
     "Local roads relaid; travel time improving.",
+    "Metro connectivity improved; residents happy with new station access.",
+    "Park development completed; families enjoying green spaces.",
+    "Street lights installation finished; safer nights for all.",
+    "Digital literacy center opened; youth learning new skills.",
 ]
 NEGATIVE_LINES = [
     "Opposition rallies again; no plan for flooding challenges.",
     "Sewage overflow complaints persist; need faster escalation.",
     "Garbage pickup delays reported; pressure is building.",
     "Traffic snarls worsening; junction redesign required.",
+    "Power outages increasing; need immediate transformer upgrade.",
+    "Water supply irregular; tanker dependency growing.",
+    "Road conditions deteriorating; monsoon damage unrepaired.",
+    "Auto-rickshaw fare disputes; need better regulation.",
 ]
 
 def pick_line(emotion: str) -> str:
