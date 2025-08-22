@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, login_user, logout_user, current_user
@@ -116,7 +116,7 @@ def status():
             {"id": current_user.id, "username": current_user.username, "email": current_user.email}
             if getattr(current_user, "is_authenticated", False) else None
         ),
-        "server_time": datetime.utcnow().isoformat() + "Z",
+        "server_time": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
     }), 200
 
 

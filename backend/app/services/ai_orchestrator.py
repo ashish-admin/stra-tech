@@ -38,7 +38,7 @@ from .perplexity_client import PerplexityClient
 from .openai_client import OpenAIClient
 from .llama_client import LlamaClient
 from .gemini_client import GeminiClient
-from .budget_manager import BudgetManager
+from .budget_manager import get_budget_manager
 from .quality_validator import QualityValidator
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class AIOrchestrator:
         self.openai_client = OpenAIClient()
         self.llama_client = LlamaClient()
         self.gemini_client = GeminiClient()
-        self.budget_manager = BudgetManager()
+        self.budget_manager = get_budget_manager()
         self.quality_validator = QualityValidator()
         
         # Circuit breaker states
@@ -1066,5 +1066,12 @@ Last error: {last_error[:200] if last_error else 'Unknown error'}
         }
 
 
-# Global orchestrator instance
-orchestrator = AIOrchestrator()
+# Global orchestrator instance - lazy initialization
+orchestrator = None
+
+def get_orchestrator():
+    """Get the global AI orchestrator instance, creating it if needed."""
+    global orchestrator
+    if orchestrator is None:
+        orchestrator = AIOrchestrator()
+    return orchestrator

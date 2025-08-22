@@ -16,10 +16,10 @@ from flask import Blueprint, request, jsonify, Response, current_app
 from flask_login import login_required, current_user
 
 from .models import GeopoliticalReport, AIModelExecution, BudgetTracker, db
-from .services.ai_orchestrator import orchestrator
-from .services.report_generator import report_generator, ReportRequest
-from .services.budget_manager import budget_manager
-from .services.strategist_integration import strategist_adapter
+from .services.ai_orchestrator import get_orchestrator
+from .services.report_generator import get_report_generator, ReportRequest
+from .services.budget_manager import get_budget_manager
+from .services.strategist_integration import get_strategist_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -97,15 +97,15 @@ def create_report():
         
         # Check budget before processing
         estimated_cost = _estimate_report_cost(analysis_depth, strategic_context)
-        if not asyncio.run(budget_manager.can_afford_request(estimated_cost)):
+        if not asyncio.run(get_budget_manager().can_afford_request(estimated_cost)):
             return jsonify({
                 "error": "Insufficient budget for request",
                 "estimated_cost_usd": estimated_cost,
-                "budget_status": asyncio.run(budget_manager.get_current_status())
+                "budget_status": asyncio.run(get_budget_manager().get_current_status())
             }), 402  # Payment Required
         
         # Generate report
-        report_uuid = asyncio.run(report_generator.generate_report(report_request))
+        report_uuid = asyncio.run(get_report_generator().generate_report(report_request))
         
         logger.info(f"Report generation started by user {current_user.id}: {report_uuid}")
         
@@ -190,7 +190,7 @@ def get_report(report_uuid):
             })
         elif report.status == "processing":
             # Get real-time status
-            status = asyncio.run(report_generator.get_report_status(report_uuid))
+            status = asyncio.run(get_report_generator().get_report_status(report_uuid))
             response_data.update({
                 "progress_percent": status.get("progress_percent", 0),
                 "estimated_completion": status.get("estimated_completion")
@@ -281,18 +281,18 @@ def quick_analyze():
         
         # Check budget
         estimated_cost = 0.05  # Quick analysis cost estimate
-        if not asyncio.run(budget_manager.can_afford_request(estimated_cost)):
+        if not asyncio.run(get_budget_manager().can_afford_request(estimated_cost)):
             return jsonify({
                 "error": "Insufficient budget for request",
                 "suggestion": "Use local analysis mode"
             }), 402
         
         # Generate quick response
-        response = asyncio.run(orchestrator.generate_response(query, context))
+        response = asyncio.run(get_orchestrator().generate_response(query, context))
         
         # Record usage
         if response.cost_usd > 0:
-            asyncio.run(budget_manager.record_spend(
+            asyncio.run(get_budget_manager().record_spend(
                 response.cost_usd, 
                 response.provider.value,
                 "quick_analysis"
@@ -361,7 +361,7 @@ def analyze_with_confidence():
         estimated_cost = base_cost + consensus_cost
         
         # Check budget
-        if not asyncio.run(budget_manager.can_afford_request(estimated_cost)):
+        if not asyncio.run(get_budget_manager().can_afford_request(estimated_cost)):
             return jsonify({
                 "error": "Insufficient budget for confidence analysis",
                 "estimated_cost_usd": estimated_cost,
@@ -369,7 +369,7 @@ def analyze_with_confidence():
             }), 402
         
         # Generate response with confidence scoring
-        result = asyncio.run(orchestrator.generate_response_with_confidence(
+        result = asyncio.run(get_orchestrator().generate_response_with_confidence(
             query, context, enable_consensus
         ))
         
@@ -382,7 +382,7 @@ def analyze_with_confidence():
         
         # Record usage
         if response.cost_usd > 0:
-            asyncio.run(budget_manager.record_spend(
+            asyncio.run(get_budget_manager().record_spend(
                 response.cost_usd, 
                 response.provider.value,
                 "confidence_analysis"
@@ -391,7 +391,7 @@ def analyze_with_confidence():
         # Record consensus cost if applicable
         consensus_data = result.get("consensus_data")
         if consensus_data and consensus_data.get("secondary_cost", 0) > 0:
-            asyncio.run(budget_manager.record_spend(
+            asyncio.run(get_budget_manager().record_spend(
                 consensus_data["secondary_cost"],
                 consensus_data.get("secondary_provider", "unknown"),
                 "consensus_validation"
@@ -461,7 +461,7 @@ def enhanced_strategist_analysis(ward):
         if enable_consensus:
             estimated_cost += estimated_cost * 0.5
         
-        if not asyncio.run(budget_manager.can_afford_request(estimated_cost)):
+        if not asyncio.run(get_budget_manager().can_afford_request(estimated_cost)):
             return jsonify({
                 "error": "Insufficient budget for enhanced strategist analysis",
                 "estimated_cost_usd": estimated_cost,
@@ -473,16 +473,16 @@ def enhanced_strategist_analysis(ward):
             # Use strategic recommendation method for consensus
             situation = f"Current political landscape in {ward}"
             goal = "Comprehensive strategic intelligence and actionable insights"
-            result = asyncio.run(strategist_adapter.strategic_recommendation(ward, situation, goal))
+            result = asyncio.run(get_strategist_adapter().strategic_recommendation(ward, situation, goal))
         else:
             # Use standard enhanced analysis
-            result = asyncio.run(strategist_adapter.analyze_political_situation(
+            result = asyncio.run(get_strategist_adapter().analyze_political_situation(
                 ward, custom_query, depth, context_mode
             ))
         
         # Record usage
         if result.get("cost_usd", 0) > 0:
-            asyncio.run(budget_manager.record_spend(
+            asyncio.run(get_budget_manager().record_spend(
                 result["cost_usd"],
                 result.get("provider", "unknown"),
                 "enhanced_strategist"
@@ -526,18 +526,18 @@ def quick_intelligence_brief(ward):
         
         # Check budget for real-time intelligence
         estimated_cost = 0.12  # Real-time data is more expensive
-        if not asyncio.run(budget_manager.can_afford_request(estimated_cost)):
+        if not asyncio.run(get_budget_manager().can_afford_request(estimated_cost)):
             return jsonify({
                 "error": "Insufficient budget for real-time intelligence",
                 "suggestion": "Increase budget or use cached analysis"
             }), 402
         
         # Generate intelligence brief
-        brief = asyncio.run(strategist_adapter.quick_intelligence_brief(ward, focus_area))
+        brief = asyncio.run(get_strategist_adapter().quick_intelligence_brief(ward, focus_area))
         
         # Record usage
         if brief.get("cost_usd", 0) > 0:
-            asyncio.run(budget_manager.record_spend(
+            asyncio.run(get_budget_manager().record_spend(
                 brief["cost_usd"],
                 brief.get("source_model", "unknown"),
                 "intelligence_brief"
@@ -565,10 +565,10 @@ def system_status():
     """
     try:
         # Get orchestrator status
-        orchestrator_status = asyncio.run(orchestrator.get_system_status())
+        orchestrator_status = asyncio.run(get_orchestrator().get_system_status())
         
         # Get budget status
-        budget_status = asyncio.run(budget_manager.get_current_status())
+        budget_status = asyncio.run(get_budget_manager().get_current_status())
         
         # Get recent performance metrics
         recent_executions = db.session.query(AIModelExecution)\
@@ -579,7 +579,7 @@ def system_status():
         model_configs = {}
         for client_name in ['claude_client', 'perplexity_client', 'openai_client', 'gemini_client', 'llama_client']:
             try:
-                client = getattr(orchestrator, client_name)
+                client = getattr(get_orchestrator(), client_name)
                 config = asyncio.run(client.get_model_info())
                 model_configs[client_name.replace('_client', '')] = config
             except Exception as e:
@@ -617,9 +617,9 @@ def system_status():
 def budget_status():
     """Get current budget status and usage metrics."""
     try:
-        status = asyncio.run(budget_manager.get_current_status())
-        forecast = asyncio.run(budget_manager.get_cost_forecast(7))
-        optimizations = asyncio.run(budget_manager.optimize_costs())
+        status = asyncio.run(get_budget_manager().get_current_status())
+        forecast = asyncio.run(get_budget_manager().get_cost_forecast(7))
+        optimizations = asyncio.run(get_budget_manager().optimize_costs())
         
         return jsonify({
             "current_status": status,
@@ -638,7 +638,7 @@ def budget_status():
 def optimize_budget():
     """Trigger budget optimization analysis."""
     try:
-        optimizations = asyncio.run(budget_manager.optimize_costs())
+        optimizations = asyncio.run(get_budget_manager().optimize_costs())
         
         return jsonify({
             "optimization_analysis": optimizations,

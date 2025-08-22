@@ -800,5 +800,12 @@ Format as professional intelligence briefing for senior political advisors.
             return "Completing soon"
 
 
-# Global report generator instance
-report_generator = ReportGenerator()
+# Global report generator instance - lazy initialization
+report_generator = None
+
+def get_report_generator():
+    """Get the global report generator instance, creating it if needed."""
+    global report_generator
+    if report_generator is None:
+        report_generator = ReportGenerator()
+    return report_generator

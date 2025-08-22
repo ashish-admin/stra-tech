@@ -395,5 +395,12 @@ class StrategistMultiModelAdapter:
         }
 
 
-# Global adapter instance
-strategist_adapter = StrategistMultiModelAdapter()
+# Global adapter instance - lazy initialization
+strategist_adapter = None
+
+def get_strategist_adapter():
+    """Get the global strategist adapter instance, creating it if needed."""
+    global strategist_adapter
+    if strategist_adapter is None:
+        strategist_adapter = StrategistMultiModelAdapter()
+    return strategist_adapter

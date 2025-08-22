@@ -14,25 +14,41 @@ from flask import Flask, request, g
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .src.app.core.extensions import db, migrate, login_manager, celery
-from .src.app.core.models.base import User
+from .extensions import db, migrate, login_manager, celery
+from .models import User
 from .celery_utils import celery_init_app
-from .src.app.core.security import (
+from .security import (
     validate_environment, 
     apply_security_headers, 
     AuditLogger,
     SecurityConfig
 )
 
-# API blueprints - Updated imports for new structure
-from .src.app.api.routes import (
-    main_bp, trends_bp, pulse_bp, ward_bp, 
-    bp_epaper, summary_bp, multimodel_bp
-)
-from .src.app.core.models import *  # Import all models
+# API blueprints - Use existing structure
+from .routes import main_bp
+from .trends_api import trends_bp
+from .pulse_api import pulse_bp
+from .ward_api import ward_bp
+from .epaper_api import bp_epaper
+from .summary_api import summary_bp
+from .multimodel_api import multimodel_bp
+from .models import *  # Import all models
 
-# Political Strategist module - Updated import
-from .src.strategist import strategist_bp
+# Political Strategist module - Check if exists
+strategist_bp = None
+try:
+    import sys
+    import os
+    # Add src to path temporarily
+    src_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src')
+    if src_path not in sys.path:
+        sys.path.insert(0, src_path)
+    from strategist import strategist_bp
+except ImportError:
+    try:
+        from strategist.router import strategist_bp
+    except ImportError:
+        print("Warning: Political Strategist module not available")
 
 def _cors_origins_from_env():
     """
@@ -151,7 +167,10 @@ def create_app(config_class: str = "config.Config") -> Flask:
         app.register_blueprint(ward_bp)
         app.register_blueprint(bp_epaper)  # NEW registrations
         app.register_blueprint(summary_bp)   # NEW
-        app.register_blueprint(strategist_bp)  # Political Strategist API
+        if strategist_bp:
+            app.register_blueprint(strategist_bp)  # Political Strategist API
+        else:
+            print("Political Strategist API not registered - module not available")
         
         # Observability is now included in strategist_bp
         return app

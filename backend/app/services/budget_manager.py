@@ -405,7 +405,13 @@ class BudgetManager:
         
         # Check for existing monthly tracker
         current_tracker = db.session.query(BudgetTracker)\
-            .filter(\n                and_(\n                    BudgetTracker.period_type == 'monthly',\n                    BudgetTracker.period_start <= now,\n                    BudgetTracker.period_end >= now\n                )\n            )\
+            .filter(
+                and_(
+                    BudgetTracker.period_type == 'monthly',
+                    BudgetTracker.period_start <= now,
+                    BudgetTracker.period_end >= now
+                )
+            )\
             .first()
         
         if current_tracker:
@@ -610,5 +616,12 @@ Period: {tracker.period_start.date()} to {tracker.period_end.date()}
         }
 
 
-# Global budget manager instance
-budget_manager = BudgetManager()
+# Global budget manager instance - lazy initialization
+budget_manager = None
+
+def get_budget_manager():
+    """Get the global budget manager instance, creating it if needed."""
+    global budget_manager
+    if budget_manager is None:
+        budget_manager = BudgetManager()
+    return budget_manager
