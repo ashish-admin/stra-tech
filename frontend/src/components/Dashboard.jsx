@@ -29,6 +29,13 @@ import {
   GenericFallback 
 } from "./ErrorFallback.jsx";
 
+// Stream A Integration
+import { useEnhancedSSE } from "../features/strategist/hooks/useEnhancedSSE";
+import { 
+  ConnectionStatusIndicator, 
+  IntelligenceActivityIndicator 
+} from "../features/strategist/components/ProgressIndicators";
+
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
   if (!label) return "";
@@ -66,6 +73,31 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Stream A Enhanced SSE Integration
+  const { 
+    connectionState, 
+    isConnected: sseConnected, 
+    intelligence, 
+    alerts,
+    analysisData 
+  } = useEnhancedSSE(selectedWard, { 
+    priority: 'all',
+    includeConfidence: true 
+  });
+
+  // Intelligence feed summary for activity indicator
+  const intelligenceSummary = useMemo(() => {
+    const total = intelligence.length + alerts.length;
+    const highPriority = [...intelligence, ...alerts]
+      .filter(item => item.priority === 'high').length;
+    const actionable = [...intelligence, ...alerts]
+      .filter(item => item.actionableItems?.length > 0).length;
+    const recent = [...intelligence, ...alerts]
+      .filter(item => Date.now() - (item.receivedAt || 0) < 3600000).length;
+    
+    return { total, highPriority, actionable, recent };
+  }, [intelligence, alerts]);
 
   const wardQuery = selectedWard && selectedWard !== "All" ? selectedWard : "";
 
@@ -178,7 +210,25 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Dashboard Health Indicator */}
-      <DashboardHealthIndicator />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <DashboardHealthIndicator />
+        </div>
+        
+        {/* Stream A Intelligence Activity */}
+        {selectedWard !== 'All' && (
+          <div className="space-y-2">
+            <ConnectionStatusIndicator 
+              connectionState={connectionState}
+              className="text-xs"
+            />
+            <IntelligenceActivityIndicator 
+              summary={intelligenceSummary}
+              className="text-xs"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

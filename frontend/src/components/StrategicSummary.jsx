@@ -7,6 +7,8 @@ import wardVotersRaw from "../data/wardVoters.js"; // keep as empty {} if not us
 // Political Strategist components
 import PoliticalStrategist from "../features/strategist/components/PoliticalStrategist";
 import { useFeatureFlag } from "../features/strategist/hooks/useStrategist";
+import { useEnhancedSSE, useConfidenceScore } from "../features/strategist/hooks/useEnhancedSSE";
+import { ConfidenceScoreIndicator, ConnectionStatusIndicator } from "../features/strategist/components/ProgressIndicators";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -215,12 +217,72 @@ function LegacyStrategicSummary({ selectedWard = "All" }) {
   );
 }
 
-// Main Strategic Summary Component with AI Integration
+// Enhanced Strategic Summary Component with Stream A Integration
 export default function StrategicSummary({ selectedWard = "All" }) {
   const useAIMode = useFeatureFlag('ai-strategist') && selectedWard !== 'All';
   
+  // Stream A's enhanced SSE integration
+  const { 
+    connectionState, 
+    isConnected, 
+    briefing, 
+    confidence 
+  } = useEnhancedSSE(selectedWard, { 
+    priority: 'all',
+    includeConfidence: true 
+  });
+  
+  // Confidence score monitoring
+  const confidenceData = useConfidenceScore(selectedWard);
+  
   if (useAIMode) {
-    return <PoliticalStrategist selectedWard={selectedWard} />;
+    return (
+      <div className="space-y-3">
+        {/* Stream A Integration Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-gray-900">AI Strategic Analysis</h3>
+            <ConnectionStatusIndicator 
+              connectionState={connectionState} 
+              className="text-xs"
+            />
+          </div>
+          
+          {/* Real-time confidence indicator */}
+          {confidenceData.current && (
+            <ConfidenceScoreIndicator 
+              confidenceData={confidenceData}
+              className="text-xs"
+            />
+          )}
+        </div>
+        
+        {/* Enhanced Political Strategist with Stream A data */}
+        <PoliticalStrategist 
+          selectedWard={selectedWard}
+          enhancedData={{
+            briefing,
+            confidence: confidenceData,
+            isConnected,
+            connectionState
+          }}
+        />
+        
+        {/* Stream A Analysis Quality Indicator */}
+        {briefing && (
+          <div className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded-md">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-purple-700">
+                Multi-Model Analysis • Sources: {briefing.sources || 'N/A'}
+              </span>
+              <span className="text-purple-600 font-medium">
+                Quality: {briefing.analysisQuality ? Math.round(briefing.analysisQuality * 100) : '--'}%
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
   
   return <LegacyStrategicSummary selectedWard={selectedWard} />;

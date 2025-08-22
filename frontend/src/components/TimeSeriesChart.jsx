@@ -10,6 +10,7 @@ import {
   YAxis,
   Legend,
 } from "recharts";
+import { AlertTriangle, TrendingUp, RefreshCw, BarChart3 } from "lucide-react";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -50,6 +51,9 @@ export default function TimeSeriesChart({ ward = "All", days = 30 }) {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const maxRetries = 3;
 
   useEffect(() => {
     let cancelled = false;
@@ -81,8 +85,12 @@ export default function TimeSeriesChart({ ward = "All", days = 30 }) {
         setSeries(shaped);
       } catch (e) {
         console.error("TimeSeriesChart trends error", e);
-        setErr("Could not load trend data.");
-        setSeries([]);
+        if (!cancelled) {
+          setErr(e.response?.status === 404 
+            ? "No trend data available for the selected ward and time period."
+            : "Could not load trend data. Please try again.");
+          setSeries([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -104,18 +112,90 @@ export default function TimeSeriesChart({ ward = "All", days = 30 }) {
     );
   }, [series]);
 
-  if (loading) {
-    return <div className="text-sm text-gray-500">Loading trend data…</div>;
+  const handleRetry = () => {
+    if (retryCount >= maxRetries) return;
+    
+    setIsRetrying(true);
+    setRetryCount(prev => prev + 1);
+    setErr("");
+    
+    // Retry after a brief delay
+    setTimeout(() => {
+      setIsRetrying(false);
+      // This will trigger the useEffect to refetch
+    }, 1000);
+  };
+
+  const generateFallbackData = () => {
+    // Generate minimal fallback data for visualization
+    const fallbackSeries = [];
+    const today = new Date();
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      fallbackSeries.push({
+        date: fmtDate(date.toISOString().split('T')[0]),
+        mentions: 0,
+        Positive: 0,
+        Anger: 0,
+        Negative: 0
+      });
+    }
+    
+    return fallbackSeries;
+  };
+
+  if (loading || isRetrying) {
+    return (
+      <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg">
+        <div className="flex flex-col items-center space-y-2">
+          <RefreshCw className={`h-6 w-6 text-gray-400 ${(loading || isRetrying) ? 'animate-spin' : ''}`} />
+          <div className="text-sm text-gray-500">
+            {isRetrying ? `Retrying... (${retryCount}/${maxRetries})` : 'Loading trend data...'}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (err) {
-    return <div className="text-sm text-red-600">{err}</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-64 bg-red-50 border border-red-200 rounded-lg p-6">
+        <AlertTriangle className="h-8 w-8 text-red-500 mb-3" />
+        <h3 className="text-sm font-medium text-red-900 mb-2">Chart Unavailable</h3>
+        <p className="text-sm text-red-700 text-center mb-4">{err}</p>
+        
+        {retryCount < maxRetries && (
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry ({maxRetries - retryCount} attempts left)
+          </button>
+        )}
+        
+        {retryCount >= maxRetries && (
+          <div className="text-center">
+            <p className="text-xs text-red-600 mb-3">Maximum retry attempts reached</p>
+            <FallbackDataTable data={generateFallbackData()} />
+          </div>
+        )}
+      </div>
+    );
   }
 
   if (!hasData) {
     return (
-      <div className="text-sm text-gray-500">
-        No historical trend data available for the selected ward.
+      <div className="flex flex-col items-center justify-center h-64 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <BarChart3 className="h-8 w-8 text-yellow-500 mb-3" />
+        <h3 className="text-sm font-medium text-yellow-900 mb-2">No Trend Data</h3>
+        <p className="text-sm text-yellow-700 text-center mb-4">
+          No historical trend data available for {ward || 'the selected ward'} in the last {days} days.
+        </p>
+        <FallbackDataTable data={generateFallbackData()} showEmpty={true} />
       </div>
     );
   }
@@ -155,6 +235,66 @@ export default function TimeSeriesChart({ ward = "All", days = 30 }) {
           ))}
         </LineChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * Fallback Data Table Component
+ * Displays trend data in tabular format when chart fails
+ */
+function FallbackDataTable({ data, showEmpty = false }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="text-xs text-gray-500 italic">
+        No fallback data available
+      </div>
+    );
+  }
+
+  const recentData = data.slice(-7); // Show last 7 days
+
+  return (
+    <div className="bg-white border rounded-lg p-3 max-w-sm mx-auto">
+      <h4 className="text-xs font-medium text-gray-700 mb-2">
+        Recent Trend Data (Last 7 Days)
+      </h4>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-1 px-2 text-gray-600">Date</th>
+              <th className="text-right py-1 px-2 text-gray-600">Mentions</th>
+              <th className="text-right py-1 px-2 text-green-600">Positive</th>
+              <th className="text-right py-1 px-2 text-red-600">Negative</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentData.map((row, index) => (
+              <tr key={index} className="border-b border-gray-100 last:border-b-0">
+                <td className="py-1 px-2 text-gray-800">{row.date}</td>
+                <td className="py-1 px-2 text-right text-gray-700">
+                  {showEmpty ? '0' : (row.mentions || '0')}
+                </td>
+                <td className="py-1 px-2 text-right text-green-600">
+                  {showEmpty ? '0' : (row.Positive || '0')}
+                </td>
+                <td className="py-1 px-2 text-right text-red-600">
+                  {showEmpty ? '0' : (row.Negative || '0')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      
+      {showEmpty && (
+        <div className="mt-2 text-center">
+          <span className="text-xs text-gray-500 italic">
+            No activity recorded in this period
+          </span>
+        </div>
+      )}
     </div>
   );
 }

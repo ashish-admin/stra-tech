@@ -1,4 +1,5 @@
 // Component health monitoring utility for LokDarpan Dashboard
+import React from 'react';
 export class ComponentHealthMonitor {
   constructor() {
     this.componentStatus = new Map();

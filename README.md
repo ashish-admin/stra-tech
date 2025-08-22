@@ -1,42 +1,64 @@
-LokDarpan – Backend
+# LokDarpan: AI-Driven Political Intelligence Dashboard
 ====================
 
-Flask + SQLAlchemy + Alembic + Celery backend for ward‑level electoral intelligence and news/epaper ingestion.
+**High-stakes, AI-driven political intelligence dashboard** designed to provide real-time, 360-degree political landscape insights for campaign teams in Hyderabad, India. 
+
+**Architecture**: Flask + PostgreSQL + Redis + Celery backend with React + Vite frontend, designed around ward-centric electoral data and real-time news analysis.
+
+**Current Phase**: Phase 3 (Automated Strategic Response) - Implementing Political Strategist system with multi-model AI architecture, SSE streaming, and advanced strategic analysis capabilities.
+
+## ✅ Current System Status (August 2025)
+
+**System Status**: Operational with configuration issues resolved  
+**Phase 1**: Foundational Intelligence - Complete ✅  
+**Phase 2**: Diagnostic Advantage - Complete ✅  
+**Phase 3**: Automated Strategic Response - In Progress 🚧
+
+### Recent Improvements
+- **Frontend Recovery**: Node modules corruption fixed, CORS configuration updated
+- **Component Architecture**: Error boundaries implemented, LocationMap.jsx verified working
+- **Database Schema**: Enhanced with AI infrastructure tables, multi-model AI support
+- **Political Strategist**: Core AI orchestration engine with Gemini 2.5 Pro + Perplexity AI
+
+### Phase 3 Development Status
+- [x] Multi-model AI architecture foundation
+- [x] Political Strategist module structure (`backend/app/strategist/`)
+- [x] SSE streaming support in Flask blueprints
+- [x] Database schema with AI infrastructure tables
+- [x] Error boundary implementation across frontend components
+- [ ] Advanced strategic reasoning engine
+- [ ] Political NLP pipeline with sentiment analysis
+- [ ] Credibility scoring and source verification
+- [ ] Real-time SSE client integration
 
 ------------------------------------------------------------------
 
-Changelog (last 24h)
---------------------
+## System Architecture
 
-**Schema**
-- Reintroduced `epaper` table and added **`epaper.sha256`** (NOT NULL, **UNIQUE**).
-- Added **`post.epaper_id`** (FK → `epaper.id`) and created a **partial unique index** so there is at most one `post` per `epaper` when `epaper_id` is not null.
-- Resolved multiple Alembic heads and merged to a **single head**.
-
-**Tasks / Ingestion**
-- `app.tasks.ingest_epaper_jsonl`: **idempotent upsert** into `epaper` by `sha256`, then **links/creates** a `post` with `post.epaper_id`; **skips duplicates** on re-runs.
-- `app.tasks.ingest_epaper_dir`: helper to batch a directory of `.jsonl` files.
-
-**API**
-- `GET /api/v1/ward/meta/<ward_id>` now includes a **top‑level `updated_at`** (the max of nested timestamps).
-
-**Time Handling**
-- New/updated code uses **timezone‑aware UTC** (`datetime.now(timezone.utc)`). DB columns remain naive `DateTime` for now, but values written are UTC.
-
-**Backfill scripts**
-- `scripts/backfill_epaper_sha.py` (compute `sha256` for existing `epaper` rows).
-- `scripts/backfill_post_epaper_id.py` (link legacy posts to epapers; safe with the partial unique index).
-
-------------------------------------------------------------------
-
-Stack
------
+### Backend Stack
 - **Flask** application factory: `app:create_app`
-- **PostgreSQL** (primary DB)
-- **Redis** (Celery broker + results)
+- **PostgreSQL** (primary DB with electoral data and AI infrastructure)
+- **Redis** (Celery broker + results + AI caching)
 - **SQLAlchemy** ORM / **Alembic** migrations
-- **Celery** worker + beat
+- **Celery** worker + beat (background processing)
+- **Multi-Model AI**: Gemini 2.5 Pro + Perplexity AI integration
 - **Python 3.12**
+
+### Frontend Stack
+- **React 18** + **Vite 7** (modern build tooling)
+- **TailwindCSS** (utility-first styling)
+- **React Query** (server state management)
+- **Leaflet** (interactive ward maps)
+- **Recharts** (data visualization)
+- **Error Boundaries** (component resilience)
+
+### Key Features
+- **Ward-Centric Intelligence**: 150 GHMC ward-level political analysis
+- **Real-time Data Processing**: SSE streaming, live sentiment analysis
+- **Multi-Model AI Analysis**: Strategic intelligence with confidence scoring
+- **Interactive Geospatial Visualization**: Ward boundary maps with click selection
+- **Resilient Component Architecture**: Error boundaries prevent cascade failures
+- **Background Task Processing**: Celery for AI analysis, news ingestion, embeddings
 
 ------------------------------------------------------------------
 

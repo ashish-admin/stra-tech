@@ -39,6 +39,8 @@ class Config:
     SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_NAME = 'lokdarpan_session'
+    # Critical: Set domain for cross-port cookie sharing in development
+    SESSION_COOKIE_DOMAIN = 'localhost' if os.environ.get('FLASK_ENV') == 'development' else None
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour
 
     # CORS Configuration - Allow multiple frontend ports and host formats

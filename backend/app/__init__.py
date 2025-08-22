@@ -14,27 +14,25 @@ from flask import Flask, request, g
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .extensions import db, migrate, login_manager, celery
-from .models import User
+from .src.app.core.extensions import db, migrate, login_manager, celery
+from .src.app.core.models.base import User
 from .celery_utils import celery_init_app
-from .security import (
+from .src.app.core.security import (
     validate_environment, 
     apply_security_headers, 
     AuditLogger,
     SecurityConfig
 )
 
-# API blueprints
-from .routes import main_bp
-from .trends_api import trends_bp
-from .pulse_api import pulse_bp
-from .ward_api import ward_bp
-from .epaper_api import bp_epaper  # NEW: epaper endpoints
-from .summary_api import summary_bp      # NEW: summary endpoints
-from .models_ai import Embedding, Leader, LeaderMention, IssueCluster, Summary  # ensure models are imported
+# API blueprints - Updated imports for new structure
+from .src.app.api.routes import (
+    main_bp, trends_bp, pulse_bp, ward_bp, 
+    bp_epaper, summary_bp, multimodel_bp
+)
+from .src.app.core.models import *  # Import all models
 
-# Political Strategist module
-from strategist.router import strategist_bp
+# Political Strategist module - Updated import
+from .src.strategist import strategist_bp
 
 def _cors_origins_from_env():
     """
@@ -155,7 +153,5 @@ def create_app(config_class: str = "config.Config") -> Flask:
         app.register_blueprint(summary_bp)   # NEW
         app.register_blueprint(strategist_bp)  # Political Strategist API
         
-        # Register observability blueprint
-        from strategist.observability.dashboard import observability_bp
-        app.register_blueprint(observability_bp)  # System monitoring
+        # Observability is now included in strategist_bp
         return app
