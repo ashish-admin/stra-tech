@@ -11,7 +11,7 @@ import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
-from .ai_orchestrator import orchestrator
+from .ai_orchestrator import get_orchestrator
 from ..models import AIModelExecution, db
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class StrategistMultiModelAdapter:
     """
     
     def __init__(self):
-        self.orchestrator = orchestrator
+        self.orchestrator = get_orchestrator()
         self.legacy_enabled = True
         
     async def analyze_political_situation(self, ward: str, query: str = None, 
