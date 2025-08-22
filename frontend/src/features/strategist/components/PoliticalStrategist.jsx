@@ -3,18 +3,23 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, TrendingUp, Target, Clock, RefreshCw, Settings } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Target, Clock, RefreshCw, Settings, Radio } from 'lucide-react';
 import { useStrategistAnalysis, useIntelligenceFeed, useTriggerAnalysis, useStrategistPreferences } from '../hooks/useStrategist';
 import StrategistBriefing from './StrategistBriefing';
 import IntelligenceFeed from './IntelligenceFeed';
 import ActionCenter from './ActionCenter';
 import AnalysisControls from './AnalysisControls';
+import StrategistStream from './StrategistStream';
 
 export default function PoliticalStrategist({ selectedWard }) {
   const { preferences, updatePreference } = useStrategistPreferences();
   const [analysisDepth, setAnalysisDepth] = useState(preferences.defaultDepth);
   const [contextMode, setContextMode] = useState(preferences.defaultContext);
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Streaming mode toggle
+  const [streamingMode, setStreamingMode] = useState(preferences.enableStreaming || false);
+  const [streamingResult, setStreamingResult] = useState(null);
 
   // Main strategic analysis
   const { 
@@ -53,6 +58,27 @@ export default function PoliticalStrategist({ selectedWard }) {
   useEffect(() => {
     updatePreference('defaultContext', contextMode);
   }, [contextMode, updatePreference]);
+
+  useEffect(() => {
+    updatePreference('enableStreaming', streamingMode);
+  }, [streamingMode, updatePreference]);
+
+  // Handle streaming analysis completion
+  const handleStreamingComplete = (result) => {
+    setStreamingResult(result);
+    
+    // If we have streaming result, prefer it over static briefing
+    if (result && result.analysis_result) {
+      // Update the briefing data to match streaming result format
+      // This ensures compatibility with existing StrategistBriefing component
+    }
+  };
+
+  // Toggle streaming mode
+  const toggleStreamingMode = () => {
+    setStreamingMode(prev => !prev);
+    setStreamingResult(null); // Clear previous streaming result
+  };
 
   const handleManualRefresh = async () => {
     try {
@@ -101,10 +127,23 @@ export default function PoliticalStrategist({ selectedWard }) {
               </span>
             </div>
             
+            {/* Streaming mode toggle */}
+            <button
+              onClick={toggleStreamingMode}
+              className={`p-2 rounded-md transition-colors ${
+                streamingMode 
+                  ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' 
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
+              title={streamingMode ? 'Disable Streaming Mode' : 'Enable Streaming Mode'}
+            >
+              {streamingMode ? <Radio className="h-4 w-4" /> : <Radio className="h-4 w-4 opacity-50" />}
+            </button>
+            
             <button
               onClick={handleManualRefresh}
-              disabled={isBriefingLoading || triggerAnalysis.isPending}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              disabled={isBriefingLoading || triggerAnalysis.isPending || streamingMode}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Refresh Analysis"
             >
               <RefreshCw className={`h-4 w-4 ${(isBriefingLoading || triggerAnalysis.isPending) ? 'animate-spin' : ''}`} />
@@ -162,20 +201,30 @@ export default function PoliticalStrategist({ selectedWard }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Primary Analysis Panel */}
         <div className="lg:col-span-2">
-          <StrategistBriefing 
-            briefing={briefing} 
-            isLoading={isBriefingLoading}
-            ward={selectedWard}
-            onRefresh={refetchBriefing}
-          />
+          {streamingMode ? (
+            <StrategistStream 
+              ward={selectedWard}
+              onAnalysisComplete={handleStreamingComplete}
+              initialDepth={analysisDepth}
+              initialContext={contextMode}
+              className="h-full"
+            />
+          ) : (
+            <StrategistBriefing 
+              briefing={streamingResult?.analysis_result || briefing} 
+              isLoading={isBriefingLoading}
+              ward={selectedWard}
+              onRefresh={refetchBriefing}
+            />
+          )}
         </div>
 
         {/* Side Panel */}
         <div className="space-y-4">
           {/* Action Center */}
           <ActionCenter 
-            actions={briefing?.recommended_actions || []}
-            isLoading={isBriefingLoading}
+            actions={(streamingResult?.analysis_result?.recommended_actions || briefing?.recommended_actions) || []}
+            isLoading={isBriefingLoading && !streamingMode}
             ward={selectedWard}
           />
           
@@ -207,6 +256,9 @@ export default function PoliticalStrategist({ selectedWard }) {
               <strong>Context Mode:</strong> {contextMode}
             </div>
             <div>
+              <strong>Streaming Mode:</strong> {streamingMode ? 'Enabled' : 'Disabled'}
+            </div>
+            <div>
               <strong>Feed Connected:</strong> {isFeedConnected ? 'Yes' : 'No'}
             </div>
             <div>
@@ -215,9 +267,12 @@ export default function PoliticalStrategist({ selectedWard }) {
             <div>
               <strong>Briefing Available:</strong> {briefing ? 'Yes' : 'No'}
             </div>
-            {briefing && (
+            <div>
+              <strong>Streaming Result:</strong> {streamingResult ? 'Available' : 'None'}
+            </div>
+            {(briefing || streamingResult?.analysis_result) && (
               <div>
-                <strong>Confidence Score:</strong> {briefing.confidence_score}
+                <strong>Confidence Score:</strong> {streamingResult?.analysis_result?.confidence_score || briefing?.confidence_score}
               </div>
             )}
           </div>

@@ -32,6 +32,11 @@ export function useEnhancedSSE(ward, options = {}) {
   // Initialize SSE client
   useEffect(() => {
     if (!ward || ward === 'All') return;
+    
+    // Enable SSE connection in development for Phase 4.2 testing
+    if (import.meta.env.DEV) {
+      console.log('SSE connection enabled for Phase 4.2 development testing');
+    }
 
     clientRef.current = new EnhancedSSEClient({
       maxRetries: options.maxRetries || 5,

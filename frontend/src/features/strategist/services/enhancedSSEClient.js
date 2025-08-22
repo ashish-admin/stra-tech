@@ -29,6 +29,7 @@ class EnhancedSSEClient {
     this.lastHeartbeat = null;
     this.heartbeatTimer = null;
     this.reconnectTimer = null;
+    this.lastConnectionParams = null;
     
     // Event listeners
     this.listeners = {
@@ -55,22 +56,55 @@ class EnhancedSSEClient {
   }
 
   /**
-   * Connect to Stream A's multi-model strategist endpoint
+   * Connect to enhanced streaming endpoint with flexible mode selection
    */
   connect(ward, options = {}) {
     if (this.eventSource) {
       this.disconnect();
     }
 
-    const params = new URLSearchParams({
-      ward: ward,
-      priority: options.priority || 'all',
-      include_confidence: 'true',
-      include_progress: 'true',
-      format: 'enhanced'
-    });
+    // Store connection parameters for reconnection
+    this.lastConnectionParams = { ward, options };
 
-    const url = `${this.options.baseUrl}/strategist/intelligence/${encodeURIComponent(ward)}?${params}`;
+    // Support multiple endpoint modes
+    const mode = options.mode || 'stream'; // 'stream', 'intelligence', or 'feed'
+    let endpoint;
+    let params;
+
+    switch (mode) {
+      case 'stream':
+        // Enhanced streaming endpoint for analysis progress
+        endpoint = `strategist/stream/${encodeURIComponent(ward)}`;
+        params = new URLSearchParams({
+          depth: options.depth || 'standard',
+          context: options.context || 'neutral',
+          include_progress: options.includeProgress !== false ? 'true' : 'false',
+          include_confidence: options.includeConfidence !== false ? 'true' : 'false'
+        });
+        break;
+      case 'intelligence':
+        // Intelligence brief endpoint
+        endpoint = `strategist/intelligence/${encodeURIComponent(ward)}`;
+        params = new URLSearchParams({
+          focus: options.focus || '',
+          format: 'sse'
+        });
+        break;
+      case 'feed':
+        // Legacy feed endpoint
+        endpoint = 'strategist/feed';
+        params = new URLSearchParams({
+          ward: ward,
+          priority: options.priority || 'all',
+          since: options.since || '',
+          format: 'enhanced'
+        });
+        break;
+      default:
+        throw new Error(`Unsupported connection mode: ${mode}`);
+    }
+
+    const url = `${this.options.baseUrl}/${endpoint}?${params}`;
     
     this.connectionStartTime = Date.now();
     this.metrics.connectionAttempts++;
@@ -80,15 +114,17 @@ class EnhancedSSEClient {
       this.setupEventHandlers();
       this.startHeartbeatMonitoring();
       
-      // Connection timeout
+      // Enhanced connection timeout with retry logic
       const timeoutId = setTimeout(() => {
         if (!this.isConnected) {
-          this.handleConnectionError(new Error('Connection timeout'));
+          console.warn(`SSE connection timeout after ${this.options.connectionTimeout}ms`);
+          this.handleConnectionError(new Error('Connection timeout - will retry with exponential backoff'));
         }
       }, this.options.connectionTimeout);
 
       this.eventSource.addEventListener('open', () => {
         clearTimeout(timeoutId);
+        console.log(`SSE connected successfully to ${endpoint}`);
       });
 
     } catch (error) {
@@ -299,59 +335,171 @@ class EnhancedSSEClient {
   }
 
   /**
-   * Start heartbeat monitoring to detect stale connections
+   * Enhanced heartbeat monitoring with connection health assessment
    */
   startHeartbeatMonitoring() {
+    // Clear any existing heartbeat timer
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+    }
+
     this.heartbeatTimer = setInterval(() => {
-      if (this.lastHeartbeat && 
-          Date.now() - this.lastHeartbeat > this.options.heartbeatInterval * 2) {
-        console.warn('SSE heartbeat timeout detected');
-        this.handleConnectionError(new Error('Heartbeat timeout'));
+      const now = Date.now();
+      
+      // Check for heartbeat timeout (2x interval + grace period)
+      const heartbeatTimeout = this.options.heartbeatInterval * 2.5;
+      if (this.lastHeartbeat && now - this.lastHeartbeat > heartbeatTimeout) {
+        console.warn(`SSE heartbeat timeout detected: ${now - this.lastHeartbeat}ms since last heartbeat`);
+        this.handleConnectionError(new Error(`Heartbeat timeout: ${Math.round((now - this.lastHeartbeat) / 1000)}s silence`));
+        return;
       }
-    }, this.options.heartbeatInterval);
+      
+      // Check overall connection health
+      const connectionHealth = this.assessConnectionHealth();
+      if (connectionHealth.status === 'unhealthy') {
+        console.warn('SSE connection health degraded:', connectionHealth);
+        this.emit('connection-degraded', connectionHealth);
+      }
+      
+      // Emit periodic connection health updates
+      this.emit('connection-health', connectionHealth);
+    }, this.options.heartbeatInterval / 2); // Check twice as frequently as heartbeat interval
   }
 
   /**
-   * Handle connection errors with exponential backoff retry
+   * Assess connection health based on multiple metrics
+   */
+  assessConnectionHealth() {
+    const now = Date.now();
+    const metrics = this.getMetrics();
+    
+    // Calculate health factors
+    const timeSinceLastHeartbeat = this.lastHeartbeat ? now - this.lastHeartbeat : Infinity;
+    const heartbeatHealth = timeSinceLastHeartbeat < this.options.heartbeatInterval * 1.5 ? 1.0 : 0.0;
+    
+    const uptimeRatio = metrics.uptime > 0 ? 1 - (metrics.totalDowntime / (metrics.uptime + metrics.totalDowntime)) : 0;
+    const connectionStability = Math.max(0, 1 - (metrics.reconnections / Math.max(1, metrics.connectionAttempts)));
+    
+    // Weighted health score
+    const healthScore = (heartbeatHealth * 0.5) + (uptimeRatio * 0.3) + (connectionStability * 0.2);
+    
+    let status, description;
+    if (healthScore >= 0.8) {
+      status = 'excellent';
+      description = 'Connection is stable and responsive';
+    } else if (healthScore >= 0.6) {
+      status = 'good';
+      description = 'Connection is stable with minor issues';
+    } else if (healthScore >= 0.4) {
+      status = 'fair';
+      description = 'Connection has some stability issues';
+    } else if (healthScore >= 0.2) {
+      status = 'poor';
+      description = 'Connection is unstable and may drop frequently';
+    } else {
+      status = 'unhealthy';
+      description = 'Connection is severely degraded or failing';
+    }
+    
+    return {
+      status,
+      description,
+      score: healthScore,
+      factors: {
+        heartbeatHealth,
+        uptimeRatio,
+        connectionStability
+      },
+      metrics: {
+        timeSinceLastHeartbeat,
+        totalReconnections: metrics.reconnections,
+        totalDowntime: metrics.totalDowntime,
+        uptime: metrics.uptime
+      }
+    };
+  }
+
+  /**
+   * Enhanced connection error handling with intelligent retry strategies
    */
   handleConnectionError(error) {
     this.isConnected = false;
     
+    // Track downtime for metrics
+    if (this.metrics.lastConnectionTime) {
+      this.metrics.totalDowntime += Date.now() - this.metrics.lastConnectionTime;
+    }
+    
+    // Emit comprehensive error information
     this.emit('error', {
       error: error.message,
       timestamp: Date.now(),
       retryCount: this.retryCount,
-      willRetry: this.retryCount < this.options.maxRetries
+      willRetry: this.retryCount < this.options.maxRetries,
+      connectionAttempts: this.metrics.connectionAttempts,
+      totalDowntime: this.metrics.totalDowntime,
+      errorType: this.classifyError(error)
     });
 
     if (this.retryCount < this.options.maxRetries) {
-      const delay = Math.min(
-        this.options.retryBaseDelay * Math.pow(2, this.retryCount),
-        this.options.maxRetryDelay
-      );
+      // Enhanced exponential backoff with jitter
+      const baseDelay = this.options.retryBaseDelay * Math.pow(2, this.retryCount);
+      const jitter = Math.random() * 0.1 * baseDelay; // Add up to 10% jitter
+      const delay = Math.min(baseDelay + jitter, this.options.maxRetryDelay);
 
       this.retryCount++;
       this.metrics.reconnections++;
 
+      console.log(`Scheduling SSE reconnection (${this.retryCount}/${this.options.maxRetries}) in ${Math.round(delay)}ms`);
+      
       this.reconnectTimer = setTimeout(() => {
-        console.log(`Attempting SSE reconnection (${this.retryCount}/${this.options.maxRetries})`);
-        this.reconnect();
+        // Check if we should still retry (user might have disconnected manually)
+        if (this.retryCount <= this.options.maxRetries && this.lastConnectionParams) {
+          console.log(`Attempting SSE reconnection (${this.retryCount}/${this.options.maxRetries})`);
+          this.reconnect();
+        }
       }, delay);
     } else {
-      console.error('Max SSE retry attempts reached');
+      console.error('Max SSE retry attempts reached - entering failed state');
       this.emit('disconnect', { 
         reason: 'max_retries_exceeded',
-        totalRetries: this.retryCount 
+        totalRetries: this.retryCount,
+        finalError: error.message,
+        totalDowntime: this.metrics.totalDowntime,
+        suggestion: 'Check network connectivity and server status'
       });
     }
+  }
+
+  /**
+   * Classify error types for better handling strategies
+   */
+  classifyError(error) {
+    const message = error.message.toLowerCase();
+    
+    if (message.includes('timeout')) return 'timeout';
+    if (message.includes('network') || message.includes('connection')) return 'network';
+    if (message.includes('authentication') || message.includes('unauthorized')) return 'auth';
+    if (message.includes('rate limit') || message.includes('too many requests')) return 'rate_limit';
+    if (message.includes('server error') || message.includes('internal error')) return 'server_error';
+    
+    return 'unknown';
   }
 
   /**
    * Reconnect with current parameters
    */
   reconnect() {
-    if (this.lastConnectionParams) {
+    if (this.lastConnectionParams && this.lastConnectionParams.ward) {
       this.connect(this.lastConnectionParams.ward, this.lastConnectionParams.options);
+    } else {
+      console.warn('Cannot reconnect: No valid connection parameters stored');
+      this.emit('error', {
+        error: 'No valid connection parameters for reconnection',
+        timestamp: Date.now(),
+        retryCount: this.retryCount,
+        willRetry: false
+      });
     }
   }
 
@@ -375,6 +523,7 @@ class EnhancedSSEClient {
     }
 
     this.isConnected = false;
+    // Keep lastConnectionParams for potential manual reconnection
     this.emit('disconnect', { reason: 'manual_disconnect' });
   }
 

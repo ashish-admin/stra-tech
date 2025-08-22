@@ -21,6 +21,7 @@ import { useWard } from "../context/WardContext.jsx";
 // Enhanced error boundary system
 import ComponentErrorBoundary from "./ComponentErrorBoundary.jsx";
 import DashboardHealthIndicator from "./DashboardHealthIndicator.jsx";
+import NotificationSystem from "./NotificationSystem.jsx";
 import { 
   MapFallback, 
   ChartFallback, 
@@ -462,6 +463,19 @@ export default function Dashboard() {
       {error && (
         <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>
       )}
+
+      {/* Real-time Notification System */}
+      <ComponentErrorBoundary
+        componentName="Notification System"
+        fallbackMessage="Real-time notifications are temporarily unavailable."
+      >
+        <NotificationSystem 
+          selectedWard={selectedWard}
+          isVisible={true}
+          enableSound={true}
+          enableBrowserNotifications={true}
+        />
+      </ComponentErrorBoundary>
     </div>
   );
 }

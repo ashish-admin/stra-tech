@@ -27,6 +27,16 @@ const RAW_BASE =
 
 export const apiBase = normalizeApiBase(RAW_BASE);
 
+// Debug logging for development
+if (import.meta.env.DEV) {
+  console.log('API Base Configuration:', {
+    RAW_BASE,
+    apiBase,
+    VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+    VITE_API_URL: import.meta.env.VITE_API_URL
+  });
+}
+
 /** Join base + path safely.
  *  Usage: joinApi("api/v1/ward/meta/WARD_001")
  *  When apiBase is empty, use relative paths for Vite proxy

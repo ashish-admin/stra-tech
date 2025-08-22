@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import L from "leaflet";
+import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchJson } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 import useViewport from "../hooks/useViewport";
-import { AlertTriangle, Map, RefreshCw, Navigation } from "lucide-react";
+import { AlertTriangle, Map as MapIcon, RefreshCw, Navigation } from "lucide-react";
 
 /* ---------- helpers ---------- */
 function normalizeWardLabel(label) {

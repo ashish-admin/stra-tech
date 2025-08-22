@@ -3,9 +3,30 @@ import { useEffect } from 'react';
 // Error reporting hook for component monitoring
 export const useErrorReporting = () => {
   useEffect(() => {
+    // Prevent infinite error loops with debouncing and deduplication
+    const reportedErrors = new Set();
+    const ERROR_DEBOUNCE_TIME = 1000; // 1 second
+    let lastReportTime = 0;
+
     // Set up global error reporting function
     window.reportError = (errorData) => {
-      // Log to console for development
+      const now = Date.now();
+      const errorKey = `${errorData.component}-${errorData.error}-${errorData.type}`;
+      
+      // Prevent duplicate error reports within debounce period
+      if (reportedErrors.has(errorKey) && (now - lastReportTime) < ERROR_DEBOUNCE_TIME) {
+        return;
+      }
+      
+      reportedErrors.add(errorKey);
+      lastReportTime = now;
+      
+      // Clear old errors after some time to allow new reports
+      setTimeout(() => {
+        reportedErrors.delete(errorKey);
+      }, ERROR_DEBOUNCE_TIME * 5);
+
+      // Log to console for development (throttled)
       console.error('LokDarpan Component Error Report:', {
         ...errorData,
         userAgent: navigator.userAgent,
