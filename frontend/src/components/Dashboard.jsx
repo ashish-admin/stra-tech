@@ -36,6 +36,13 @@ import {
   IntelligenceActivityIndicator 
 } from "../features/strategist/components/ProgressIndicators";
 
+// Phase 3 Political Strategist Components
+import StrategistErrorBoundary from "../features/strategist/components/StrategistErrorBoundary";
+import IntelligenceFeed from "../features/strategist/components/IntelligenceFeed";
+import StrategistChat from "../features/strategist/components/StrategistChat";
+import StrategicWorkbench from "../features/strategist/components/StrategicWorkbench";
+import ScenarioSimulator from "../features/strategist/components/ScenarioSimulator";
+
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
   if (!label) return "";
@@ -101,11 +108,10 @@ export default function Dashboard() {
 
   const wardQuery = selectedWard && selectedWard !== "All" ? selectedWard : "";
 
-  /** Derive a wardId for WardMetaPanel (expects codes like WARD_001). */
+  /** Derive a wardId for WardMetaPanel - now uses actual ward names as IDs. */
   const wardIdForMeta = useMemo(() => {
-    const s = selectedWard || "";
-    if (/^WARD_\d+$/i.test(s)) return s.toUpperCase();
-    return "WARD_001";
+    // Use the actual ward name as the ward_id since backend now supports this
+    return selectedWard && selectedWard !== "All" ? selectedWard : "Jubilee Hills";
   }, [selectedWard]);
 
   // keep map height matched to the Strategic Summary card
@@ -422,6 +428,35 @@ export default function Dashboard() {
         >
           <AlertsPanel posts={filteredPosts} ward={selectedWard} />
         </ComponentErrorBoundary>
+      </div>
+
+      {/* Phase 3: Political Strategist Suite */}
+      <div className="space-y-6">
+        <div className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">
+          Political Strategist Suite
+        </div>
+        
+        {/* Intelligence Feed & Chat */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StrategistErrorBoundary componentName="Intelligence Feed">
+            <IntelligenceFeed ward={selectedWard} />
+          </StrategistErrorBoundary>
+          
+          <StrategistErrorBoundary componentName="AI Strategy Chat">
+            <StrategistChat />
+          </StrategistErrorBoundary>
+        </div>
+        
+        {/* Strategic Workbench & Scenario Simulator */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StrategistErrorBoundary componentName="Strategic Workbench">
+            <StrategicWorkbench />
+          </StrategistErrorBoundary>
+          
+          <StrategistErrorBoundary componentName="Scenario Simulator">
+            <ScenarioSimulator />
+          </StrategistErrorBoundary>
+        </div>
       </div>
 
       {error && (
