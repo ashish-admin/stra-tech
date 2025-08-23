@@ -1,7 +1,21 @@
 # LokDarpan: AI-Driven Political Intelligence Dashboard
 ====================
 
-**High-stakes, AI-driven political intelligence dashboard** designed to provide real-time, 360-degree political landscape insights for campaign teams in Hyderabad, India. 
+**The only AI-first political intelligence platform designed specifically for Indian campaigns**, delivering real-time strategic insights at the ward level where elections are decided. LokDarpan combines advanced multi-model AI (Gemini 2.5 Pro + Perplexity AI) with deep Indian political context to provide decisive competitive advantages.
+
+## Market Position & Competitive Advantage
+
+**Strategic Positioning**: LokDarpan occupies a unique "blue ocean" position in the Indian political technology market, bridging traditional campaign management tools and generic social media monitoring solutions.
+
+**Key Differentiators vs. Competitors**:
+- **80% cost reduction** vs. traditional political consultants ($2K-$10K/month vs. $20K/month)
+- **Real-time AI intelligence** vs. periodic human consultation (24/7 vs. on-demand)
+- **Ward-level precision** vs. generic social media monitoring (electoral context vs. brand sentiment)
+- **Multi-model AI architecture** - No competitor offers Gemini 2.5 Pro + Perplexity AI integration
+
+**Target Market**: Technology-forward political campaigns seeking competitive advantage through AI-driven intelligence.
+
+## Architecture & Technology Stack
 
 **Architecture**: Flask + PostgreSQL + Redis + Celery backend with React + Vite frontend, designed around ward-centric electoral data and real-time news analysis.
 

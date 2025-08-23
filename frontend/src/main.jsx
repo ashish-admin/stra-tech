@@ -8,6 +8,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 // (optional) devtools
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
+// Component failure testing tools (development only)
+import { addFailureControls } from "./utils/componentFailureSimulator.js";
+if (import.meta.env.DEV) {
+  addFailureControls();
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -14,7 +14,7 @@ export class SSEClient {
   }
 
   // Connect to SSE endpoint
-  connect(url = this.url) {
+  async connect(url = this.url) {
     if (this.isConnecting || this.isConnected) {
       console.warn('SSE: Already connected or connecting');
       return;
@@ -24,12 +24,38 @@ export class SSEClient {
       throw new Error('SSE: URL is required');
     }
 
+    // Authentication check before connecting
+    try {
+      const authResponse = await fetch('/api/v1/status', { 
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (!authResponse.ok) {
+        throw new Error(`Authentication required: ${authResponse.status}`);
+      }
+      
+      const authData = await authResponse.json();
+      if (!authData.authenticated) {
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('🔐 SSE: Authentication verified for user:', authData.user?.username);
+    } catch (authError) {
+      console.error('SSE: Authentication check failed:', authError);
+      this.emit('auth-error', { error: authError.message });
+      return;
+    }
+
     this.url = url;
     this.isConnecting = true;
 
     try {
       console.log('🔗 SSE: Connecting to', url);
-      this.eventSource = new EventSource(url, { withCredentials: true });
+      // Include cookies for session-based authentication
+      this.eventSource = new EventSource(url, { 
+        withCredentials: true,
+      });
 
       this.eventSource.onopen = (event) => {
         console.log('✅ SSE: Connected');

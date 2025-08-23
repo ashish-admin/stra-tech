@@ -10,13 +10,18 @@ import AnalysisControls from '../../features/strategist/components/AnalysisContr
 
 describe('AnalysisControls Component', () => {
   const defaultProps = {
-    analysisDepth: 'standard',
-    contextMode: 'neutral',
-    priorityFilter: 'all',
-    onAnalysisDepthChange: vi.fn(),
-    onContextModeChange: vi.fn(),
-    onPriorityFilterChange: vi.fn(),
-    onRefreshAnalysis: vi.fn(),
+    depth: 'standard',
+    context: 'neutral',
+    onDepthChange: vi.fn(),
+    onContextChange: vi.fn(),
+    isVisible: false,
+    preferences: {
+      autoRefresh: false,
+      refreshInterval: 5,
+      enableNotifications: true,
+      priorityFilter: 'all'
+    },
+    onPreferenceChange: vi.fn(),
     isLoading: false,
   };
 
@@ -26,29 +31,30 @@ describe('AnalysisControls Component', () => {
 
   describe('Basic Rendering', () => {
     it('renders all control sections', () => {
-      render(<AnalysisControls {...defaultProps} />);
+      render(<AnalysisControls {...defaultProps} isVisible={true} />);
 
-      expect(screen.getByText(/Analysis Controls/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Analysis Depth/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Context Mode/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Priority Filter/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /refresh analysis/i })).toBeInTheDocument();
+      expect(screen.getByText(/Analysis Depth/i)).toBeInTheDocument();
+      expect(screen.getByText(/Strategic Context/i)).toBeInTheDocument();
+      expect(screen.getByRole('radiogroup', { name: /Analysis Depth/i })).toBeInTheDocument();
+      expect(screen.getByRole('radiogroup', { name: /Strategic Context/i })).toBeInTheDocument();
     });
 
     it('displays current values correctly', () => {
-      render(<AnalysisControls {...defaultProps} />);
+      render(<AnalysisControls {...defaultProps} isVisible={true} />);
 
-      expect(screen.getByDisplayValue('standard')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('neutral')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('all')).toBeInTheDocument();
+      // Check for selected radio buttons (aria-checked="true")
+      const selectedDepthButton = screen.getByRole('radio', { checked: true, name: /Standard/ });
+      expect(selectedDepthButton).toBeInTheDocument();
+      
+      const selectedContextButton = screen.getByRole('radio', { checked: true, name: /Neutral/ });
+      expect(selectedContextButton).toBeInTheDocument();
     });
 
     it('shows loading state when isLoading is true', () => {
-      render(<AnalysisControls {...defaultProps} isLoading={true} />);
+      render(<AnalysisControls {...defaultProps} isLoading={true} isVisible={true} />);
 
-      const refreshButton = screen.getByRole('button', { name: /refresh analysis/i });
-      expect(refreshButton).toBeDisabled();
       expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
+      expect(screen.getByText(/Updating analysis/i)).toBeInTheDocument();
     });
   });
 

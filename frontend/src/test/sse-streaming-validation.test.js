@@ -5,7 +5,7 @@
  * under various network conditions and performance scenarios.
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
@@ -22,8 +22,8 @@ class MockEventSource {
     this.onopen = null;
     this.onmessage = null;
     this.onerror = null;
-    this.addEventListener = jest.fn();
-    this.close = jest.fn();
+    this.addEventListener = vi.fn();
+    this.close = vi.fn();
     
     // Store instance for test manipulation
     MockEventSource.instances.push(this);
@@ -47,12 +47,12 @@ class MockEventSource {
 const mockNavigator = {
   onLine: true,
   permissions: {
-    query: jest.fn().mockResolvedValue({ state: 'granted' })
+    query: vi.fn().mockResolvedValue({ state: 'granted' })
   }
 };
 
 const mockNotification = {
-  requestPermission: jest.fn().mockResolvedValue('granted'),
+  requestPermission: vi.fn().mockResolvedValue('granted'),
   permission: 'granted'
 };
 
@@ -165,7 +165,7 @@ describe('SSE Streaming Core Functionality', () => {
     global.Notification = mockNotification;
     
     MockEventSource.reset();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -208,7 +208,7 @@ describe('SSE Streaming Core Functionality', () => {
         retryBaseDelay: 100
       });
       
-      const errorHandler = jest.fn();
+      const errorHandler = vi.fn();
       client.on('error', errorHandler);
       
       await act(async () => {
@@ -253,7 +253,7 @@ describe('SSE Streaming Core Functionality', () => {
     });
 
     it('should show progress indicators during analysis', async () => {
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       
       await act(async () => {
         render(
@@ -296,7 +296,7 @@ describe('SSE Streaming Core Functionality', () => {
     });
 
     it('should handle analysis completion', async () => {
-      const onComplete = jest.fn();
+      const onComplete = vi.fn();
       
       await act(async () => {
         render(
@@ -369,7 +369,7 @@ describe('Network Condition Testing', () => {
     global.navigator = mockNavigator;
     
     MockEventSource.reset();
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -383,8 +383,8 @@ describe('Network Condition Testing', () => {
       retryBaseDelay: 100
     });
     
-    const connectHandler = jest.fn();
-    const errorHandler = jest.fn();
+    const connectHandler = vi.fn();
+    const errorHandler = vi.fn();
     
     client.on('connect', connectHandler);
     client.on('error', errorHandler);
@@ -420,7 +420,7 @@ describe('Network Condition Testing', () => {
       maxRetries: 2
     });
     
-    const errorHandler = jest.fn();
+    const errorHandler = vi.fn();
     client.on('error', errorHandler);
     
     await act(async () => {
@@ -443,7 +443,7 @@ describe('Network Condition Testing', () => {
 
   it('should handle server errors gracefully', async () => {
     const client = new EnhancedSSEClient();
-    const errorHandler = jest.fn();
+    const errorHandler = vi.fn();
     client.on('error', errorHandler);
     
     await act(async () => {
@@ -480,10 +480,10 @@ describe('Performance Validation', () => {
     
     // Mock performance API
     global.performance = {
-      mark: jest.fn((name) => {
+      mark: vi.fn((name) => {
         performanceMarks[name] = Date.now();
       }),
-      measure: jest.fn((name, startMark, endMark) => {
+      measure: vi.fn((name, startMark, endMark) => {
         const start = performanceMarks[startMark];
         const end = performanceMarks[endMark];
         return { duration: end - start };
@@ -520,7 +520,7 @@ describe('Performance Validation', () => {
 
   it('should handle high-frequency messages efficiently', async () => {
     const client = new EnhancedSSEClient();
-    const messageHandler = jest.fn();
+    const messageHandler = vi.fn();
     client.on('progress', messageHandler);
     
     await act(async () => {
@@ -611,7 +611,7 @@ describe('Error Recovery and Resilience', () => {
       maxRetryDelay: 1000
     });
     
-    const errorHandler = jest.fn();
+    const errorHandler = vi.fn();
     client.on('error', errorHandler);
     
     await act(async () => {
@@ -640,8 +640,8 @@ describe('Error Recovery and Resilience', () => {
       retryBaseDelay: 50
     });
     
-    const connectHandler = jest.fn();
-    const errorHandler = jest.fn();
+    const connectHandler = vi.fn();
+    const errorHandler = vi.fn();
     
     client.on('connect', connectHandler);
     client.on('error', errorHandler);
@@ -691,7 +691,7 @@ describe('Phase 4.2 Integration Tests', () => {
   });
 
   it('should complete full streaming analysis workflow', async () => {
-    const onComplete = jest.fn();
+    const onComplete = vi.fn();
     
     await act(async () => {
       render(

@@ -33,6 +33,7 @@ from .epaper_api import bp_epaper
 from .summary_api import summary_bp
 from .multimodel_api import multimodel_bp
 from .strategist_api import strategist_bp as compat_strategist_bp
+from .error_monitoring import error_bp  # Error monitoring system
 from .models import *  # Import all models
 
 # Political Strategist module - Check if exists
@@ -169,6 +170,7 @@ def create_app(config_class: str = "config.Config") -> Flask:
         app.register_blueprint(bp_epaper)  # NEW registrations
         app.register_blueprint(summary_bp)   # NEW
         app.register_blueprint(multimodel_bp)  # Multi-model AI API
+        app.register_blueprint(error_bp)  # Error monitoring system
         
         # Register compatibility strategist API (always available)
         app.register_blueprint(compat_strategist_bp)

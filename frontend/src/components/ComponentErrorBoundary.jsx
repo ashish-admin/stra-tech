@@ -35,32 +35,45 @@ class ComponentErrorBoundary extends React.Component {
       window.trackComponentError(componentName);
     }
 
-    // Enhanced logging with component context
-    console.group(`🚨 LokDarpan Component Error: ${componentName}`);
-    console.error('Error:', error.message);
-    console.error('Stack:', error.stack);
-    console.error('Component Stack:', errorInfo.componentStack);
-    console.error('Retry Count:', this.state.retryCount);
-    console.error('Timestamp:', new Date().toISOString());
+    // Enhanced logging with component context (production-safe)
+    const isDevelopment = process.env.NODE_ENV === 'development';
     
-    if (this.props.logProps && this.props.children?.props) {
-      console.error('Props:', this.props.children.props);
+    if (isDevelopment) {
+      console.group(`🚨 LokDarpan Component Error: ${componentName}`);
+      console.error('Error:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('Component Stack:', errorInfo.componentStack);
+      console.error('Retry Count:', this.state.retryCount);
+      console.error('Timestamp:', new Date().toISOString());
+      
+      if (this.props.logProps && this.props.children?.props) {
+        console.error('Props:', this.props.children.props);
+      }
+      
+      console.groupEnd();
+    } else {
+      // Production: minimal logging without sensitive information
+      console.error(`Component Error: ${componentName} - ${error.message}`);
     }
-    
-    console.groupEnd();
 
-    // Report to monitoring service if available
+    // Report to monitoring service if available (sanitized for production)
     if (window.reportError) {
-      window.reportError({
+      const reportData = {
         component: componentName,
         error: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
         retryCount: this.state.retryCount,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href
-      });
+        timestamp: new Date().toISOString()
+      };
+      
+      // Include additional details only in development
+      if (isDevelopment) {
+        reportData.stack = error.stack;
+        reportData.componentStack = errorInfo.componentStack;
+        reportData.userAgent = navigator.userAgent;
+        reportData.url = window.location.href;
+      }
+      
+      window.reportError(reportData);
     }
 
     // Trigger global error event for dashboard-wide error handling

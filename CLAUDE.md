@@ -6,9 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 LokDarpan is a high-stakes, AI-driven political intelligence dashboard designed to provide real-time, 360-degree political landscape insights for campaign teams in Hyderabad, India. The platform leverages a sophisticated multi-model AI architecture combining Google Gemini 2.5 Pro and Perplexity AI to deliver actionable strategic intelligence that moves beyond simple monitoring to provide decisive competitive advantages.
 
+**Market Position**: LokDarpan is positioned as the only AI-first political intelligence platform specifically designed for Indian campaigns, delivering real-time strategic insights at the ward level where elections are decided. The platform occupies a unique "blue ocean" position, bridging traditional campaign management tools and advanced social media monitoring solutions.
+
 **Architecture**: Flask + PostgreSQL + Redis + Celery backend with React + Vite frontend, designed around ward-centric electoral data and real-time news analysis.
 
 **Current Development Phase**: Phase 3 (Automated Strategic Response) - implementing Political Strategist system with multi-model AI architecture, SSE streaming, and advanced strategic analysis capabilities.
+
+## Competitive Advantages
+
+**LokDarpan's Unique Differentiators**:
+1. **Multi-Model AI Architecture**: Combines Gemini 2.5 Pro + Perplexity AI for comprehensive analysis (no competitor offers this)
+2. **Hyper-Local Political Intelligence**: Ward-level political analysis with electoral data integration
+3. **Real-Time Strategic Response**: SSE streaming with proactive alerts vs. reactive monitoring
+4. **Integrated Electoral & News Intelligence**: Holistic political landscape view combining news sentiment with electoral demographics
+5. **Cost-Effective AI-First Approach**: Automated intelligence vs. expensive human consultants (80% cost reduction)
+6. **Indian Political Context Specialization**: Built specifically for Indian political landscape with deep regional understanding
+7. **18-24 Month Technology Lead**: Advanced AI orchestration maintaining competitive advantage
+
+## Competitive Landscape
+
+**Market Segments**:
+- **Traditional Political Consulting**: Leadtech, I-PAC, Mindshare Analytics (human-driven, expensive, limited tech)
+- **Social Media Monitoring**: Hootsuite, Brandwatch, Sprinklr (generic platforms, no political specialization)
+- **Campaign Management Tools**: Smart Neta, SmartiElection (basic functionality, limited AI)
+
+**Strategic Positioning**: "AI-first political intelligence platform that replaces expensive consultants with 24/7 AI monitoring and delivers ward-level strategic insights in real-time."
+
+**Key Competitive Messages**:
+- vs. Traditional Consulting: "24/7 AI intelligence vs. periodic human consultation" (80% cost reduction)
+- vs. Social Media Monitoring: "Political intelligence vs. brand monitoring" (campaign-specific insights)
+- vs. Campaign Tools: "Strategic intelligence vs. administrative functionality" (predictive vs. reactive)
+
+**Target Market**: Technology-forward political campaigns seeking competitive advantage through AI-driven intelligence ($2K-$10K/month value-based pricing vs. $20K/month traditional consultants).
 
 ## Claude's Role as LokDarpan Architect
 
@@ -397,14 +426,15 @@ When schema changes occur:
 - Strategic workbench with comprehensive communications playbooks and talking points
 - Scenario simulation with "what-if" analysis for campaign decision support
 
-### Phase 4: Frontend Enhancement & Modernization 🚧 Planned
+### Phase 4: Frontend Enhancement & Modernization 🚧 In Progress
 **Goal**: Transform LokDarpan frontend into a resilient, high-performance political intelligence platform
 
-#### Phase 4.1: Component Resilience & Error Boundaries (5-7 days)
-- **Enhanced Error Boundary System**: Granular error boundaries for each critical component with fallback UI and retry mechanisms
-- **Component Isolation**: Wrap LocationMap, StrategicSummary, TimeSeriesChart in individual error boundaries
-- **Graceful Degradation**: Ensure single component failures never crash entire dashboard
-- **Deliverables**: ComponentErrorBoundary.jsx, enhanced Dashboard.jsx, ErrorFallback.jsx
+#### Phase 4.1: Component Resilience & Error Boundaries ✅ COMPLETE
+- **Enhanced Error Boundary System**: ✅ ComponentErrorBoundary.jsx with retry mechanisms and health monitoring
+- **Component Isolation**: ✅ 25+ error boundaries wrapping all critical components (LocationMap, StrategicSummary, TimeSeriesChart, etc.)
+- **Graceful Degradation**: ✅ Single component failures never crash dashboard - verified through integration testing
+- **Deliverables**: ✅ ComponentErrorBoundary.jsx, enhanced Dashboard.jsx, ErrorFallback.jsx, componentHealth.js
+- **Status**: Story 4.1.1 completed with QA review (Gate: CONCERNS - ready for production with minor optimizations)
 
 #### Phase 4.2: Political Strategist SSE Integration (8-10 days)
 - **Real-time Analysis Streaming**: SSE client for Political Strategist with progress indicators

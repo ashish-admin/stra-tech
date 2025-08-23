@@ -19,6 +19,12 @@ from .nlp.pipeline import NLPProcessor
 from .credibility.checks import CredibilityScorer
 from .guardrails import sanitize_and_strategize
 from .observability import get_observer, monitor_strategist_operation
+from .resilience import (
+    circuit_breaker,
+    retry,
+    with_degradation,
+    CircuitBreakerOpenException
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +50,8 @@ class PoliticalStrategist:
         self.observer = get_observer()
         
     @monitor_strategist_operation("analyze_situation")
+    @circuit_breaker("strategist_analysis", failure_threshold=3, timeout_seconds=120)
+    @retry(max_retries=2, base_delay=2.0)
     async def analyze_situation(self, depth: str = "standard") -> Dict[str, Any]:
         """
         Perform comprehensive political situation analysis.
@@ -103,13 +111,24 @@ class PoliticalStrategist:
             logger.info(f"Analysis completed for {self.ward} with confidence: {confidence}")
             return final_result
             
+        except CircuitBreakerOpenException as e:
+            logger.warning(f"Circuit breaker open for {self.ward}: {e}")
+            return {
+                "error": "Analysis temporarily unavailable due to system protection",
+                "ward": self.ward,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "fallback_mode": True,
+                "circuit_breaker": True,
+                "retry_after_seconds": 120
+            }
         except Exception as e:
             logger.error(f"Error in situation analysis for {self.ward}: {e}", exc_info=True)
             return {
                 "error": "Analysis failed",
                 "ward": self.ward,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "fallback_mode": True
+                "fallback_mode": True,
+                "error_type": type(e).__name__
             }
 
 

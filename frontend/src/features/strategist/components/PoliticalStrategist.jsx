@@ -104,7 +104,7 @@ export default function PoliticalStrategist({ selectedWard }) {
   }
 
   return (
-    <div className="strategist-dashboard space-y-6">
+    <div className="strategist-dashboard space-y-6" data-testid="strategist-container">
       {/* Header with controls */}
       <div className="bg-white border rounded-lg p-4">
         <div className="flex items-center justify-between mb-4">
@@ -121,9 +121,12 @@ export default function PoliticalStrategist({ selectedWard }) {
           <div className="flex items-center gap-2">
             {/* Intelligence feed status */}
             <div className="flex items-center gap-1 text-xs">
-              <div className={`h-2 w-2 rounded-full ${isFeedConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div 
+                className={`h-2 w-2 rounded-full ${isFeedConnected ? 'bg-green-500' : 'bg-red-500'}`}
+                data-testid="connection-indicator"
+              ></div>
               <span className="text-gray-500">
-                {isFeedConnected ? 'Live' : 'Disconnected'}
+                {isFeedConnected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
             
@@ -168,6 +171,7 @@ export default function PoliticalStrategist({ selectedWard }) {
           isVisible={showSettings}
           preferences={preferences}
           onPreferenceChange={updatePreference}
+          isLoading={isBriefingLoading || triggerAnalysis.isPending}
         />
       </div>
 
@@ -194,6 +198,14 @@ export default function PoliticalStrategist({ selectedWard }) {
               Intelligence feed: {feedError}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {(isBriefingLoading && !streamingMode) && (
+        <div className="flex items-center justify-center py-8" data-testid="loading-spinner">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Analyzing political landscape...</span>
         </div>
       )}
 
@@ -229,13 +241,15 @@ export default function PoliticalStrategist({ selectedWard }) {
           />
           
           {/* Intelligence Feed */}
-          <IntelligenceFeed 
-            intelligence={intelligence}
-            isConnected={isFeedConnected}
-            ward={selectedWard}
-            priority={preferences.priorityFilter}
-            onPriorityChange={(priority) => updatePreference('priorityFilter', priority)}
-          />
+          <div data-testid="intelligence-feed">
+            <IntelligenceFeed 
+              intelligence={intelligence}
+              isConnected={isFeedConnected}
+              ward={selectedWard}
+              priority={preferences.priorityFilter}
+              onPriorityChange={(priority) => updatePreference('priorityFilter', priority)}
+            />
+          </div>
         </div>
       </div>
 

@@ -12,7 +12,8 @@ export default function AnalysisControls({
   onContextChange,
   isVisible,
   preferences,
-  onPreferenceChange 
+  onPreferenceChange,
+  isLoading = false
 }) {
   if (!isVisible) return null;
 
@@ -29,17 +30,37 @@ export default function AnalysisControls({
   ];
 
   return (
-    <div className="border-t pt-4 space-y-4">
+    <div className="border-t pt-4 space-y-4" data-testid="analysis-controls-container">
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center p-4" data-testid="loading-indicator">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-sm text-gray-600">Updating analysis...</span>
+        </div>
+      )}
+
       {/* Analysis Depth */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label 
+          className="block text-sm font-medium text-gray-700 mb-2"
+          id="analysis-depth-label"
+        >
           Analysis Depth
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div 
+          className="grid grid-cols-3 gap-2"
+          role="radiogroup"
+          aria-labelledby="analysis-depth-label"
+          aria-describedby="analysis-depth-description"
+        >
           {depthOptions.map(option => (
             <button
               key={option.value}
               onClick={() => onDepthChange(option.value)}
+              role="radio"
+              aria-checked={depth === option.value}
+              aria-labelledby={`depth-${option.value}-label`}
+              aria-describedby={`depth-${option.value}-description`}
               className={`p-3 border rounded-lg text-center transition-colors ${
                 depth === option.value
                   ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -47,8 +68,12 @@ export default function AnalysisControls({
               }`}
             >
               <div className="flex justify-center mb-1">{option.icon}</div>
-              <div className="font-medium text-xs">{option.label}</div>
-              <div className="text-xs text-gray-500 mt-1">{option.description}</div>
+              <div className="font-medium text-xs" id={`depth-${option.value}-label`}>
+                {option.label}
+              </div>
+              <div className="text-xs text-gray-500 mt-1" id={`depth-${option.value}-description`}>
+                {option.description}
+              </div>
             </button>
           ))}
         </div>
@@ -56,14 +81,26 @@ export default function AnalysisControls({
 
       {/* Strategic Context */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label 
+          className="block text-sm font-medium text-gray-700 mb-2"
+          id="context-mode-label"
+        >
           Strategic Context
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div 
+          className="grid grid-cols-3 gap-2"
+          role="radiogroup"
+          aria-labelledby="context-mode-label"
+          aria-describedby="context-mode-description"
+        >
           {contextOptions.map(option => (
             <button
               key={option.value}
               onClick={() => onContextChange(option.value)}
+              role="radio"
+              aria-checked={context === option.value}
+              aria-labelledby={`context-${option.value}-label`}
+              aria-describedby={`context-${option.value}-description`}
               className={`p-3 border rounded-lg text-center transition-colors ${
                 context === option.value
                   ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -71,8 +108,12 @@ export default function AnalysisControls({
               }`}
             >
               <div className="flex justify-center mb-1">{option.icon}</div>
-              <div className="font-medium text-xs">{option.label}</div>
-              <div className="text-xs text-gray-500 mt-1">{option.description}</div>
+              <div className="font-medium text-xs" id={`context-${option.value}-label`}>
+                {option.label}
+              </div>
+              <div className="text-xs text-gray-500 mt-1" id={`context-${option.value}-description`}>
+                {option.description}
+              </div>
             </button>
           ))}
         </div>

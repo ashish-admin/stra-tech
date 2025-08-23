@@ -97,11 +97,36 @@ class AIOrchestrator:
     """
     
     def __init__(self):
-        self.claude_client = ClaudeClient()
-        self.perplexity_client = PerplexityClient()
-        self.openai_client = OpenAIClient()
-        self.llama_client = LlamaClient()
-        self.gemini_client = GeminiClient()
+        # Initialize AI clients with error handling
+        try:
+            self.claude_client = ClaudeClient()
+        except Exception as e:
+            logger.warning(f"Failed to initialize ClaudeClient: {e}")
+            self.claude_client = None
+            
+        try:
+            self.perplexity_client = PerplexityClient()
+        except Exception as e:
+            logger.warning(f"Failed to initialize PerplexityClient: {e}")
+            self.perplexity_client = None
+            
+        try:
+            self.openai_client = OpenAIClient()
+        except Exception as e:
+            logger.warning(f"Failed to initialize OpenAIClient: {e}")
+            self.openai_client = None
+            
+        try:
+            self.llama_client = LlamaClient()
+        except Exception as e:
+            logger.warning(f"Failed to initialize LlamaClient: {e}")
+            self.llama_client = None
+            
+        try:
+            self.gemini_client = GeminiClient()
+        except Exception as e:
+            logger.warning(f"Failed to initialize GeminiClient: {e}")
+            self.gemini_client = None
         self.budget_manager = get_budget_manager()
         self.quality_validator = QualityValidator()
         
@@ -397,6 +422,18 @@ class AIOrchestrator:
 
     def _is_model_available(self, provider: ModelProvider) -> bool:
         """Check if a model provider is currently available (circuit breaker)."""
+        # Check if client is available
+        if provider == ModelProvider.CLAUDE and self.claude_client is None:
+            return False
+        if provider == ModelProvider.PERPLEXITY and self.perplexity_client is None:
+            return False
+        if provider == ModelProvider.OPENAI and self.openai_client is None:
+            return False
+        if provider == ModelProvider.LLAMA_LOCAL and self.llama_client is None:
+            return False
+        if provider == ModelProvider.GEMINI and self.gemini_client is None:
+            return False
+            
         breaker = self._circuit_breakers[provider]
         
         if not breaker["is_open"]:
@@ -528,14 +565,24 @@ class AIOrchestrator:
         """Call specific AI model provider."""
         
         if provider == ModelProvider.CLAUDE:
+            if self.claude_client is None:
+                raise ValueError("Claude client not available")
             return await self.claude_client.generate_response(query, context, request_id)
         elif provider == ModelProvider.PERPLEXITY:
+            if self.perplexity_client is None:
+                raise ValueError("Perplexity client not available")
             return await self.perplexity_client.generate_response(query, context, request_id)
         elif provider == ModelProvider.OPENAI:
+            if self.openai_client is None:
+                raise ValueError("OpenAI client not available")
             return await self.openai_client.generate_response(query, context, request_id)
         elif provider == ModelProvider.GEMINI:
+            if self.gemini_client is None:
+                raise ValueError("Gemini client not available")
             return await self.gemini_client.generate_response(query, context, request_id)
         elif provider == ModelProvider.LLAMA_LOCAL:
+            if self.llama_client is None:
+                raise ValueError("Llama client not available")
             return await self.llama_client.generate_response(query, context, request_id)
         else:
             raise ValueError(f"Unknown provider: {provider}")

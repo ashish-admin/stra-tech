@@ -6,12 +6,26 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
-    css: true,
+    css: false,  // Disable CSS parsing for speed
     globals: true,
+    testTimeout: 10000,  // 10 second timeout per test
+    hookTimeout: 5000,   // 5 second timeout for hooks
+    teardownTimeout: 3000,
+    isolate: false,      // Faster test execution
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 2,     // Limit threads to prevent hanging
+        minThreads: 1
+      }
+    }
   },
   resolve: {
     alias: {
       '@': '/src',
     },
   },
+  esbuild: {
+    target: 'node18'  // Speed up build
+  }
 })

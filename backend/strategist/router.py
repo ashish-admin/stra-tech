@@ -8,12 +8,18 @@ import os
 import json
 import logging
 from datetime import datetime
-from flask import Blueprint, request, Response, jsonify, current_app, stream_template
-from flask_login import login_required
+from flask import Blueprint, request, Response, jsonify, current_app, stream_template, g
+from flask_login import login_required, current_user
 
 from .service import get_ward_report, analyze_text
 from .sse import sse_stream
 from .observability import track_api_call, get_observer
+from .auth_middleware import (
+    sse_auth_required, 
+    sse_auth_manager, 
+    refresh_sse_token,
+    validate_sse_request_integrity
+)
 
 logger = logging.getLogger(__name__)
 
@@ -147,20 +153,28 @@ def analyze_content():
 
 
 @strategist_bp.route('/feed', methods=['GET'])
-@login_required
+@sse_auth_required
 def intelligence_feed():
     """
-    Server-Sent Events stream for real-time intelligence updates.
+    Enhanced Server-Sent Events stream for real-time intelligence updates.
     
     Query Parameters:
     - ward: Ward to monitor
     - since: Timestamp for updates since
     - priority: Filter by priority level
+    - token: Connection token (optional, can use Authorization header)
     
     Returns:
-        SSE stream of intelligence updates
+        SSE stream of intelligence updates with enhanced security
     """
     try:
+        # Validate request integrity
+        if not validate_sse_request_integrity():
+            return jsonify({
+                "error": "Invalid SSE request format",
+                "code": "SSE_INVALID_REQUEST"
+            }), 400
+        
         ward = request.args.get('ward', 'All')
         since = request.args.get('since')
         priority = request.args.get('priority', 'all')
@@ -169,22 +183,37 @@ def intelligence_feed():
         if priority not in ['all', 'high', 'critical']:
             priority = 'all'
         
-        logger.info(f"Starting intelligence feed for {ward} (priority: {priority})")
+        # Get connection info from auth middleware
+        connection_info = getattr(g, 'sse_connection_info', None)
+        connection_token = getattr(g, 'sse_connection_token', None)
+        
+        logger.info(f"Starting enhanced intelligence feed for user {current_user.id}, ward {ward} (priority: {priority})")
+        
+        # Enhanced SSE headers with security
+        headers = {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',  # Nginx compatibility
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+            'Content-Security-Policy': "default-src 'none'",
+        }
+        
+        # Include connection token in initial response if newly generated
+        if connection_token:
+            headers['X-SSE-Connection-Token'] = connection_token
         
         return Response(
-            sse_stream(ward, since, priority),
+            enhanced_sse_stream(ward, since, priority, connection_info or {'user_id': str(current_user.id)}),
             mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'  # Nginx compatibility
-            }
+            headers=headers
         )
         
     except Exception as e:
         logger.error(f"Error starting intelligence feed: {e}", exc_info=True)
         return jsonify({
             "error": "Intelligence feed unavailable",
+            "code": "SSE_FEED_ERROR",
             "timestamp": datetime.now().isoformat()
         }), 500
 
@@ -248,6 +277,194 @@ def invalidate_cache():
     except Exception as e:
         logger.error(f"Error invalidating cache: {e}")
         return jsonify({"error": "Cache invalidation failed"}), 500
+
+
+@strategist_bp.route('/auth/token', methods=['POST'])
+@login_required
+def generate_connection_token():
+    """
+    Generate a secure connection token for SSE streams.
+    
+    Request Body:
+    {
+        "ward": "Ward name for connection",
+        "expires_in": 3600  // Optional: token expiry in seconds
+    }
+    
+    Returns:
+        Connection token and metadata
+    """
+    try:
+        data = request.get_json() or {}
+        ward = data.get('ward')
+        expires_in = data.get('expires_in', 3600)
+        
+        if not ward:
+            return jsonify({
+                "error": "Ward is required for connection token",
+                "code": "SSE_TOKEN_001"
+            }), 400
+        
+        # Validate expiry
+        if not isinstance(expires_in, int) or expires_in < 60 or expires_in > 7200:
+            expires_in = 3600  # Default to 1 hour
+        
+        # Generate token
+        token = sse_auth_manager.generate_connection_token(
+            str(current_user.id),
+            ward,
+            expires_in
+        )
+        
+        logger.info(f"Generated connection token for user {current_user.id}, ward {ward}")
+        
+        return jsonify({
+            "token": token,
+            "expires_in": expires_in,
+            "ward": ward,
+            "token_type": "Bearer",
+            "usage": "Include in Authorization header as 'Bearer <token>' for SSE connections",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating connection token: {e}")
+        return jsonify({
+            "error": "Failed to generate connection token",
+            "code": "SSE_TOKEN_002",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+@strategist_bp.route('/auth/token/refresh', methods=['POST'])
+@login_required 
+def refresh_connection_token():
+    """
+    Refresh an existing connection token.
+    
+    Request Body:
+    {
+        "token": "current_connection_token",
+        "extend_by": 3600  // Optional: seconds to extend
+    }
+    
+    Returns:
+        New refreshed connection token
+    """
+    try:
+        data = request.get_json() or {}
+        current_token = data.get('token')
+        extend_by = data.get('extend_by', 3600)
+        
+        if not current_token:
+            return jsonify({
+                "error": "Current token is required for refresh",
+                "code": "SSE_REFRESH_001"
+            }), 400
+        
+        # Refresh token
+        new_token = sse_auth_manager.refresh_connection_token(current_token, extend_by)
+        
+        if not new_token:
+            return jsonify({
+                "error": "Failed to refresh token - may be expired or invalid",
+                "code": "SSE_REFRESH_002"
+            }), 400
+        
+        logger.info(f"Refreshed connection token for user {current_user.id}")
+        
+        return jsonify({
+            "token": new_token,
+            "expires_in": extend_by,
+            "token_type": "Bearer",
+            "refreshed_at": datetime.now().isoformat(),
+            "usage": "Use this new token for future SSE connections"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error refreshing connection token: {e}")
+        return jsonify({
+            "error": "Token refresh failed",
+            "code": "SSE_REFRESH_003",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+@strategist_bp.route('/auth/connections', methods=['GET'])
+@login_required
+def list_active_connections():
+    """
+    List active SSE connections for the current user.
+    
+    Returns:
+        List of active connections with metadata
+    """
+    try:
+        stats = sse_auth_manager.get_connection_stats()
+        
+        # Filter connections for current user (in production, implement proper filtering)
+        user_connections = [
+            conn for conn_id, conn in sse_auth_manager.active_connections.items()
+            if conn.get('user_id') == str(current_user.id)
+        ]
+        
+        return jsonify({
+            "active_connections": len(user_connections),
+            "connections": [
+                {
+                    "ward": conn.get('ward'),
+                    "created_at": conn.get('created_at').isoformat() if conn.get('created_at') else None,
+                    "last_heartbeat": conn.get('last_heartbeat').isoformat() if conn.get('last_heartbeat') else None,
+                    "connection_count": conn.get('connection_count', 0),
+                    "error_count": conn.get('error_count', 0)
+                }
+                for conn in user_connections
+            ],
+            "system_stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error listing active connections: {e}")
+        return jsonify({
+            "error": "Failed to list connections",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+@strategist_bp.route('/auth/cleanup', methods=['POST'])
+@login_required
+def cleanup_expired_connections():
+    """
+    Manually trigger cleanup of expired connections.
+    Admin or maintenance endpoint.
+    
+    Returns:
+        Cleanup results and statistics
+    """
+    try:
+        # Basic permission check (in production, implement proper admin auth)
+        if not current_user.is_authenticated:
+            return jsonify({"error": "Authentication required"}), 401
+        
+        cleanup_count = sse_auth_manager.cleanup_expired_connections()
+        stats = sse_auth_manager.get_connection_stats()
+        
+        logger.info(f"Manual connection cleanup performed by user {current_user.id}, {cleanup_count} connections cleaned")
+        
+        return jsonify({
+            "cleanup_performed": True,
+            "expired_connections_cleaned": cleanup_count,
+            "current_stats": stats,
+            "cleanup_timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error during connection cleanup: {e}")
+        return jsonify({
+            "error": "Cleanup operation failed",
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 
 @strategist_bp.route('/status', methods=['GET'])

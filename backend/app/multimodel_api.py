@@ -587,10 +587,16 @@ def strategist_analysis_stream(ward):
                         # Wait between stages (shorter for demo purposes)
                         time.sleep({'quick': 2, 'standard': 4, 'deep': 6}.get(depth, 4))
                 
-                # Generate actual analysis using strategist adapter
                 try:
-                    result = asyncio.run(get_strategist_adapter().analyze_political_situation(
-                        ward, '', depth, context_mode
+                    # Generate actual AI analysis using strategist integration
+                    strategist_adapter = get_strategist_adapter()
+                    
+                    # Call the async analysis method and get results
+                    result = asyncio.run(strategist_adapter.analyze_political_situation(
+                        ward=ward,
+                        query=request.args.get('query'),  
+                        depth=depth,
+                        context_mode=context_mode
                     ))
                     
                     # Send completion event with results
@@ -603,14 +609,14 @@ def strategist_analysis_stream(ward):
                     }
                     yield f"data: {json.dumps(completion_event)}\n\n"
                     
-                    # Record usage
-                    if result.get("cost_usd", 0) > 0:
-                        asyncio.run(get_budget_manager().record_spend(
-                            result["cost_usd"],
-                            result.get("provider", "unknown"),
-                            "streaming_analysis"
-                        ))
-                        
+                    # Record usage (temporarily disabled)
+                    # if result.get("cost_usd", 0) > 0:
+                    #     asyncio.run(get_budget_manager().record_spend(
+                    #         result["cost_usd"],
+                    #         result.get("provider", "unknown"),
+                    #         "streaming_analysis"
+                    #     ))
+                    
                 except Exception as analysis_error:
                     logger.error(f"Analysis error in stream: {analysis_error}")
                     error_event = {

@@ -98,3 +98,8 @@ coverage*.xml
 # Virtual environment (root level)  
 /venv/
 backend/celerybeat-schedule*
+
+# Project Brief Monitoring System
+.project-brief-updates.log
+.project-brief-monitor.pid
+.project-brief-monitor

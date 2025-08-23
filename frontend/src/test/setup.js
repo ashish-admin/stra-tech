@@ -1,17 +1,36 @@
 import '@testing-library/jest-dom'
+import { setupFastMocks, setTestTimeouts } from './test-recovery.js'
+
+// Set up fast test environment
+setTestTimeouts();
+setupFastMocks();
 
 // Mock environment variables
 globalThis.process = {
   env: {
+    NODE_ENV: 'test',
     VITE_API_BASE_URL: 'http://localhost:5000',
   }
 }
 
-// Mock console methods for cleaner test output
+// Mock console methods for cleaner test output (preserve important ones)
+const originalError = console.error;
+const originalWarn = console.warn;
+
 globalThis.console = {
   ...console,
-  warn: vi.fn(),
-  error: vi.fn(),
+  warn: vi.fn((msg) => {
+    // Log actual warnings in development
+    if (msg.includes('componentDidCatch') || msg.includes('Error')) {
+      originalWarn(msg);
+    }
+  }),
+  error: vi.fn((msg) => {
+    // Log actual errors in development  
+    if (msg.includes('componentDidCatch') || msg.includes('Error')) {
+      originalError(msg);
+    }
+  }),
 }
 
 // Mock fetch for API calls
