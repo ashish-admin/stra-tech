@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, login_user, logout_user, current_user
@@ -12,6 +12,12 @@ from sqlalchemy import func
 
 from . import db
 from .models import User, Post, Author, Alert
+from .security import (
+    rate_limit, 
+    InputValidator, 
+    AuditLogger, 
+    validate_content_type
+)
 
 main_bp = Blueprint("main", __name__, url_prefix="/api/v1")
 
@@ -110,7 +116,7 @@ def status():
             {"id": current_user.id, "username": current_user.username, "email": current_user.email}
             if getattr(current_user, "is_authenticated", False) else None
         ),
-        "server_time": datetime.utcnow().isoformat() + "Z",
+        "server_time": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'),
     }), 200
 
 
@@ -118,24 +124,80 @@ def status():
 # Auth
 # ---------------------------
 @main_bp.route("/login", methods=["POST"])
+@rate_limit('auth')
+@validate_content_type(['application/json'])
 def login():
+    """Secure authentication endpoint with rate limiting and audit logging."""
     data = request.get_json(silent=True) or {}
-    username = (data.get("username") or "").strip()
-    password = data.get("password") or ""
+    
+    # Validate input
+    try:
+        username = InputValidator.validate_username(data.get("username", ""))
+        password = data.get("password", "")
+        
+        if not password:
+            raise ValueError("Password is required")
+            
+    except (ValueError, Exception) as e:
+        AuditLogger.log_authentication_attempt("", False, str(e))
+        return jsonify({"error": "Invalid input"}), 400
+    
+    # Find user
     user = User.query.filter(func.lower(User.username) == username.lower()).first()
+    
+    # Check if account is locked
+    if user and user.is_account_locked():
+        AuditLogger.log_authentication_attempt(username, False, "Account locked")
+        return jsonify({"error": "Account temporarily locked due to multiple failed login attempts"}), 423
+    
+    # Check credentials
     if not user or not user.check_password(password):
-        return jsonify({"message": "Invalid username or password."}), 401
-    login_user(user)
-    return jsonify({"message": "Login successful.", "user": {
-        "id": user.id, "username": user.username, "email": user.email
-    }})
+        if user:
+            user.record_failed_login()
+            db.session.commit()
+        
+        AuditLogger.log_authentication_attempt(username, False, "Invalid credentials")
+        return jsonify({"error": "Invalid username or password"}), 401
+    
+    # Check if account is active
+    if not user.is_active:
+        AuditLogger.log_authentication_attempt(username, False, "Inactive account")
+        return jsonify({"error": "Account is inactive"}), 403
+    
+    # Successful login
+    user.record_successful_login()
+    db.session.commit()
+    
+    login_user(user, remember=False)
+    
+    AuditLogger.log_authentication_attempt(username, True, "Successful login")
+    
+    return jsonify({
+        "message": "Login successful", 
+        "user": {
+            "id": user.id, 
+            "username": user.username, 
+            "email": user.email,
+            "last_login": user.last_login.isoformat() if user.last_login else None
+        }
+    })
     
 
 @main_bp.route("/logout", methods=["POST"])
 @login_required
+@rate_limit('default')
 def logout():
+    """Secure logout endpoint with audit logging."""
+    user_id = current_user.id
+    username = current_user.username
+    
+    AuditLogger.log_security_event(
+        'user_logout',
+        {'user_id': user_id, 'username': username}
+    )
+    
     logout_user()
-    return jsonify({"message": "Logged out."})
+    return jsonify({"message": "Logged out successfully"})
 
 
 # ---------------------------

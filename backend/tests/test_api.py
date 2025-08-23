@@ -141,11 +141,18 @@ class TestPostsAPI:
         
         assert response.status_code == 200
         data = response.get_json()
-        assert isinstance(data, list)
-        assert len(data) >= 1
-        
-        # Check post structure
-        post = data[0]
+        # Handle both paginated and non-paginated responses
+        if isinstance(data, dict) and 'items' in data:
+            # Paginated response
+            posts = data['items']
+            assert isinstance(posts, list)
+            assert len(posts) >= 1
+            post = posts[0]
+        else:
+            # Direct list response (backwards compatibility)
+            assert isinstance(data, list)
+            assert len(data) >= 1
+            post = data[0]
         assert 'id' in post
         assert 'text' in post
         assert 'author' in post

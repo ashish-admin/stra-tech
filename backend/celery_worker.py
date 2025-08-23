@@ -38,14 +38,18 @@ celery.conf.update(
 
 # ---- Beat schedule (OPTIONAL) ----
 # Safe default: empty schedule. Uncomment the example to enable it.
-celery.conf.beat_schedule = {
-    # "ingest-epaper-dir-6am": {
-    #     "task": "app.tasks.ingest_epaper_dir",
-    #     "schedule": crontab(hour=6, minute=0),  # every day at 06:00 UTC
-    #     "args": ("data/epaper/inbox", True),
-    # },
-}
-
+celery.conf.beat_schedule.update({
+    "embed-recent-6am": {
+        "task": "app.tasks.embed_recent",
+        "schedule": crontab(hour=6, minute=0),
+        "args": (7, 400),
+    }, 
+    "generate-summaries-6_30am": {
+        "task": "app.tasks.generate_summary",
+        "schedule": crontab(hour=6, minute=30),
+        "args": ("WARD_001", "P7D"),   # add more wards via separate entries or loop in your own scheduler
+    },
+})
 if __name__ == "__main__":
     # Allows: python backend/celery_worker.py worker --loglevel=info
     celery.start()

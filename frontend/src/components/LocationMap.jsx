@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import L from "leaflet";
+import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fetchJson } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 import useViewport from "../hooks/useViewport";
+import { AlertTriangle, Map as MapIcon, RefreshCw, Navigation } from "lucide-react";
 
 /* ---------- helpers ---------- */
 function normalizeWardLabel(label) {
@@ -65,6 +66,11 @@ export default function LocationMap({
   maxHeight = 900,
   preferredDvh,              // override dvh if you want (e.g. 62)
 }) {
+  // Enhanced error state management
+  const [mapError, setMapError] = useState(null);
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
   const { ward: wardCtx, setWard: setWardCtx } = useWard();
   const selectedWard = selectedWardProp ?? wardCtx;
   const onWardSelect = onWardSelectProp ?? setWardCtx;
@@ -113,28 +119,57 @@ export default function LocationMap({
   /* ---------- init map once ---------- */
   useEffect(() => {
     if (mapRef.current || !mapContainerRef.current) return;
-    const map = L.map(mapContainerRef.current, {
-      center: [17.385, 78.4867],
-      zoom: 11,
-      scrollWheelZoom: true,
-      preferCanvas: true,
-    });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
-    mapRef.current = map;
+    
+    try {
+      const map = L.map(mapContainerRef.current, {
+        center: [17.385, 78.4867],
+        zoom: 11,
+        scrollWheelZoom: true,
+        preferCanvas: true,
+      });
+      
+      const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap",
+        maxZoom: 19,
+        errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==', // 1x1 transparent pixel
+      });
+      
+      tileLayer.on('tileerror', (e) => {
+        console.warn('Map tile loading error:', e);
+        // Continue gracefully - Leaflet will handle retries
+      });
+      
+      tileLayer.addTo(map);
+      mapRef.current = map;
 
-    let rafId = null;
-    const scheduleLabels = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(rebuildLabels);
-    };
-    map.on("moveend zoomend", scheduleLabels);
-    return () => {
-      map.off("moveend zoomend", scheduleLabels);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
+      let rafId = null;
+      const scheduleLabels = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(rebuildLabels);
+      };
+      
+      map.on("moveend zoomend", scheduleLabels);
+      
+      // Clear any previous errors on successful initialization
+      setMapError(null);
+      setRetryCount(0);
+      
+      return () => {
+        try {
+          map.off("moveend zoomend", scheduleLabels);
+          if (rafId) cancelAnimationFrame(rafId);
+        } catch (cleanupError) {
+          console.warn('Map cleanup error:', cleanupError);
+        }
+      };
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      setMapError({
+        type: 'initialization',
+        message: 'Failed to initialize map',
+        error: error.message
+      });
+    }
   }, []);
 
   /* ---------- responsive height ---------- */
@@ -189,6 +224,8 @@ export default function LocationMap({
       layerRef.current = null;
     }
     if (!geojson) return;
+
+    try {
 
     const defaultStyle = { weight: 1, color: "#5b6b7a", fillOpacity: 0.35, fillColor: "#d9e3f0" };
     const selectedStyle = { weight: 2.25, color: "#111827", fillOpacity: 0.55, fillColor: "#ffbf47" };
@@ -269,6 +306,15 @@ export default function LocationMap({
     }
 
     rebuildLabels();
+    
+    } catch (error) {
+      console.error('Geojson processing error:', error);
+      setMapError({
+        type: 'geojson',
+        message: 'Failed to load ward boundaries',
+        error: error.message
+      });
+    }
   }, [geojson, metricAccessor, scale, onWardSelect, selectedWard]);
 
   /* ---------- react to selection ---------- */
@@ -397,6 +443,104 @@ export default function LocationMap({
         });
       } catch {}
     }
+  }
+
+  /* ---------- error recovery ---------- */
+  const handleRetry = async () => {
+    if (retryCount >= maxRetries) return;
+    
+    setIsRecovering(true);
+    setRetryCount(prev => prev + 1);
+    
+    try {
+      // Force re-initialization after a delay
+      setTimeout(() => {
+        setMapError(null);
+        
+        // If map container exists, try to reinitialize
+        if (mapContainerRef.current) {
+          if (mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+          }
+          // Trigger re-initialization on next render
+          setIsRecovering(false);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('Map recovery error:', error);
+      setIsRecovering(false);
+    }
+  };
+
+  // Error fallback UI
+  if (mapError && !isRecovering) {
+    return (
+      <div
+        ref={wrapperRef}
+        className="relative w-full rounded-md border overflow-hidden bg-red-50"
+        style={{ height: 360 }}
+      >
+        <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+          <h3 className="text-lg font-medium text-red-900 mb-2">Map Unavailable</h3>
+          <p className="text-sm text-red-700 mb-4">
+            {mapError.message}. The interactive ward map is temporarily unavailable, but you can still use the ward selector above.
+          </p>
+          
+          {retryCount < maxRetries && (
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry Map ({maxRetries - retryCount} attempts left)
+            </button>
+          )}
+          
+          {retryCount >= maxRetries && (
+            <div className="bg-red-100 border border-red-200 rounded-md p-3">
+              <p className="text-sm text-red-800">
+                Maximum retry attempts reached. Please use the ward dropdown for navigation or refresh the entire page.
+              </p>
+            </div>
+          )}
+          
+          {/* Fallback ward selector */}
+          <div className="mt-4 w-full max-w-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Select Ward (Fallback)
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              value={selectedWard || ''}
+              onChange={(e) => onWardSelect?.(e.target.value)}
+            >
+              <option value="">Select a ward...</option>
+              {wardNames.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Recovery/loading state
+  if (isRecovering) {
+    return (
+      <div
+        ref={wrapperRef}
+        className="relative w-full rounded-md border overflow-hidden bg-blue-50"
+        style={{ height: 360 }}
+      >
+        <div className="flex flex-col items-center justify-center h-full">
+          <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mb-3" />
+          <p className="text-sm text-blue-700">Recovering map functionality...</p>
+        </div>
+      </div>
+    );
   }
 
   /* ---------- render ---------- */

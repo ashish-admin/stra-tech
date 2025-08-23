@@ -1,0 +1,414 @@
+openapi: 3.0.3
+info:
+  title: LokDarpan Political Strategist API
+  version: 1.0.0
+  description: AI-powered political intelligence and strategic analysis system for electoral campaigns
+  contact:
+    name: LokDarpan Development Team
+    email: dev@lokdarpan.com
+  license:
+    name: Proprietary
+    
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development server
+  - url: https://api.lokdarpan.com/api/v1
+    description: Production server
+
+security:
+  - sessionAuth: []
+
+paths:
+  /strategist/{ward}:
+    get:
+      summary: Get strategic analysis for ward
+      description: Retrieve comprehensive AI-powered strategic analysis for a specific ward
+      parameters:
+        - name: ward
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Ward name or ID
+          example: "Jubilee Hills"
+        - name: depth
+          in: query
+          schema:
+            type: string
+            enum: [quick, standard, deep]
+            default: standard
+          description: Analysis depth level
+        - name: context
+          in: query
+          schema:
+            type: string
+            enum: [defensive, neutral, offensive]
+            default: neutral
+          description: Strategic context mode
+      responses:
+        200:
+          description: Strategic analysis successful
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Cache validation tag
+            Cache-Control:
+              schema:
+                type: string
+              description: Cache control directives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StrategistBriefing'
+        304:
+          description: Not modified (cached response still valid)
+        400:
+          description: Invalid request parameters
+        401:
+          description: Authentication required
+        500:
+          description: Analysis failed
+      tags:
+        - Strategic Analysis
+
+  /strategist/analyze:
+    post:
+      summary: Analyze arbitrary content
+      description: Perform strategic analysis on provided text content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  description: Content to analyze
+                  maxLength: 10000
+                ward:
+                  type: string
+                  description: Ward context for analysis
+                context:
+                  type: string
+                  enum: [defensive, neutral, offensive]
+                  default: neutral
+      responses:
+        200:
+          description: Analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentAnalysis'
+        400:
+          description: Invalid request content
+        401:
+          description: Authentication required
+      tags:
+        - Content Analysis
+
+  /strategist/feed:
+    get:
+      summary: Real-time intelligence feed
+      description: Server-Sent Events stream for real-time intelligence updates
+      parameters:
+        - name: ward
+          in: query
+          schema:
+            type: string
+          description: Ward to monitor
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Get updates since timestamp
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [all, high, critical]
+            default: all
+          description: Priority filter
+      responses:
+        200:
+          description: SSE stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+      tags:
+        - Real-time Intelligence
+
+  /strategist/trigger:
+    post:
+      summary: Trigger manual analysis
+      description: Manually trigger strategic analysis for a ward
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ward
+              properties:
+                ward:
+                  type: string
+                  description: Ward name or ID
+                depth:
+                  type: string
+                  enum: [quick, standard, deep]
+                  default: standard
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+                  default: medium
+      responses:
+        200:
+          description: Analysis triggered successfully
+        400:
+          description: Invalid parameters
+        401:
+          description: Authentication required
+      tags:
+        - Strategic Analysis
+
+  /strategist/status:
+    get:
+      summary: System status
+      description: Get strategist system status and configuration
+      responses:
+        200:
+          description: System status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+      tags:
+        - System Health
+
+  /strategist/health:
+    get:
+      summary: Health check
+      description: Comprehensive health check for strategist system
+      responses:
+        200:
+          description: System healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+        503:
+          description: System degraded or unhealthy
+      tags:
+        - System Health
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: lokdarpan_session
+
+  schemas:
+    StrategistBriefing:
+      type: object
+      properties:
+        ward:
+          type: string
+          description: Ward name or ID
+        strategic_overview:
+          type: string
+          description: Executive summary of political landscape
+        key_intelligence:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntelligenceItem'
+        opportunities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Opportunity'
+        threats:
+          type: array
+          items:
+            $ref: '#/components/schemas/Threat'
+        recommended_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+        confidence_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Analysis confidence score
+        source_citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        generated_at:
+          type: string
+          format: date-time
+        internal_use_only:
+          type: boolean
+          default: true
+
+    IntelligenceItem:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [narrative, opposition, public_sentiment, development]
+        content:
+          type: string
+        impact_level:
+          type: string
+          enum: [low, medium, high, critical]
+        actionable:
+          type: boolean
+        confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+
+    Opportunity:
+      type: object
+      properties:
+        description:
+          type: string
+        timeline:
+          type: string
+        success_metrics:
+          type: array
+          items:
+            type: string
+        resource_requirements:
+          type: object
+          properties:
+            personnel:
+              type: integer
+            budget:
+              type: integer
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    Threat:
+      type: object
+      properties:
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        mitigation_strategy:
+          type: string
+        timeline:
+          type: string
+        monitoring_required:
+          type: boolean
+
+    Action:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [immediate, 24h, week, strategic]
+        description:
+          type: string
+        success_metrics:
+          type: array
+          items:
+            type: string
+        resource_requirements:
+          type: object
+        timeline:
+          type: string
+        priority:
+          type: integer
+
+    Citation:
+      type: object
+      properties:
+        source_type:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        source:
+          type: string
+        date:
+          type: string
+          format: date
+        relevance:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+
+    ContentAnalysis:
+      type: object
+      properties:
+        analyzed_text:
+          type: string
+        strategic_insights:
+          type: array
+          items:
+            type: string
+        sentiment_analysis:
+          type: object
+        confidence_score:
+          type: number
+        generated_at:
+          type: string
+          format: date-time
+
+    SystemStatus:
+      type: object
+      properties:
+        strategist_enabled:
+          type: boolean
+        strategist_mode:
+          type: string
+        ai_services:
+          type: object
+          properties:
+            gemini:
+              type: boolean
+            perplexity:
+              type: boolean
+            openai:
+              type: boolean
+        cache_enabled:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, critical, error]
+        dependencies:
+          type: object
+        performance:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+tags:
+  - name: Strategic Analysis
+    description: AI-powered strategic analysis operations
+  - name: Content Analysis 
+    description: Text content analysis and insights
+  - name: Real-time Intelligence
+    description: Live intelligence feed and updates
+  - name: System Health
+    description: System monitoring and health checks

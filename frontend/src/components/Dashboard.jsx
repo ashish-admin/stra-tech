@@ -18,6 +18,32 @@ import EpaperFeed from "./EpaperFeed.jsx";
 import { joinApi } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 
+// Enhanced error boundary system
+import ComponentErrorBoundary from "./ComponentErrorBoundary.jsx";
+import DashboardHealthIndicator from "./DashboardHealthIndicator.jsx";
+import NotificationSystem from "./NotificationSystem.jsx";
+import { 
+  MapFallback, 
+  ChartFallback, 
+  StrategistFallback, 
+  AlertsFallback, 
+  GenericFallback 
+} from "./ErrorFallback.jsx";
+
+// Stream A Integration
+import { useEnhancedSSE } from "../features/strategist/hooks/useEnhancedSSE";
+import { 
+  ConnectionStatusIndicator, 
+  IntelligenceActivityIndicator 
+} from "../features/strategist/components/ProgressIndicators";
+
+// Phase 3 Political Strategist Components
+import StrategistErrorBoundary from "../features/strategist/components/StrategistErrorBoundary";
+import IntelligenceFeed from "../features/strategist/components/IntelligenceFeed";
+import StrategistChat from "../features/strategist/components/StrategistChat";
+import StrategicWorkbench from "../features/strategist/components/StrategicWorkbench";
+import ScenarioSimulator from "../features/strategist/components/ScenarioSimulator";
+
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
   if (!label) return "";
@@ -56,13 +82,37 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Stream A Enhanced SSE Integration
+  const { 
+    connectionState, 
+    isConnected: sseConnected, 
+    intelligence, 
+    alerts,
+    analysisData 
+  } = useEnhancedSSE(selectedWard, { 
+    priority: 'all',
+    includeConfidence: true 
+  });
+
+  // Intelligence feed summary for activity indicator
+  const intelligenceSummary = useMemo(() => {
+    const total = intelligence.length + alerts.length;
+    const highPriority = [...intelligence, ...alerts]
+      .filter(item => item.priority === 'high').length;
+    const actionable = [...intelligence, ...alerts]
+      .filter(item => item.actionableItems?.length > 0).length;
+    const recent = [...intelligence, ...alerts]
+      .filter(item => Date.now() - (item.receivedAt || 0) < 3600000).length;
+    
+    return { total, highPriority, actionable, recent };
+  }, [intelligence, alerts]);
+
   const wardQuery = selectedWard && selectedWard !== "All" ? selectedWard : "";
 
-  /** Derive a wardId for WardMetaPanel (expects codes like WARD_001). */
+  /** Derive a wardId for WardMetaPanel - now uses actual ward names as IDs. */
   const wardIdForMeta = useMemo(() => {
-    const s = selectedWard || "";
-    if (/^WARD_\d+$/i.test(s)) return s.toUpperCase();
-    return "WARD_001";
+    // Use the actual ward name as the ward_id since backend now supports this
+    return selectedWard && selectedWard !== "All" ? selectedWard : "Jubilee Hills";
   }, [selectedWard]);
 
   // keep map height matched to the Strategic Summary card
@@ -166,6 +216,27 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Dashboard Health Indicator */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <DashboardHealthIndicator />
+        </div>
+        
+        {/* Stream A Intelligence Activity */}
+        {selectedWard !== 'All' && (
+          <div className="space-y-2">
+            <ConnectionStatusIndicator 
+              connectionState={connectionState}
+              className="text-xs"
+            />
+            <IntelligenceActivityIndicator 
+              summary={intelligenceSummary}
+              className="text-xs"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -217,26 +288,41 @@ export default function Dashboard() {
       </div>
 
       {/* Ward Meta Panel */}
-      <WardMetaPanel wardId={wardIdForMeta} />
+      <ComponentErrorBoundary
+        componentName="Ward Meta Panel"
+        fallbackMessage="Ward demographic information is temporarily unavailable."
+      >
+        <WardMetaPanel wardId={wardIdForMeta} />
+      </ComponentErrorBoundary>
 
       {/* Map + Strategic Summary (responsive 12-col layout on large screens) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 xl:col-span-8 bg-white border rounded-md">
           <div className="p-2 font-medium">Geospatial Intelligence</div>
           <div className="p-2">
-            <LocationMap
-              geojson={geojson}
-              selectedWard={selectedWard}
-              onWardSelect={setSelectedWard}
-              matchHeightRef={summaryRef}   // auto-size map to match the summary card height
-            />
+            <ComponentErrorBoundary
+              componentName="Interactive Map"
+              fallbackMessage="The interactive ward map is temporarily unavailable. Use the ward dropdown above for area selection."
+            >
+              <LocationMap
+                geojson={geojson}
+                selectedWard={selectedWard}
+                onWardSelect={setSelectedWard}
+                matchHeightRef={summaryRef}   // auto-size map to match the summary card height
+              />
+            </ComponentErrorBoundary>
           </div>
         </div>
 
         <div className="lg:col-span-5 xl:col-span-4 bg-white border rounded-md" ref={summaryRef}>
           <div className="p-2 font-medium">On-Demand Strategic Summary</div>
           <div className="p-2">
-            <StrategicSummary selectedWard={selectedWard} />
+            <ComponentErrorBoundary
+              componentName="Strategic Analysis"
+              fallbackMessage={`AI-powered strategic analysis for ${selectedWard || 'the selected ward'} is temporarily unavailable. Core analytics below remain functional.`}
+            >
+              <StrategicSummary selectedWard={selectedWard} />
+            </ComponentErrorBoundary>
           </div>
         </div>
       </div>
@@ -248,7 +334,12 @@ export default function Dashboard() {
           {loading ? (
             <div className="text-sm text-gray-500">Loading chart data…</div>
           ) : (
-            <EmotionChart posts={filteredPosts} />
+            <ComponentErrorBoundary
+              componentName="Sentiment Chart"
+              fallbackMessage="Sentiment visualization is temporarily unavailable."
+            >
+              <EmotionChart posts={filteredPosts} />
+            </ComponentErrorBoundary>
           )}
         </div>
 
@@ -257,7 +348,12 @@ export default function Dashboard() {
           {loading ? (
             <div className="text-sm text-gray-500">Loading analysis…</div>
           ) : (
-            <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
+            <ComponentErrorBoundary
+              componentName="Competitive Analysis"
+              fallbackMessage="Party comparison analysis is temporarily unavailable."
+            >
+              <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
+            </ComponentErrorBoundary>
           )}
         </div>
       </div>
@@ -266,43 +362,120 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Trend: Emotions & Share of Voice</div>
-          <TimeSeriesChart ward={selectedWard} days={30} />
+          <ComponentErrorBoundary
+            componentName="Time Series Chart"
+            fallbackMessage="Historical trend analysis is temporarily unavailable."
+          >
+            <TimeSeriesChart ward={selectedWard} days={30} />
+          </ComponentErrorBoundary>
         </div>
 
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Topic Analysis</div>
-          <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
+          <ComponentErrorBoundary
+            componentName="Topic Analysis"
+            fallbackMessage="Topic clustering analysis is temporarily unavailable."
+          >
+            <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
+          </ComponentErrorBoundary>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitor Trend</div>
-          <CompetitorTrendChart ward={selectedWard} days={30} />
+          <ComponentErrorBoundary
+            componentName="Competitor Trend Chart"
+            fallbackMessage="Competitor timeline analysis is temporarily unavailable."
+          >
+            <CompetitorTrendChart ward={selectedWard} days={30} />
+          </ComponentErrorBoundary>
         </div>
 
         <div className="lg:col-span-6 bg-white border rounded-md p-2">
           <div className="font-medium mb-2">Competitive Benchmark</div>
-          <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
+          <ComponentErrorBoundary
+            componentName="Competitive Benchmark"
+            fallbackMessage="Performance benchmarking is temporarily unavailable."
+          >
+            <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
+          </ComponentErrorBoundary>
         </div>
       </div>
 
       <div className="bg-white border rounded-md p-2">
         <div className="font-medium mb-2">Predictive Outlook</div>
-        <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+        <ComponentErrorBoundary
+          componentName="Predictive Analysis"
+          fallbackMessage="Electoral prediction analysis is temporarily unavailable."
+        >
+          <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+        </ComponentErrorBoundary>
       </div>
 
       {/* Latest Epaper Headlines */}
-      <EpaperFeed ward={selectedWard} limit={10} />
+      <ComponentErrorBoundary
+        componentName="Latest Headlines"
+        fallbackMessage="Latest news headlines are temporarily unavailable."
+      >
+        <EpaperFeed ward={selectedWard} limit={10} />
+      </ComponentErrorBoundary>
 
       {/* Intelligence feed */}
       <div className="bg-white border rounded-md p-2">
-        <AlertsPanel posts={filteredPosts} ward={selectedWard} />
+        <ComponentErrorBoundary
+          componentName="Intelligence Alerts"
+          fallbackMessage="Real-time intelligence alerts are temporarily unavailable. Check back shortly for political updates."
+        >
+          <AlertsPanel posts={filteredPosts} ward={selectedWard} />
+        </ComponentErrorBoundary>
+      </div>
+
+      {/* Phase 3: Political Strategist Suite */}
+      <div className="space-y-6">
+        <div className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">
+          Political Strategist Suite
+        </div>
+        
+        {/* Intelligence Feed & Chat */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StrategistErrorBoundary componentName="Intelligence Feed">
+            <IntelligenceFeed ward={selectedWard} />
+          </StrategistErrorBoundary>
+          
+          <StrategistErrorBoundary componentName="AI Strategy Chat">
+            <StrategistChat />
+          </StrategistErrorBoundary>
+        </div>
+        
+        {/* Strategic Workbench & Scenario Simulator */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StrategistErrorBoundary componentName="Strategic Workbench">
+            <StrategicWorkbench />
+          </StrategistErrorBoundary>
+          
+          <StrategistErrorBoundary componentName="Scenario Simulator">
+            <ScenarioSimulator />
+          </StrategistErrorBoundary>
+        </div>
       </div>
 
       {error && (
         <div className="p-3 bg-red-100 text-red-700 rounded-md">{error}</div>
       )}
+
+      {/* Real-time Notification System */}
+      <ComponentErrorBoundary
+        componentName="Notification System"
+        fallbackMessage="Real-time notifications are temporarily unavailable."
+      >
+        <NotificationSystem 
+          selectedWard={selectedWard}
+          isVisible={true}
+          enableSound={true}
+          enableBrowserNotifications={true}
+        />
+      </ComponentErrorBoundary>
     </div>
   );
 }
