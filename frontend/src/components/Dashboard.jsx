@@ -30,6 +30,9 @@ import {
   GenericFallback 
 } from "./ErrorFallback.jsx";
 
+// Error boundary testing initialization
+import { initializeErrorBoundaryTesting } from "../utils/testErrorBoundaries.js";
+
 // Stream A Integration
 import { useEnhancedSSE } from "../features/strategist/hooks/useEnhancedSSE";
 import { 
@@ -150,6 +153,13 @@ export default function Dashboard() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Initialize error boundary testing in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      initializeErrorBoundaryTesting();
+    }
   }, []);
 
   /** Load ward-dependent data (posts + competitive aggregate) */
@@ -303,6 +313,8 @@ export default function Dashboard() {
             <ComponentErrorBoundary
               componentName="Interactive Map"
               fallbackMessage="The interactive ward map is temporarily unavailable. Use the ward dropdown above for area selection."
+              allowRetry={true}
+              showDetails={false}
             >
               <LocationMap
                 geojson={geojson}
@@ -320,6 +332,8 @@ export default function Dashboard() {
             <ComponentErrorBoundary
               componentName="Strategic Analysis"
               fallbackMessage={`AI-powered strategic analysis for ${selectedWard || 'the selected ward'} is temporarily unavailable. Core analytics below remain functional.`}
+              allowRetry={true}
+              showDetails={false}
             >
               <StrategicSummary selectedWard={selectedWard} />
             </ComponentErrorBoundary>
@@ -337,6 +351,8 @@ export default function Dashboard() {
             <ComponentErrorBoundary
               componentName="Sentiment Chart"
               fallbackMessage="Sentiment visualization is temporarily unavailable."
+              allowRetry={true}
+              showDetails={false}
             >
               <EmotionChart posts={filteredPosts} />
             </ComponentErrorBoundary>
@@ -351,6 +367,8 @@ export default function Dashboard() {
             <ComponentErrorBoundary
               componentName="Competitive Analysis"
               fallbackMessage="Party comparison analysis is temporarily unavailable."
+              allowRetry={true}
+              showDetails={false}
             >
               <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
             </ComponentErrorBoundary>
@@ -365,6 +383,8 @@ export default function Dashboard() {
           <ComponentErrorBoundary
             componentName="Time Series Chart"
             fallbackMessage="Historical trend analysis is temporarily unavailable."
+            allowRetry={true}
+            showDetails={false}
           >
             <TimeSeriesChart ward={selectedWard} days={30} />
           </ComponentErrorBoundary>
@@ -387,6 +407,8 @@ export default function Dashboard() {
           <ComponentErrorBoundary
             componentName="Competitor Trend Chart"
             fallbackMessage="Competitor timeline analysis is temporarily unavailable."
+            allowRetry={true}
+            showDetails={false}
           >
             <CompetitorTrendChart ward={selectedWard} days={30} />
           </ComponentErrorBoundary>
@@ -397,6 +419,8 @@ export default function Dashboard() {
           <ComponentErrorBoundary
             componentName="Competitive Benchmark"
             fallbackMessage="Performance benchmarking is temporarily unavailable."
+            allowRetry={true}
+            showDetails={false}
           >
             <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
           </ComponentErrorBoundary>
@@ -408,6 +432,8 @@ export default function Dashboard() {
         <ComponentErrorBoundary
           componentName="Predictive Analysis"
           fallbackMessage="Electoral prediction analysis is temporarily unavailable."
+          allowRetry={true}
+          showDetails={false}
         >
           <PredictionSummary ward={selectedWard} posts={filteredPosts} />
         </ComponentErrorBoundary>
@@ -417,6 +443,8 @@ export default function Dashboard() {
       <ComponentErrorBoundary
         componentName="Latest Headlines"
         fallbackMessage="Latest news headlines are temporarily unavailable."
+        allowRetry={true}
+        showDetails={false}
       >
         <EpaperFeed ward={selectedWard} limit={10} />
       </ComponentErrorBoundary>
@@ -426,6 +454,8 @@ export default function Dashboard() {
         <ComponentErrorBoundary
           componentName="Intelligence Alerts"
           fallbackMessage="Real-time intelligence alerts are temporarily unavailable. Check back shortly for political updates."
+          allowRetry={true}
+          showDetails={false}
         >
           <AlertsPanel posts={filteredPosts} ward={selectedWard} />
         </ComponentErrorBoundary>

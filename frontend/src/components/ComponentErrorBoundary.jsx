@@ -25,7 +25,7 @@ class ComponentErrorBoundary extends React.Component {
       hasError: true
     });
 
-    const componentName = this.props.componentName;
+    const componentName = this.props.componentName || 'Unknown Component';
 
     // Report to health monitoring system
     healthMonitor.reportError(componentName, error);
@@ -35,14 +35,19 @@ class ComponentErrorBoundary extends React.Component {
       window.trackComponentError(componentName);
     }
 
-    // Log error for monitoring
-    console.error(`LokDarpan Component Error in ${componentName}:`, {
-      error: error.message,
-      stack: error.stack,
-      errorInfo,
-      timestamp: new Date().toISOString(),
-      props: this.props.logProps ? this.props.children?.props : undefined
-    });
+    // Enhanced logging with component context
+    console.group(`🚨 LokDarpan Component Error: ${componentName}`);
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    console.error('Component Stack:', errorInfo.componentStack);
+    console.error('Retry Count:', this.state.retryCount);
+    console.error('Timestamp:', new Date().toISOString());
+    
+    if (this.props.logProps && this.props.children?.props) {
+      console.error('Props:', this.props.children.props);
+    }
+    
+    console.groupEnd();
 
     // Report to monitoring service if available
     if (window.reportError) {
@@ -50,9 +55,24 @@ class ComponentErrorBoundary extends React.Component {
         component: componentName,
         error: error.message,
         stack: error.stack,
-        timestamp: new Date().toISOString()
+        componentStack: errorInfo.componentStack,
+        retryCount: this.state.retryCount,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        url: window.location.href
       });
     }
+
+    // Trigger global error event for dashboard-wide error handling
+    window.dispatchEvent(new CustomEvent('componentError', {
+      detail: {
+        componentName,
+        error: error.message,
+        stack: error.stack,
+        retryCount: this.state.retryCount,
+        timestamp: Date.now()
+      }
+    }));
   }
 
   handleRetry = () => {

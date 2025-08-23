@@ -1,132 +1,159 @@
-// Error boundary testing utility for LokDarpan Dashboard
-export const testErrorBoundaries = () => {
-  console.log('🧪 Testing LokDarpan Error Boundary System...');
+/**
+ * Manual Error Boundary Testing Utilities
+ * Interactive testing tools for validating component resilience
+ */
 
-  // Test component error simulation
-  const triggerComponentError = (componentName, errorType = 'render') => {
-    const errors = {
-      render: new Error(`Simulated render error in ${componentName}`),
-      api: new Error(`API connection failed for ${componentName}`),
-      timeout: new Error(`Request timeout in ${componentName}`),
-      memory: new Error(`Memory allocation failed in ${componentName}`)
-    };
+import { failureSimulator, runCriticalComponentTests, testDashboardResilience } from './componentFailureSimulator.js';
+import { healthMonitor } from './componentHealth.js';
 
-    const error = errors[errorType] || errors.render;
-    
-    // Simulate error in component
-    if (window.reportError) {
-      window.reportError({
-        component: componentName,
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-        simulated: true
-      });
-    }
+// Initialize testing environment
+export const initializeErrorBoundaryTesting = () => {
+  if (typeof window === 'undefined' || process.env.NODE_ENV === 'production') {
+    return;
+  }
 
-    console.log(`🔴 Simulated ${errorType} error in ${componentName}:`, error.message);
-    return error;
-  };
-
-  // Test error recovery
-  const testRecovery = (componentName, delay = 2000) => {
-    setTimeout(() => {
-      console.log(`🟢 Testing recovery for ${componentName}`);
-      if (window.healthMonitor) {
-        window.healthMonitor.markRecovered(componentName);
-      }
-    }, delay);
-  };
-
-  // Test error cascade isolation
-  const testCascadeIsolation = () => {
-    const components = [
-      'Interactive Map',
-      'Strategic Analysis', 
-      'Sentiment Chart',
-      'Time Series Chart'
-    ];
-
-    console.log('🧪 Testing cascade isolation - triggering multiple errors...');
-    
-    components.forEach((component, index) => {
+  // Add testing tools to global scope
+  window.LokDarpanErrorTesting = {
+    // Individual component testing
+    testComponent: (componentName, errorType = 'render') => {
+      console.log(`🧪 Testing error boundary for: ${componentName}`);
+      failureSimulator.startSimulation();
+      const error = failureSimulator.simulateComponentFailure(componentName, errorType);
+      
       setTimeout(() => {
-        triggerComponentError(component, 'api');
-        // Test recovery after 3 seconds
-        testRecovery(component, 3000);
-      }, index * 500);
-    });
-  };
-
-  // Test health monitoring
-  const testHealthMonitoring = () => {
-    console.log('📊 Testing health monitoring system...');
-    
-    if (window.healthMonitor) {
-      // Get initial health
-      const initialHealth = window.healthMonitor.getDashboardHealth();
-      console.log('Initial health:', initialHealth);
-
-      // Trigger some errors
-      triggerComponentError('Interactive Map', 'timeout');
-      triggerComponentError('Strategic Analysis', 'api');
-
-      // Check health after errors
-      setTimeout(() => {
-        const healthAfterErrors = window.healthMonitor.getDashboardHealth();
-        console.log('Health after errors:', healthAfterErrors);
-
-        // Test recovery
-        window.healthMonitor.markRecovered('Interactive Map');
-        window.healthMonitor.markRecovered('Strategic Analysis');
-
+        const status = healthMonitor.getComponentStatus(componentName);
+        console.log(`📊 Component Status:`, status);
+        
+        // Auto-clear after 5 seconds for demo
         setTimeout(() => {
-          const healthAfterRecovery = window.healthMonitor.getDashboardHealth();
-          console.log('Health after recovery:', healthAfterRecovery);
-        }, 1000);
-      }, 1000);
-    }
-  };
+          failureSimulator.clearComponentFailure(componentName);
+          failureSimulator.stopSimulation();
+          console.log(`✅ Test completed for ${componentName}`);
+        }, 5000);
+      }, 100);
+      
+      return error;
+    },
 
-  // Test error metrics
-  const testErrorMetrics = () => {
-    console.log('📈 Testing error metrics...');
-    
-    if (window.errorMetrics) {
-      const initialMetrics = window.errorMetrics;
-      console.log('Initial metrics:', initialMetrics);
+    // Test all critical components
+    testAllComponents: async () => {
+      console.log('🚀 Starting comprehensive component error boundary test');
+      const results = await runCriticalComponentTests();
+      
+      console.log('📊 Test Results:');
+      console.log(`  Total Tests: ${results.totalTests}`);
+      console.log(`  Passed: ${results.passed}`);
+      console.log(`  Failed: ${results.failed}`);
+      console.log(`  Success Rate: ${Math.round((results.passed / results.totalTests) * 100)}%`);
+      
+      return results;
+    },
 
-      // Trigger tracked errors
-      if (window.trackComponentError) {
-        window.trackComponentError('Interactive Map');
-        window.trackComponentError('Strategic Analysis');
-        window.trackComponentError('Interactive Map'); // Duplicate to test counting
+    // Test dashboard resilience
+    testResilience: async () => {
+      console.log('🛡️ Testing dashboard resilience with multiple failures');
+      const result = await testDashboardResilience();
+      
+      console.log('🏁 Resilience Test Results:');
+      console.log(`  Dashboard Resilience: ${result.isResilient ? '✅ PASSED' : '❌ FAILED'}`);
+      console.log(`  Health Score: ${result.dashboardHealth.healthScore}%`);
+      console.log(`  Healthy Components: ${result.dashboardHealth.healthyComponents}/${result.dashboardHealth.totalComponents}`);
+      
+      return result;
+    },
+
+    // Interactive component failure simulation
+    simulateFailure: (componentName, errorType) => {
+      const availableComponents = [
+        'Interactive Map',
+        'Strategic Analysis', 
+        'Time Series Chart',
+        'Competitor Trend Chart',
+        'Intelligence Alerts',
+        'Sentiment Chart',
+        'Competitive Analysis'
+      ];
+
+      const availableErrors = [
+        'render', 'api', 'network', 'data', 'timeout', 'memory', 'permission'
+      ];
+
+      if (!availableComponents.includes(componentName)) {
+        console.warn(`⚠️ Component "${componentName}" not in test list. Available:`, availableComponents);
+        return null;
       }
 
-      console.log('Metrics after errors:', window.errorMetrics);
+      if (!availableErrors.includes(errorType)) {
+        console.warn(`⚠️ Error type "${errorType}" not available. Available:`, availableErrors);
+        return null;
+      }
+
+      failureSimulator.startSimulation();
+      const error = failureSimulator.simulateComponentFailure(componentName, errorType);
+      
+      console.log(`💥 Simulated ${errorType} error in ${componentName}`);
+      console.log('   Use clearFailure() to recover or stopSimulation() to clear all');
+      
+      return error;
+    },
+
+    // Clear specific component failure
+    clearFailure: (componentName) => {
+      failureSimulator.clearComponentFailure(componentName);
+      const status = healthMonitor.getComponentStatus(componentName);
+      console.log(`✅ Cleared failure for ${componentName}`, status);
+    },
+
+    // Stop all failure simulation
+    stopSimulation: () => {
+      failureSimulator.stopSimulation();
+      console.log('🛑 All failure simulation stopped');
+    },
+
+    // Get current system health
+    getHealth: () => {
+      const health = healthMonitor.getDashboardHealth();
+      console.log('🏥 Current Dashboard Health:', health);
+      return health;
+    },
+
+    // Get simulation status
+    getStatus: () => {
+      const status = failureSimulator.getSimulationStatus();
+      console.log('📊 Simulation Status:', status);
+      return status;
+    },
+
+    // Helper to show available commands
+    help: () => {
+      console.log('🔧 LokDarpan Error Boundary Testing Commands:');
+      console.log('');
+      console.log('📊 Quick Tests:');
+      console.log('  LokDarpanErrorTesting.testComponent("Interactive Map", "render")');
+      console.log('  LokDarpanErrorTesting.testAllComponents()');
+      console.log('  LokDarpanErrorTesting.testResilience()');
+      console.log('');
+      console.log('💥 Manual Simulation:');
+      console.log('  LokDarpanErrorTesting.simulateFailure("Strategic Analysis", "api")');
+      console.log('  LokDarpanErrorTesting.clearFailure("Strategic Analysis")');
+      console.log('  LokDarpanErrorTesting.stopSimulation()');
+      console.log('');
+      console.log('📈 Monitoring:');
+      console.log('  LokDarpanErrorTesting.getHealth()');
+      console.log('  LokDarpanErrorTesting.getStatus()');
     }
   };
 
-  // Run all tests
-  return {
-    triggerComponentError,
-    testRecovery,
-    testCascadeIsolation,
-    testHealthMonitoring,
-    testErrorMetrics,
-    runAllTests: () => {
-      console.log('🚀 Running comprehensive error boundary tests...');
-      testHealthMonitoring();
-      setTimeout(() => testErrorMetrics(), 2000);
-      setTimeout(() => testCascadeIsolation(), 4000);
-      console.log('✅ Error boundary tests initiated. Check console for results.');
-    }
-  };
+  // Quick access shortcuts
+  window.testErrorBoundary = window.LokDarpanErrorTesting.testComponent;
+  window.testAllErrorBoundaries = window.LokDarpanErrorTesting.testAllComponents;
+  window.testDashboardResilience = window.LokDarpanErrorTesting.testResilience;
+  
+  console.log('🧪 LokDarpan Error Boundary Testing Initialized');
+  console.log('   Run LokDarpanErrorTesting.help() for commands');
+  console.log('   Quick test: testErrorBoundary("Interactive Map", "render")');
 };
 
-// Make available globally for development
-if (typeof window !== 'undefined') {
-  window.testErrorBoundaries = testErrorBoundaries();
-}
-
-export default testErrorBoundaries;
+export default {
+  initializeErrorBoundaryTesting
+};
