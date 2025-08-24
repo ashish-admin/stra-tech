@@ -1,0 +1,46 @@
+# Error Tracking Report
+
+**Generated:** {{ now.isoformat() }}
+**Total Errors:** {{ error_analysis.total_errors }}
+
+## Error Distribution
+
+{% for category, errors in error_analysis.error_categories.items() %}
+### {{ category.title() }} ({{ errors.count }} errors)
+
+{% if errors.errors %}
+Recent examples:
+{% for error in errors.errors[:3] %}
+- **{{ error.get('timestamp', 'Unknown time') }}:** {{ error.get('message', error.get('error', 'No message')) }}
+{% endfor %}
+{% endif %}
+
+{% endfor %}
+
+## Error Trends
+
+{% if error_analysis.error_trends %}
+- **Daily Trend:** {{ error_analysis.error_trends.daily_trend }}
+{% if error_analysis.error_trends.peak_hours %}
+- **Peak Hours:** {{ error_analysis.error_trends.peak_hours | join(', ') }}
+{% endif %}
+{% endif %}
+
+## Critical Issues
+
+{% for issue in error_analysis.critical_issues %}
+### {{ issue.type.title() }}
+- **Severity:** {{ issue.severity }}
+- **Message:** {{ issue.message }}
+- **Action Required:** {{ issue.action_required }}
+
+{% endfor %}
+
+## Recommendations
+
+{% for recommendation in error_analysis.recommendations %}
+- {{ recommendation }}
+{% endfor %}
+
+---
+*This report is automatically updated based on system error patterns*

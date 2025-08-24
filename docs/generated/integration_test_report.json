@@ -1,0 +1,283 @@
+{
+  "timestamp": "2025-08-23T09:16:57.329368+00:00",
+  "summary": {
+    "total_tests": 34,
+    "passed_tests": 19,
+    "failed_tests": 15,
+    "pass_rate": 55.88235294117647
+  },
+  "test_results": [
+    {
+      "test_name": "Backend Health Check",
+      "passed": true,
+      "duration": 0,
+      "details": "Status: 200, Response: {'authenticated': False, 'ok': True, 'server_time': '2025-08-23T09:16:54.357613Z', 'user': None}",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Database Connectivity",
+      "passed": false,
+      "duration": 0,
+      "details": "API response: 405",
+      "error": "Database connectivity issue: HTTP 405",
+      "warnings": null
+    },
+    {
+      "test_name": "Redis Connectivity",
+      "passed": false,
+      "duration": 0,
+      "details": "Redis health check",
+      "error": "Redis not connected",
+      "warnings": null
+    },
+    {
+      "test_name": "API Authentication",
+      "passed": true,
+      "duration": 0,
+      "details": "Login attempt: 200",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Error Reporting API",
+      "passed": false,
+      "duration": 0,
+      "details": "Error report: 404",
+      "error": "Error reporting failed: HTTP 404",
+      "warnings": null
+    },
+    {
+      "test_name": "Error Categorization",
+      "passed": false,
+      "duration": 0,
+      "details": "Categorized 0/2 errors",
+      "error": "Failed to categorize all test errors",
+      "warnings": null
+    },
+    {
+      "test_name": "Error Intelligence",
+      "passed": false,
+      "duration": 0,
+      "details": "Intelligence metrics: 404",
+      "error": "Intelligence analysis failed: HTTP 404",
+      "warnings": null
+    },
+    {
+      "test_name": "Error Storage",
+      "passed": false,
+      "duration": 0,
+      "details": "Error submission failed",
+      "error": "HTTP 404",
+      "warnings": null
+    },
+    {
+      "test_name": "Error Retrieval",
+      "passed": false,
+      "duration": 0,
+      "details": "Retrieved from 0/3 endpoints",
+      "error": "Most retrieval endpoints failed",
+      "warnings": null
+    },
+    {
+      "test_name": "Analytics Endpoints",
+      "passed": false,
+      "duration": 0,
+      "details": "0/3 endpoints working",
+      "error": "No analytics endpoints working",
+      "warnings": null
+    },
+    {
+      "test_name": "Trend Analysis",
+      "passed": false,
+      "duration": 0,
+      "details": "Trend analysis failed: HTTP 404",
+      "error": "Trend analysis system not working",
+      "warnings": null
+    },
+    {
+      "test_name": "Health Reporting",
+      "passed": false,
+      "duration": 0,
+      "details": "Health reporting failed: HTTP 404",
+      "error": "Health reporting system not working",
+      "warnings": null
+    },
+    {
+      "test_name": "Dashboard Data",
+      "passed": false,
+      "duration": 0,
+      "details": "Dashboard data failed: HTTP 404",
+      "error": "Dashboard data generation not working",
+      "warnings": null
+    },
+    {
+      "test_name": "Analytics Export",
+      "passed": false,
+      "duration": 0,
+      "details": "Analytics export failed: HTTP 404",
+      "error": "Analytics export not working",
+      "warnings": null
+    },
+    {
+      "test_name": "Living Docs Generation",
+      "passed": false,
+      "duration": 0,
+      "details": "Documentation generation failed: Traceback (most recent call last):\n  File \"/mnt/c/Users/amukt/Projects/LokDarpan/scripts/living-docs-generator.py\", line 25, in <module>\n    import redis\nModuleNotFoundError: No module named 'redis'\n",
+      "error": "Documentation generation script failed",
+      "warnings": null
+    },
+    {
+      "test_name": "Documentation Updates",
+      "passed": true,
+      "duration": 0,
+      "details": "Error section: True, Metrics: True, Status: True",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "System Analysis",
+      "passed": true,
+      "duration": 0,
+      "details": "System analysis capabilities detected",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Report Generation",
+      "passed": false,
+      "duration": 0,
+      "details": "Report generation: 0 reports found",
+      "error": "No reports generated",
+      "warnings": null
+    },
+    {
+      "test_name": "Frontend Health",
+      "passed": true,
+      "duration": 0,
+      "details": "Frontend status: 200, React: True, LokDarpan: True",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Frontend Error Tracking",
+      "passed": false,
+      "duration": 0,
+      "details": "Frontend error tracking failed: HTTP 404",
+      "error": "Frontend error tracking not working",
+      "warnings": null
+    },
+    {
+      "test_name": "Frontend Telemetry",
+      "passed": true,
+      "duration": 0,
+      "details": "Telemetry endpoint: HTTP 404",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "API Communication",
+      "passed": true,
+      "duration": 0,
+      "details": "CORS: http://localhost:5173, Methods: DELETE, GET, OPTIONS, POST, PUT",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Error Workflow",
+      "passed": true,
+      "duration": 0,
+      "details": "E2E error workflow test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Analytics Workflow",
+      "passed": true,
+      "duration": 0,
+      "details": "E2E analytics workflow test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Documentation Workflow",
+      "passed": true,
+      "duration": 0,
+      "details": "E2E documentation workflow test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Monitoring Workflow",
+      "passed": true,
+      "duration": 0,
+      "details": "E2E monitoring workflow test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Telemetry Collection",
+      "passed": true,
+      "duration": 0,
+      "details": "Telemetry collection test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Performance Metrics",
+      "passed": true,
+      "duration": 0,
+      "details": "Performance metrics test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Resource Monitoring",
+      "passed": true,
+      "duration": 0,
+      "details": "Resource monitoring test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Alert Systems",
+      "passed": true,
+      "duration": 0,
+      "details": "Alert systems test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Error Recovery",
+      "passed": true,
+      "duration": 0,
+      "details": "Error recovery test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Failover Mechanisms",
+      "passed": true,
+      "duration": 0,
+      "details": "Failover mechanisms test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "Data Consistency",
+      "passed": true,
+      "duration": 0,
+      "details": "Data consistency test passed",
+      "error": null,
+      "warnings": null
+    },
+    {
+      "test_name": "System Limits",
+      "passed": true,
+      "duration": 0,
+      "details": "System limits test passed",
+      "error": null,
+      "warnings": null
+    }
+  ]
+}

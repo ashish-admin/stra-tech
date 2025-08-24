@@ -1,0 +1,173 @@
+# LokDarpan Strategic Research Configuration
+# Configuration file for automated bi-weekly research and analysis
+
+research_schedule:
+  frequency: "bi-weekly"  # every 2 weeks
+  execution_day: "friday"
+  execution_time: "09:00"
+  timezone: "Asia/Kolkata"
+
+# News sources for political technology monitoring
+news_sources:
+  google_news_rss:
+    - "https://news.google.com/rss/search?q=political+technology+India&hl=en-IN&gl=IN&ceid=IN:en"
+    - "https://news.google.com/rss/search?q=election+campaign+AI+India&hl=en-IN&gl=IN&ceid=IN:en"
+    - "https://news.google.com/rss/search?q=political+analytics&hl=en-IN&gl=IN&ceid=IN:en"
+    - "https://news.google.com/rss/search?q=social+media+election+monitoring&hl=en-IN&gl=IN&ceid=IN:en"
+    - "https://news.google.com/rss/search?q=WhatsApp+political+campaigns+India&hl=en-IN&gl=IN&ceid=IN:en"
+  
+  industry_blogs:
+    - "https://techcrunch.com/category/artificial-intelligence/"
+    - "https://www.wired.com/category/business/"
+    - "https://economictimes.indiatimes.com/tech/rssfeeds/63319161.cms"
+
+# Competitor monitoring configuration
+competitors:
+  direct:
+    - name: "CVoter"
+      website: "https://www.cvoter.com"
+      focus: "polling_surveys"
+      monitoring_keywords: ["polling", "survey", "election prediction", "voter sentiment"]
+      
+    - name: "Prashnam"
+      website: "https://prashnam.com"  
+      focus: "market_research"
+      monitoring_keywords: ["market research", "opinion polls", "data analytics"]
+      
+    - name: "Political Edge"
+      website: ""
+      focus: "political_consulting"
+      monitoring_keywords: ["political consulting", "campaign strategy", "election management"]
+  
+  indirect:
+    - name: "NielsenIQ"
+      website: "https://nielseniq.com/global/en/"
+      focus: "consumer_analytics"
+      monitoring_keywords: ["consumer behavior", "market intelligence", "data insights"]
+      
+    - name: "Gramener"
+      website: "https://gramener.com"
+      focus: "data_visualization"
+      monitoring_keywords: ["data visualization", "business intelligence", "analytics"]
+
+# Technology trend monitoring
+technology_trends:
+  github_queries:
+    - "political sentiment analysis"
+    - "election prediction"
+    - "social media monitoring"
+    - "WhatsApp API political"
+    - "Indian political data"
+    - "campaign analytics"
+  
+  research_areas:
+    - "natural_language_processing"
+    - "social_media_analytics" 
+    - "real_time_streaming"
+    - "political_bias_detection"
+    - "multilingual_sentiment_analysis"
+    - "deepfake_detection"
+
+# Research categories and priorities
+research_categories:
+  market_intelligence:
+    priority: "high"
+    frequency: "bi-weekly"
+    sources: ["news", "industry_reports", "competitor_analysis"]
+    
+  competitive_analysis:
+    priority: "high" 
+    frequency: "bi-weekly"
+    sources: ["competitor_websites", "product_updates", "pricing_analysis"]
+    
+  technology_trends:
+    priority: "medium"
+    frequency: "bi-weekly"
+    sources: ["github", "research_papers", "tech_blogs"]
+    
+  regulatory_changes:
+    priority: "medium"
+    frequency: "weekly"
+    sources: ["government_websites", "legal_updates", "compliance_news"]
+    
+  client_feedback:
+    priority: "high"
+    frequency: "continuous"
+    sources: ["support_tickets", "user_interviews", "satisfaction_surveys"]
+
+# Analysis framework configuration
+analysis_framework:
+  relevance_keywords:
+    high_priority: ["political", "election", "campaign", "AI", "analytics", "intelligence"]
+    medium_priority: ["sentiment", "social media", "data", "prediction", "voter", "polling"]
+    low_priority: ["technology", "software", "platform", "tool", "service"]
+  
+  competitive_threat_assessment:
+    factors:
+      - "feature_overlap"
+      - "market_position" 
+      - "funding_status"
+      - "technology_capability"
+      - "customer_base"
+    
+    scoring:
+      low: "0-3"
+      medium: "4-6" 
+      high: "7-10"
+  
+  market_opportunity_scoring:
+    criteria:
+      - "market_demand"
+      - "technical_feasibility"
+      - "competitive_advantage"
+      - "resource_requirements"
+      - "timeline_to_market"
+
+# Automation and integration settings
+automation:
+  enabled: true
+  
+  data_sources:
+    rss_feeds: true
+    github_api: true  
+    google_alerts: true
+    web_scraping: false  # requires additional setup
+    
+  notifications:
+    email_alerts: false
+    slack_integration: false
+    dashboard_alerts: true
+    
+  output_formats:
+    json: true
+    markdown: true
+    csv: false
+    
+  retention_policy:
+    raw_data: "3_months"
+    processed_results: "1_year" 
+    summary_reports: "indefinite"
+
+# Quality control and validation
+quality_control:
+  minimum_sources: 3
+  relevance_threshold: 0.6
+  confidence_scoring: true
+  fact_checking: false  # future enhancement
+  
+  validation_checks:
+    - "source_credibility"
+    - "information_freshness" 
+    - "relevance_scoring"
+    - "duplicate_detection"
+
+# Integration with LokDarpan systems  
+integration:
+  database_logging: true
+  api_endpoints: true
+  dashboard_updates: true
+  
+  stakeholder_notifications:
+    - "product_team"
+    - "engineering_team"  
+    - "business_development"
