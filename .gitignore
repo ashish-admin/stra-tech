@@ -74,6 +74,7 @@ wheels/
 # Celery
 celerybeat-schedule*
 celerybeat-schedule.*
+backend/celerybeat-schedule.dat
 
 # Testing
 .coverage
