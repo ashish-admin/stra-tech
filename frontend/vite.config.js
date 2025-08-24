@@ -7,45 +7,167 @@ export default defineConfig({
     // Enable code splitting for better performance
     rollupOptions: {
       output: {
-        // Manual chunks for vendor libraries
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'chart-vendor': ['chart.js', 'react-chartjs-2', 'recharts'],
-          'map-vendor': ['leaflet', 'react-leaflet'],
-          'query-vendor': ['@tanstack/react-query'],
-          'ui-vendor': ['lucide-react'],
-          'i18n-vendor': ['i18next', 'react-i18next'],
+        // Enhanced manual chunks for political dashboard optimization
+        manualChunks(id) {
+          // Core React bundle - highest priority
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-core';
+          }
+          
+          // Data visualization - high priority for political intelligence
+          if (id.includes('chart.js') || id.includes('recharts') || id.includes('react-chartjs-2')) {
+            return 'charts';
+          }
+          
+          // Geospatial mapping - critical for ward-based analysis
+          if (id.includes('leaflet') || id.includes('react-leaflet')) {
+            return 'mapping';
+          }
+          
+          // API and state management - high priority
+          if (id.includes('@tanstack/react-query') || id.includes('axios')) {
+            return 'api-client';
+          }
+          
+          // UI components and icons - medium priority
+          if (id.includes('lucide-react') || id.includes('@headlessui')) {
+            return 'ui-components';
+          }
+          
+          // Internationalization - deferred loading
+          if (id.includes('i18next') || id.includes('react-i18next')) {
+            return 'i18n';
+          }
+          
+          // Date/time utilities - deferred loading
+          if (id.includes('date-fns') || id.includes('moment')) {
+            return 'datetime';
+          }
+          
+          // Political intelligence features - route-based splitting
+          if (id.includes('/features/strategist/')) {
+            return 'strategist-features';
+          }
+          
+          if (id.includes('/tabs/StrategistTab') || id.includes('StrategistChat')) {
+            return 'strategist-ui';
+          }
+          
+          if (id.includes('/tabs/SentimentTab') || id.includes('EmotionChart')) {
+            return 'sentiment-analysis';
+          }
+          
+          if (id.includes('/tabs/CompetitiveTab') || id.includes('CompetitorTrend')) {
+            return 'competitive-analysis';
+          }
+          
+          if (id.includes('/tabs/GeographicTab') || id.includes('LocationMap')) {
+            return 'geographic-analysis';
+          }
+          
+          // Analytics and monitoring - background loading
+          if (id.includes('/monitoring/') || id.includes('PerformanceMonitor')) {
+            return 'monitoring';
+          }
+          
+          // Generic vendor chunks for other node_modules
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
-        // Use content-based file names
-        chunkFileNames: 'assets/[name]-[hash].js',
+        
+        // Optimized file naming for caching
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId ? 
+            chunkInfo.facadeModuleId.split('/').pop().replace(/\.\w+$/, '') : 
+            'chunk';
+          return `assets/[name]-[hash].js`;
+        },
         entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const extType = info[info.length - 1];
+          
+          // Organize assets by type for better caching
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(extType)) {
+            return `assets/images/[name]-[hash][extname]`;
+          }
+          if (/woff2?|eot|ttf|otf/i.test(extType)) {
+            return `assets/fonts/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
+        }
       }
     },
-    // Increase chunk size warning limit for vendor chunks
+    // Optimized chunk size limits for political dashboard
     chunkSizeWarningLimit: 1000,
-    // Enable source maps for production debugging
-    sourcemap: false,
-    // Minify with terser for better compression
+    // Enable source maps for development, disable for production
+    sourcemap: process.env.NODE_ENV === 'development' ? 'inline' : false,
+    // Enhanced minification for production
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: true,
+        passes: 2, // Multiple passes for better compression
+        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+      },
+      mangle: {
+        safari10: true, // Handle Safari 10 bug
+      },
+    },
+    // Target modern browsers for better optimization
+    target: 'es2020',
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Rollup external dependencies (not bundled)
+    external: [],
+    // Optimize chunk loading
+    experimentalMinChunkSize: 1000,
+  },
+  // Enhanced performance optimizations for political dashboard
+  optimizeDeps: {
+    include: [
+      // Core dependencies - always pre-bundle
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'axios',
+      '@tanstack/react-query',
+      
+      // UI and visualization - critical for user experience
+      'lucide-react',
+      'chart.js',
+      'react-chartjs-2',
+      
+      // Optional dependencies - conditionally include based on usage
+      'leaflet',
+      'react-leaflet',
+      'i18next',
+      'react-i18next'
+    ],
+    exclude: [
+      // Large dependencies that benefit from dynamic loading
+      'recharts',
+      '@headlessui/react'
+    ],
+    // Force optimization of specific modules
+    force: true,
+    // Optimize for ESM
+    esbuildOptions: {
+      target: 'es2020',
+      supported: {
+        'top-level-await': true,
+        'import-meta': true
       }
     }
   },
-  // Performance optimizations
-  optimizeDeps: {
-    include: [
-      'react',
-      'react-dom',
-      'axios',
-      '@tanstack/react-query',
-      'lucide-react',
-      'i18next',
-      'react-i18next'
-    ]
+  
+  // Enhanced development performance
+  esbuild: {
+    target: 'es2020',
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
+    jsxInject: `import React from 'react'`, // Auto-inject React for JSX
   },
   server: {
     host: true, // Allow external connections

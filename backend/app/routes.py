@@ -18,6 +18,7 @@ from .security import (
     AuditLogger, 
     validate_content_type
 )
+import time
 
 main_bp = Blueprint("main", __name__, url_prefix="/api/v1")
 
@@ -391,3 +392,164 @@ def pulse(ward):
         },
         "evidence": m["evidence"]
     })
+
+
+# ---------------------------
+# Telemetry and Performance Endpoints (for frontend monitoring)
+# ---------------------------
+
+@main_bp.route('/telemetry/performance', methods=['POST'])
+def performance_telemetry():
+    """
+    Record performance telemetry data from frontend.
+    
+    Expected payload:
+    {
+        "metrics": {
+            "load_time": 2.5,
+            "api_response_time": 150,
+            "render_time": 300,
+            "memory_usage": 45.5
+        },
+        "page": "dashboard",
+        "user_agent": "Mozilla/5.0...",
+        "timestamp": "2025-01-01T12:00:00Z"
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        metrics = data.get('metrics', {})
+        page = data.get('page', 'unknown')
+        
+        # Log performance metrics for analysis
+        AuditLogger.log_security_event(
+            'performance_telemetry',
+            {
+                'page': page,
+                'metrics': metrics,
+                'user_agent': request.headers.get('User-Agent', 'unknown'),
+                'timestamp': data.get('timestamp'),
+                'source_ip': request.remote_addr
+            },
+            'INFO'
+        )
+        
+        # Store in performance tracking if needed
+        # This could be expanded to store in a time-series database
+        
+        return jsonify({
+            'status': 'recorded',
+            'message': 'Performance telemetry recorded successfully'
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error recording performance telemetry: {e}")
+        return jsonify({
+            'error': 'Failed to record telemetry data'
+        }), 500
+
+
+@main_bp.route('/telemetry/user-action', methods=['POST'])
+def user_action_telemetry():
+    """
+    Record user action telemetry for UX analysis.
+    
+    Expected payload:
+    {
+        "action": "ward_selection",
+        "details": {
+            "ward": "Jubilee Hills",
+            "method": "dropdown|map_click",
+            "time_to_action": 2.5
+        },
+        "session_id": "session_123",
+        "timestamp": "2025-01-01T12:00:00Z"
+    }
+    """
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        action = data.get('action', 'unknown')
+        details = data.get('details', {})
+        
+        # Log user action for UX analysis
+        AuditLogger.log_security_event(
+            'user_action_telemetry',
+            {
+                'action': action,
+                'details': details,
+                'session_id': data.get('session_id'),
+                'timestamp': data.get('timestamp'),
+                'user_agent': request.headers.get('User-Agent', 'unknown')
+            },
+            'INFO'
+        )
+        
+        return jsonify({
+            'status': 'recorded',
+            'message': 'User action telemetry recorded successfully'
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error recording user action telemetry: {e}")
+        return jsonify({
+            'error': 'Failed to record telemetry data'
+        }), 500
+
+
+@main_bp.route('/health/detailed', methods=['GET'])
+def detailed_health_check():
+    """
+    Comprehensive health check with performance metrics.
+    """
+    start_time = time.time()
+    
+    health_data = {
+        'timestamp': datetime.utcnow().isoformat(),
+        'status': 'healthy',
+        'components': {},
+        'metrics': {},
+        'version': os.getenv('APP_VERSION', 'development')
+    }
+    
+    try:
+        # Database health check
+        db_start = time.time()
+        db.session.execute('SELECT 1')
+        db_time = (time.time() - db_start) * 1000
+        
+        health_data['components']['database'] = {
+            'status': 'healthy',
+            'response_time_ms': round(db_time, 2)
+        }
+        
+        # Check post count for data availability
+        post_count = db.session.query(func.count(Post.id)).scalar()
+        health_data['metrics']['total_posts'] = post_count
+        
+        # Check recent post activity (last 24 hours)
+        recent_posts = db.session.query(func.count(Post.id)).filter(
+            Post.created_at >= datetime.utcnow() - timedelta(hours=24)
+        ).scalar()
+        health_data['metrics']['recent_posts_24h'] = recent_posts
+        
+    except Exception as e:
+        health_data['components']['database'] = {
+            'status': 'unhealthy',
+            'error': str(e)
+        }
+        health_data['status'] = 'degraded'
+    
+    # Overall response time
+    total_time = (time.time() - start_time) * 1000
+    health_data['metrics']['health_check_time_ms'] = round(total_time, 2)
+    
+    # Set appropriate HTTP status
+    status_code = 200 if health_data['status'] == 'healthy' else 503
+    
+    return jsonify(health_data), status_code

@@ -1,27 +1,112 @@
-// Service Worker for LokDarpan Political Intelligence Dashboard
-// Provides offline capability, caching strategies, and performance optimization
+/**
+ * LokDarpan Political Intelligence Dashboard - Enhanced Service Worker
+ * 
+ * Features:
+ * - Aggressive caching for campaign environments
+ * - Offline capabilities for critical political intelligence
+ * - Network-aware caching strategies
+ * - Campaign scenario-based prioritization
+ * - Bundle optimization and preloading
+ * - Performance monitoring integration
+ */
 
-const CACHE_NAME = 'lokdarpan-v1.3.0';
-const STATIC_CACHE = 'lokdarpan-static-v1.3.0';
-const DYNAMIC_CACHE = 'lokdarpan-dynamic-v1.3.0';
-const API_CACHE = 'lokdarpan-api-v1.3.0';
+const CACHE_VERSION = '2.0.0';
+const CACHE_NAME = `lokdarpan-v${CACHE_VERSION}`;
+const STATIC_CACHE = `lokdarpan-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `lokdarpan-dynamic-v${CACHE_VERSION}`;
+const API_CACHE = `lokdarpan-api-v${CACHE_VERSION}`;
+const BUNDLE_CACHE = `lokdarpan-bundles-v${CACHE_VERSION}`;
+const INTEL_CACHE = `lokdarpan-intelligence-v${CACHE_VERSION}`;
 
-// Critical resources to cache immediately
+// Critical resources for political dashboard operation
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/data/wardData.js'
+  '/data/wardData.js',
+  '/data/ghmc_wards.geojson'
 ];
 
-// API endpoints to cache with different strategies
-const API_CACHE_PATTERNS = [
-  '/api/v1/geojson',
-  '/api/v1/ward/meta/',
-  '/api/v1/competitive-analysis',
-  '/api/v1/trends'
+// Enhanced bundle patterns for optimized caching
+const BUNDLE_PATTERNS = [
+  /\/assets\/.*-[a-f0-9]+\.js$/,     // Vite JS bundles
+  /\/assets\/.*-[a-f0-9]+\.css$/,    // Vite CSS bundles
+  /\/assets\/react-core-[a-f0-9]+\.js$/,        // React core bundle
+  /\/assets\/charts-[a-f0-9]+\.js$/,            // Charts bundle
+  /\/assets\/mapping-[a-f0-9]+\.js$/,           // Mapping bundle
+  /\/assets\/api-client-[a-f0-9]+\.js$/,        // API client bundle
+  /\/assets\/ui-components-[a-f0-9]+\.js$/,     // UI components bundle
+  /\/assets\/strategist-features-[a-f0-9]+\.js$/, // Strategist features
+  /\/assets\/sentiment-analysis-[a-f0-9]+\.js$/, // Sentiment analysis
+  /\/assets\/competitive-analysis-[a-f0-9]+\.js$/, // Competitive analysis
+  /\/assets\/geographic-analysis-[a-f0-9]+\.js$/ // Geographic analysis
 ];
+
+// Political intelligence API patterns with caching strategies
+const API_CACHE_CONFIG = {
+  // Critical ward data - long cache
+  geojson: {
+    pattern: /\/api\/v1\/geojson/,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    strategy: 'cache-first'
+  },
+  
+  // Ward metadata - moderate cache
+  wardMeta: {
+    pattern: /\/api\/v1\/ward\/meta\//,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    strategy: 'stale-while-revalidate'
+  },
+  
+  // Political trends - short cache for freshness
+  trends: {
+    pattern: /\/api\/v1\/trends/,
+    maxAge: 5 * 60 * 1000, // 5 minutes
+    strategy: 'network-first'
+  },
+  
+  // Strategic intelligence - moderate cache
+  strategist: {
+    pattern: /\/api\/v1\/strategist/,
+    maxAge: 10 * 60 * 1000, // 10 minutes
+    strategy: 'network-first'
+  },
+  
+  // Competitive analysis - moderate cache
+  competitive: {
+    pattern: /\/api\/v1\/competitive-analysis/,
+    maxAge: 10 * 60 * 1000, // 10 minutes
+    strategy: 'network-first'
+  },
+  
+  // Real-time alerts - no cache
+  alerts: {
+    pattern: /\/api\/v1\/alerts/,
+    maxAge: 0,
+    strategy: 'network-only'
+  },
+  
+  // Live SSE streams - no cache
+  sse: {
+    pattern: /\/api\/v1\/.*\/(sse|stream|live)/,
+    maxAge: 0,
+    strategy: 'network-only'
+  }
+};
+
+// Campaign scenario priorities
+const CAMPAIGN_SCENARIOS = {
+  NORMAL: 'normal',
+  RALLY: 'rally',
+  ELECTION_DAY: 'election',
+  CRISIS: 'crisis'
+};
+
+// Global state
+let currentScenario = CAMPAIGN_SCENARIOS.NORMAL;
+let networkQuality = 'good'; // good, slow, offline
+let offlineActionQueue = [];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
