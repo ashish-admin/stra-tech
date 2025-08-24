@@ -1,0 +1,771 @@
+/**
+ * Sprint 2 Animation Enhancements
+ * 
+ * CSS animations for progressive loading, smooth transitions, and chart animations
+ */
+
+/* Shimmer animation for progressive loading */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Smooth scale animation for transitions */
+@keyframes smoothScale {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Progressive reveal animation */
+@keyframes progressiveReveal {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Chart data point animation */
+@keyframes chartDataPoint {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Executive summary card focus animation */
+@keyframes cardFocus {
+  0% {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  }
+  100% {
+    box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  }
+}
+
+/* Professional pulse animation for loading indicators */
+@keyframes pulse-enhanced {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* Professional micro-interaction animations */
+@keyframes gentle-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes subtle-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+}
+
+@keyframes professional-hover {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Bounce animation for notifications */
+@keyframes bounce-subtle {
+  0%, 20%, 53%, 80%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translate3d(0, -5px, 0);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translate3d(0, -2px, 0);
+  }
+  90% {
+    transform: translate3d(0, -1px, 0);
+  }
+}
+
+/* Slide-in animations for modals */
+@keyframes slideInUp {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Professional animation utility classes */
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+.animate-smooth-scale {
+  animation: smoothScale 300ms ease-out;
+}
+
+.animate-progressive-reveal {
+  animation: progressiveReveal 400ms ease-out;
+}
+
+.animate-chart-point {
+  animation: chartDataPoint 400ms ease-out;
+}
+
+.animate-card-focus {
+  animation: cardFocus 200ms ease-out forwards;
+}
+
+.animate-pulse-enhanced {
+  animation: pulse-enhanced 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 1s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideInUp 300ms ease-out;
+}
+
+.animate-slide-down {
+  animation: slideInDown 300ms ease-out;
+}
+
+.animate-gentle-bounce {
+  animation: gentle-bounce 2s ease-out infinite;
+}
+
+.animate-subtle-glow {
+  animation: subtle-glow 2s ease-in-out infinite;
+}
+
+.animate-professional-hover {
+  animation: professional-hover 200ms ease-out forwards;
+}
+
+/* Professional interaction states */
+.hover-professional {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-professional:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.focus-professional {
+  transition: all 150ms ease-out;
+  outline: none;
+}
+
+.focus-professional:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.press-professional {
+  transition: transform 100ms ease-out;
+}
+
+.press-professional:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 200ms; }
+.stagger-4 { animation-delay: 300ms; }
+.stagger-5 { animation-delay: 400ms; }
+
+/* Transition utilities */
+.transition-smooth {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Loading skeleton enhancements */
+.skeleton-enhanced {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Professional Executive Summary Card Styles */
+.executive-summary-card {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.executive-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 130, 246, 0.05),
+    transparent
+  );
+  transition: left 400ms ease-out;
+}
+
+.executive-summary-card:hover::before {
+  left: 100%;
+}
+
+.executive-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.executive-summary-card:focus {
+  animation: cardFocus 200ms ease-out forwards;
+  border-color: #3b82f6;
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.executive-summary-card:focus-visible {
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.1), 
+    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+    0 0 0 2px #3b82f6;
+}
+
+.executive-summary-card:active {
+  transform: translateY(0) scale(0.98);
+  transition: transform 100ms ease-out;
+}
+
+/* Professional chart animation utilities */
+.chart-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.chart-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+.chart-professional-enter {
+  opacity: 0;
+  transform: scale(0.95) translateY(10px);
+  animation: chart-professional-entrance 600ms ease-out forwards;
+}
+
+@keyframes chart-professional-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.chart-data-point {
+  transition: all 200ms ease-out;
+  cursor: pointer;
+}
+
+.chart-data-point:hover {
+  transform: scale(1.1);
+  filter: brightness(1.1);
+}
+
+.chart-bar-professional {
+  transform-origin: bottom;
+  animation: bar-grow-professional 800ms ease-out;
+}
+
+@keyframes bar-grow-professional {
+  0% {
+    transform: scaleY(0);
+  }
+  60% {
+    transform: scaleY(1.05);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Modal animations */
+.modal-backdrop {
+  backdrop-filter: blur(4px);
+  transition: all 200ms ease-out;
+}
+
+.modal-content {
+  animation: smoothScale 200ms ease-out;
+}
+
+/* Professional progressive loading system */
+.progressive-load-container {
+  opacity: 0;
+  animation: progressive-load-fade 400ms ease-out forwards;
+}
+
+.progressive-load-item {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: progressive-load-item 400ms ease-out forwards;
+}
+
+.progressive-load-item:nth-child(1) { animation-delay: 100ms; }
+.progressive-load-item:nth-child(2) { animation-delay: 200ms; }
+.progressive-load-item:nth-child(3) { animation-delay: 300ms; }
+.progressive-load-item:nth-child(4) { animation-delay: 400ms; }
+.progressive-load-item:nth-child(5) { animation-delay: 500ms; }
+
+@keyframes progressive-load-fade {
+  to { opacity: 1; }
+}
+
+@keyframes progressive-load-item {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Professional error state animations */
+.error-shake {
+  animation: error-shake 500ms ease-in-out;
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.success-bounce {
+  animation: success-bounce 600ms ease-out;
+}
+
+@keyframes success-bounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive animation control */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-shimmer,
+  .animate-pulse-enhanced,
+  .animate-gentle-bounce,
+  .animate-subtle-glow {
+    animation: none;
+  }
+  
+  .hover-professional:hover,
+  .executive-summary-card:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .skeleton-enhanced {
+    background: #000;
+  }
+  
+  .executive-summary-card:focus {
+    outline: 3px solid #000;
+    outline-offset: 2px;
+  }
+  
+  .hover-professional:hover {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+  }
+  
+  .focus-professional:focus-visible {
+    outline: 3px solid #000;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+/* Professional loading state indicators */
+.loading-professional {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-professional::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #3b82f6,
+    transparent
+  );
+  animation: loading-progress 2s infinite linear;
+}
+
+@keyframes loading-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Professional notification animations */
+.notification-slide-in {
+  animation: notification-slide-in 400ms ease-out;
+}
+
+@keyframes notification-slide-in {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-slide-out {
+  animation: notification-slide-out 300ms ease-in forwards;
+}
+
+@keyframes notification-slide-out {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Dark mode animations (if implemented) */
+@media (prefers-color-scheme: dark) {
+  .skeleton-enhanced {
+    background: linear-gradient(
+      90deg,
+      #1f2937 0%,
+      #374151 50%,
+      #1f2937 100%
+    );
+  }
+  
+  .executive-summary-card::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(147, 197, 253, 0.08),
+      transparent
+    );
+  }
+  
+  .subtle-glow {
+    box-shadow: 0 0 20px rgba(147, 197, 253, 0.3);
+  }
+}
+
+/* Professional Chart Performance Enhancements - Wave 3 */
+
+/* Enhanced chart line animations */
+.chart-line-professional {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  opacity: 0;
+  animation: line-draw-professional 1000ms ease-out forwards;
+}
+
+@keyframes line-draw-professional {
+  0% {
+    stroke-dashoffset: 1000;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+/* Chart container entrance */
+.chart-container-enter {
+  opacity: 0;
+  transform: scale(0.98) translateY(5px);
+  animation: chart-container-entrance 400ms ease-out forwards;
+}
+
+@keyframes chart-container-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.98) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Chart axis animations */
+.chart-axis-enter {
+  opacity: 0;
+  transform: translateX(-10px);
+  animation: axis-slide-in 300ms ease-out forwards;
+}
+
+@keyframes axis-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Chart tooltip professional styling */
+.chart-tooltip-professional {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: tooltip-appear 200ms ease-out;
+}
+
+@keyframes tooltip-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Performance optimization classes */
+.chart-will-animate {
+  will-change: transform, opacity, stroke-dashoffset;
+}
+
+.chart-static {
+  will-change: auto;
+}
+
+.chart-performance-optimized {
+  contain: layout style paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.chart-gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Chart loading state indicators */
+.chart-loading-pulse {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-chart 2s infinite;
+}
+
+@keyframes shimmer-chart {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Component-specific chart animations */
+.time-series-chart {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: chart-fade-in 600ms ease-out 0.2s forwards;
+}
+
+.competitor-trend-chart {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: chart-fade-in 600ms ease-out 0.4s forwards;
+}
+
+.emotion-chart {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: chart-fade-in 600ms ease-out 0.6s forwards;
+}
+
+@keyframes chart-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Chart performance monitoring */
+.chart-performance-monitor {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 10px;
+  color: #9ca3af;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.chart-performance-monitor.visible {
+  opacity: 1;
+}
+
+/* Memory leak prevention */
+.chart-cleanup {
+  will-change: auto;
+  transform: none;
+}
+
+.chart-cleanup * {
+  animation: none;
+  transition: none;
+}
+
+/* Enhanced motion reduction for charts */
+@media (prefers-reduced-motion: reduce) {
+  .chart-line-professional,
+  .chart-bar-professional,
+  .chart-professional-enter,
+  .chart-container-enter,
+  .time-series-chart,
+  .competitor-trend-chart,
+  .emotion-chart {
+    animation: none !important;
+  }
+  
+  .chart-will-animate {
+    will-change: auto;
+  }
+  
+  .chart-loading-pulse {
+    animation: none;
+    background: #f1f5f9;
+  }
+}

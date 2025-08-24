@@ -40,6 +40,9 @@ from .error_tracking import init_error_tracking
 from .error_api import error_api as error_bp
 from .error_analytics import analytics_bp
 
+# Heat Map API system for widget dashboard
+from .heatmap_api import heatmap_bp
+
 # Political Strategist module - Check if exists
 strategist_bp = None
 try:
@@ -181,6 +184,9 @@ def create_app(config_class: str = "config.Config") -> Flask:
         # Register enhanced error tracking and analytics
         app.register_blueprint(error_bp)
         app.register_blueprint(analytics_bp)
+        
+        # Register heat map API for widget system
+        app.register_blueprint(heatmap_bp)
         
         # Initialize error tracking system
         init_error_tracking(app)
