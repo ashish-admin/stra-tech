@@ -14,6 +14,7 @@ export default defineConfig({
           'map-vendor': ['leaflet', 'react-leaflet'],
           'query-vendor': ['@tanstack/react-query'],
           'ui-vendor': ['lucide-react'],
+          'i18n-vendor': ['i18next', 'react-i18next'],
         },
         // Use content-based file names
         chunkFileNames: 'assets/[name]-[hash].js',
@@ -41,7 +42,9 @@ export default defineConfig({
       'react-dom',
       'axios',
       '@tanstack/react-query',
-      'lucide-react'
+      'lucide-react',
+      'i18next',
+      'react-i18next'
     ]
   },
   server: {
