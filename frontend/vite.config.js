@@ -167,7 +167,7 @@ export default defineConfig({
   esbuild: {
     target: 'es2020',
     logOverride: { 'this-is-undefined-in-esm': 'silent' },
-    jsxInject: `import React from 'react'`, // Auto-inject React for JSX
+    // Removed auto-inject to avoid conflicts with explicit imports
   },
   server: {
     host: true, // Allow external connections
