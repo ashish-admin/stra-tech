@@ -32,17 +32,25 @@ class StrategicPlanner:
     AI-powered strategic planning engine using Gemini 2.0 Flash.
     
     Implements "Ultra Think" approach with deliberation budgets and explainability.
+    Enhanced for Wave 2 with multi-model coordination and conversation-aware analysis.
     """
     
     def __init__(self):
         self.model = model
         self.think_tokens = int(os.getenv('THINK_TOKENS', 4096))
+        # Wave 2 enhancements
+        self.conversation_context = None
+        self.multi_model_enabled = os.getenv('MULTI_MODEL_ENABLED', 'true').lower() == 'true'
+        self.evidence_aggregation_enabled = True
+        self.confidence_scoring_enabled = True
         
     async def create_analysis_plan(
         self, 
         ward: str, 
         depth: str = "standard", 
-        context_mode: str = "neutral"
+        context_mode: str = "neutral",
+        conversation_context: Optional[Dict[str, Any]] = None,
+        evidence_sources: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Create strategic analysis plan for a ward.

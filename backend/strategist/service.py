@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Any
 
 from .cache import cget, cset
 from .reasoner.ultra_think import StrategicPlanner
+from .reasoner.multi_model_coordinator import MultiModelCoordinator, AnalysisRequest
 from .retriever.perplexity_client import PerplexityRetriever
 from .nlp.pipeline import NLPProcessor
 from .credibility.checks import CredibilityScorer
@@ -42,9 +43,17 @@ class PoliticalStrategist:
         self.nlp = NLPProcessor()
         self.credibility = CredibilityScorer()
         self.observer = get_observer()
+        # Wave 2 enhancements
+        self.multi_model_coordinator = MultiModelCoordinator()
+        self.conversation_context = None
         
     @monitor_strategist_operation("analyze_situation")
-    async def analyze_situation(self, depth: str = "standard") -> Dict[str, Any]:
+    async def analyze_situation(
+        self, 
+        depth: str = "standard", 
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+        user_query: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Perform comprehensive political situation analysis.
         
@@ -111,9 +120,78 @@ class PoliticalStrategist:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "fallback_mode": True
             }
+    
+    async def analyze_conversation_query(
+        self,
+        user_query: str,
+        conversation_history: List[Dict[str, Any]],
+        chat_type: str = "strategy"
+    ) -> Dict[str, Any]:
+        """
+        Wave 2: Advanced conversational strategic analysis.
+        
+        Provides conversation-aware strategic analysis with multi-model coordination.
+        """
+        try:
+            logger.info(f"Starting conversational analysis for ward: {self.ward}, chat_type: {chat_type}")
+            
+            # Create structured analysis request
+            analysis_request = AnalysisRequest(
+                ward=self.ward,
+                query=user_query,
+                depth="standard",
+                context_mode=self.context_mode,
+                conversation_history=conversation_history,
+                user_preferences={"chat_type": chat_type}
+            )
+            
+            # Execute multi-model strategic analysis
+            strategic_response = await self.multi_model_coordinator.coordinate_strategic_analysis(
+                analysis_request
+            )
+            
+            # Format response for conversation interface
+            result = {
+                "ward": self.ward,
+                "query": user_query,
+                "chat_type": chat_type,
+                "analysis_type": "conversational_strategic",
+                "content": strategic_response.content,
+                "confidence_score": strategic_response.confidence_score,
+                "strategic_implications": strategic_response.strategic_implications,
+                "recommended_actions": strategic_response.recommended_actions,
+                "evidence_sources": [
+                    {
+                        "content": src.content,
+                        "credibility_score": src.credibility_score,
+                        "source_type": src.source_type,
+                        "timestamp": src.timestamp
+                    }
+                    for src in strategic_response.evidence_sources
+                ],
+                "conversation_continuity": strategic_response.conversation_continuity,
+                "multi_model_consensus": strategic_response.multi_model_consensus,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "model_coordination": "multi_model_gemini_perplexity"
+            }
+            
+            # Log success metrics
+            logger.info(f"Conversational analysis complete - confidence: {strategic_response.confidence_score:.2f}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Conversational analysis failed: {e}", exc_info=True)
+            return {
+                "error": "Conversational analysis failed",
+                "ward": self.ward,
+                "query": user_query,
+                "fallback_response": f"I understand you're asking about {user_query}. Let me provide what I can based on available information.",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "fallback_mode": True
+            }
 
 
-def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str, Any], str, int]:
+async def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str, Any], str, int]:
     """
     Get cached or generate new ward strategic report.
     
@@ -135,9 +213,9 @@ def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str, Any],
     record_cache_operation("get", False, "strategist")
     
     try:
-        # Generate new analysis
+        # Generate new analysis - FIXED: Added await keyword
         strategist = PoliticalStrategist(ward)
-        result = strategist.analyze_situation(depth)
+        result = await strategist.analyze_situation(depth)
         
         # Generate ETag and TTL
         etag = hashlib.md5(str(result).encode()).hexdigest()
@@ -163,7 +241,7 @@ def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str, Any],
         return fallback, etag, ttl
 
 
-def analyze_text(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def analyze_text(payload: Dict[str, Any]) -> Dict[str, Any]:
     """
     Analyze arbitrary text content for political insights.
     
@@ -183,8 +261,8 @@ def analyze_text(payload: Dict[str, Any]) -> Dict[str, Any]:
         
         strategist = PoliticalStrategist(ward, context)
         
-        # Quick analysis for text-based requests
-        result = strategist.analyze_situation("quick")
+        # Quick analysis for text-based requests - FIXED: Added await keyword
+        result = await strategist.analyze_situation("quick")
         result['analyzed_text'] = text[:200] + "..." if len(text) > 200 else text
         
         return result
