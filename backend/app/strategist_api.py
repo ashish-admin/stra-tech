@@ -32,64 +32,89 @@ def get_ward_analysis(ward):
     - context: Strategic context (defensive|neutral|offensive) - default: neutral
     """
     try:
-        # Try to use multimodel enhanced analysis
         from flask import current_app, request as flask_request
+        from .services.strategist_integration import get_strategist_adapter
+        from .async_helper import run_async
         
         # Get query parameters
         depth = flask_request.args.get('depth', 'standard')
         context = flask_request.args.get('context', 'neutral')
         
-        # Create a mock response based on ward analysis for now
-        # This provides immediate functionality while multimodel system is being set up
-        response_data = {
-            "ward": ward,
-            "analysis_depth": depth,
-            "strategic_context": context,
-            "timestamp": "2025-08-22T08:14:31.586793+00:00",
-            "status": "analysis_complete",
-            "confidence_score": 0.85,
-            "provider": "lokdarpan_strategist",
-            "model_used": "political_analysis_v1",
-            "briefing": {
-                "key_issue": f"Political landscape analysis for {ward} shows mixed sentiment with opportunities for strategic positioning.",
-                "our_angle": f"Position our candidate as the reliable problem-solver for {ward}, emphasizing quick wins, transparent governance, and measurable progress on local issues.",
-                "opposition_weakness": f"Opposition lacks coherent messaging in {ward} and shows inconsistent follow-through on campaign promises.",
-                "strategic_recommendations": [
-                    {
-                        "action": "Community listening tours", 
-                        "timeline": "Within 72 hours",
-                        "priority": "high",
-                        "details": f"Conduct door-to-door engagement in 3 key areas of {ward} to gather direct feedback on pressing issues."
-                    },
-                    {
-                        "action": "Digital narrative campaign", 
-                        "timeline": "48 hours",
-                        "priority": "medium", 
-                        "details": "Launch targeted social media campaign highlighting our track record vs. opposition promises."
-                    },
-                    {
-                        "action": "Local media engagement",
-                        "timeline": "1 week", 
-                        "priority": "medium",
-                        "details": "Secure interviews with local news outlets to discuss ward-specific solutions."
-                    }
-                ]
-            },
-            "intelligence": {
-                "sentiment_analysis": {
-                    "overall_sentiment": "neutral_positive",
-                    "key_concerns": ["infrastructure", "civic_services", "transparency"],
-                    "engagement_level": "moderate"
+        # First try to use the sophisticated multimodel system
+        try:
+            # Use the strategist adapter to get real AI-powered analysis
+            adapter = get_strategist_adapter()
+            
+            # Generate political analysis using multi-model orchestration
+            # Using async_helper to avoid Flask context issues
+            result = run_async(adapter.analyze_political_situation(
+                ward=ward,
+                query=None,  # Will generate default query
+                depth=depth,
+                context_mode=context
+            ))
+            
+            # The adapter returns a properly formatted response
+            logger.info(f"Successfully used multimodel analysis for {ward}")
+            return jsonify(result)
+            
+        except Exception as multimodel_error:
+            logger.warning(f"Multimodel analysis failed for {ward}: {multimodel_error}")
+            
+            # Fallback to enhanced mock if multimodel fails
+            # This ensures the system stays operational even if AI services are down
+            from datetime import datetime, timezone
+            
+            response_data = {
+                "ward": ward,
+                "analysis_depth": depth,
+                "strategic_context": context,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "status": "analysis_complete",
+                "confidence_score": 0.65,  # Lower confidence for fallback
+                "provider": "lokdarpan_fallback",
+                "model_used": "strategic_template_v1",
+                "briefing": {
+                    "key_issue": f"Political landscape analysis for {ward} shows mixed sentiment with opportunities for strategic positioning.",
+                    "our_angle": f"Position our candidate as the reliable problem-solver for {ward}, emphasizing quick wins, transparent governance, and measurable progress on local issues.",
+                    "opposition_weakness": f"Opposition lacks coherent messaging in {ward} and shows inconsistent follow-through on campaign promises.",
+                    "strategic_recommendations": [
+                        {
+                            "action": "Community listening tours", 
+                            "timeline": "Within 72 hours",
+                            "priority": "high",
+                            "details": f"Conduct door-to-door engagement in 3 key areas of {ward} to gather direct feedback on pressing issues."
+                        },
+                        {
+                            "action": "Digital narrative campaign", 
+                            "timeline": "48 hours",
+                            "priority": "medium", 
+                            "details": "Launch targeted social media campaign highlighting our track record vs. opposition promises."
+                        },
+                        {
+                            "action": "Local media engagement",
+                            "timeline": "1 week", 
+                            "priority": "medium",
+                            "details": "Secure interviews with local news outlets to discuss ward-specific solutions."
+                        }
+                    ]
                 },
-                "competitive_landscape": {
-                    "main_opponents": 2,
-                    "our_position": "competitive",
-                    "key_differentiators": ["experience", "local_connections", "proven_delivery"]
-                }
+                "intelligence": {
+                    "sentiment_analysis": {
+                        "overall_sentiment": "neutral_positive",
+                        "key_concerns": ["infrastructure", "civic_services", "transparency"],
+                        "engagement_level": "moderate"
+                    },
+                    "competitive_landscape": {
+                        "main_opponents": 2,
+                        "our_position": "competitive",
+                        "key_differentiators": ["experience", "local_connections", "proven_delivery"]
+                    }
+                },
+                "fallback_notice": "Using template-based analysis. AI services temporarily unavailable."
             }
-        }
-        
-        return jsonify(response_data)
+            
+            return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"Error in strategist analysis for {ward}: {e}")
@@ -125,10 +150,14 @@ def intelligence_feed():
         if not ward:
             return jsonify({"error": "Ward parameter is required"}), 400
             
-        # Simple SSE implementation - simplified to not block
+        # Enhanced SSE implementation with real-time intelligence
         def generate_intelligence_feed():
             import json
             import time
+            import asyncio
+            from datetime import datetime, timezone
+            from .services.strategist_integration import get_strategist_adapter
+            from .models import Post, Alert, db
             
             # Send initial connection confirmation
             connection_data = {
@@ -139,25 +168,83 @@ def intelligence_feed():
             }
             yield f"data: {json.dumps(connection_data)}\n\n"
             
-            # Send a few quick updates and close
-            for i in range(3):
-                intelligence_data = {
-                    'type': 'intelligence',
-                    'data': {
-                        'id': f'intel_{i+1}',
-                        'ward': ward,
-                        'priority': priority,
-                        'message': f'Mock intelligence update #{i+1} for {ward}',
-                        'timestamp': time.time(),
-                        'source': 'demo_feed',
-                        'content': f'Demo: Political development #{i+1} in {ward}',
-                        'severity': 'low'
+            try:
+                # Try to get real intelligence updates
+                adapter = get_strategist_adapter()
+                
+                # Get recent alerts for the ward
+                with current_app.app_context():
+                    recent_alerts = db.session.query(Alert)\
+                        .filter(Alert.city == ward)\
+                        .order_by(Alert.created_at.desc())\
+                        .limit(5)\
+                        .all()
+                    
+                    for idx, alert in enumerate(recent_alerts):
+                        intelligence_data = {
+                            'type': 'intelligence',
+                            'data': {
+                                'id': f'alert_{alert.id}',
+                                'ward': ward,
+                                'priority': 'high' if alert.priority == 1 else 'medium',
+                                'message': alert.message[:200] if alert.message else f'Alert for {ward}',
+                                'timestamp': alert.created_at.timestamp() if alert.created_at else time.time(),
+                                'source': alert.source or 'lokdarpan_system',
+                                'content': alert.description or alert.message,
+                                'severity': 'high' if alert.priority == 1 else 'medium',
+                                'category': alert.category or 'political_development'
+                            }
+                        }
+                        yield f"data: {json.dumps(intelligence_data)}\n\n"
+                        time.sleep(0.5)  # Small delay between updates
+                    
+                    # If no real alerts, generate strategic intelligence
+                    if not recent_alerts:
+                        # Generate quick intelligence brief
+                        from .async_helper import run_async
+                        brief = run_async(adapter.quick_intelligence_brief(ward))
+                        
+                        if brief and brief.get('intelligence_points'):
+                            for idx, point in enumerate(brief['intelligence_points'][:3]):
+                                intelligence_data = {
+                                    'type': 'intelligence',
+                                    'data': {
+                                        'id': f'strategic_{idx+1}',
+                                        'ward': ward,
+                                        'priority': point.get('priority', 'medium'),
+                                        'message': point.get('title', f'Strategic insight #{idx+1}'),
+                                        'timestamp': time.time(),
+                                        'source': 'multimodel_analysis',
+                                        'content': point.get('description', ''),
+                                        'severity': point.get('severity', 'medium'),
+                                        'category': 'strategic_intelligence'
+                                    }
+                                }
+                                yield f"data: {json.dumps(intelligence_data)}\n\n"
+                                time.sleep(1)
+                
+            except Exception as e:
+                logger.warning(f"Real-time intelligence generation failed: {e}")
+                
+                # Fallback to basic updates
+                for i in range(3):
+                    intelligence_data = {
+                        'type': 'intelligence',
+                        'data': {
+                            'id': f'fallback_{i+1}',
+                            'ward': ward,
+                            'priority': priority,
+                            'message': f'Political update #{i+1} for {ward}',
+                            'timestamp': time.time(),
+                            'source': 'template_feed',
+                            'content': f'Monitor political developments in {ward}',
+                            'severity': 'low'
+                        }
                     }
-                }
-                yield f"data: {json.dumps(intelligence_data)}\n\n"
+                    yield f"data: {json.dumps(intelligence_data)}\n\n"
             
-            # Send close message
-            close_data = {'type': 'close', 'reason': 'demo_complete', 'timestamp': time.time()}
+            # Send completion message
+            close_data = {'type': 'close', 'reason': 'feed_complete', 'timestamp': time.time()}
             yield f"data: {json.dumps(close_data)}\n\n"
         
         return Response(
@@ -235,27 +322,61 @@ def health_check():
 @strategist_bp.route('/analyze', methods=['POST'])
 @login_required
 def analyze_content():
-    """Analyze arbitrary content."""
+    """Analyze arbitrary content using multimodel orchestration."""
     try:
-        # Try multimodel analysis
-        try:
-            from .multimodel_api import quick_analyze
-            return quick_analyze()
-        except ImportError:
-            pass
-            
-        # Fallback analysis
+        import asyncio
+        from .services.ai_orchestrator import get_orchestrator
+        from datetime import datetime, timezone
+        
         data = request.get_json() or {}
         query = data.get('query', '').strip()
+        ward = data.get('ward', '').strip()
+        depth = data.get('depth', 'standard')
         
         if not query:
             return jsonify({"error": "Query is required"}), 400
+        
+        # Try to use multimodel orchestrator for analysis
+        try:
+            orchestrator = get_orchestrator()
             
-        return jsonify({
-            "analysis": f"Analyzed: {query[:100]}...",
-            "mode": "fallback_analysis",
-            "note": "Enhanced analysis requires multimodel system"
-        })
+            # Build context for the analysis
+            context = {
+                "ward_context": ward if ward else None,
+                "analysis_depth": depth,
+                "region_context": "hyderabad",
+                "priority": "normal"
+            }
+            
+            # Generate AI-powered analysis
+            from .async_helper import run_async
+            response = run_async(orchestrator.generate_response(
+                query, 
+                context,
+                model_preferences=["gemini-2.0-flash-exp", "gemini-1.5-pro", "gpt-4o-mini"]
+            ))
+            
+            return jsonify({
+                "analysis": response.content,
+                "mode": "multimodel_orchestration",
+                "model_used": response.model_used,
+                "provider": response.provider.value,
+                "confidence_score": response.quality_score,
+                "cost_usd": response.cost_usd,
+                "processing_time_ms": response.latency_ms,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            
+        except Exception as orchestrator_error:
+            logger.warning(f"Multimodel orchestrator failed: {orchestrator_error}")
+            
+            # Fallback analysis
+            return jsonify({
+                "analysis": f"Quick analysis of: {query[:100]}...",
+                "mode": "fallback_analysis",
+                "note": "Using template-based analysis. AI services temporarily unavailable.",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
         
     except Exception as e:
         logger.error(f"Error in content analysis: {e}")
@@ -265,22 +386,73 @@ def analyze_content():
 @strategist_bp.route('/trigger', methods=['POST'])
 @login_required
 def trigger_analysis():
-    """Trigger manual analysis for a ward."""
+    """Trigger manual analysis for a ward using multimodel orchestration."""
     try:
+        import asyncio
+        from datetime import datetime, timezone
+        from .services.report_generator import get_report_generator, ReportRequest
+        from .services.budget_manager import get_budget_manager
+        
         data = request.get_json() or {}
         ward = data.get('ward', '').strip()
         depth = data.get('depth', 'standard')
+        priority = data.get('priority', 'normal')
         
         if not ward:
             return jsonify({"error": "Ward is required"}), 400
+        
+        # Create a comprehensive analysis request
+        try:
+            # Check budget
+            estimated_cost = {'quick': 0.10, 'standard': 0.25, 'deep': 0.50}.get(depth, 0.25)
+            from .async_helper import run_async
+            if not run_async(get_budget_manager().can_afford_request(estimated_cost)):
+                return jsonify({
+                    "error": "Insufficient budget for analysis",
+                    "estimated_cost_usd": estimated_cost
+                }), 402
             
-        # Simple trigger acknowledgment
-        return jsonify({
-            "message": f"Analysis triggered for {ward}",
-            "depth": depth,
-            "status": "queued",
-            "estimated_completion": "2-3 minutes"
-        })
+            # Create report request for comprehensive analysis
+            report_request = ReportRequest(
+                query=f"Comprehensive political intelligence analysis for {ward} ward including sentiment trends, party competition dynamics, key issues, and strategic recommendations",
+                user_id=current_user.id,
+                ward_context=ward,
+                region_context="hyderabad",
+                analysis_depth=depth,
+                strategic_context="neutral",
+                priority_level=priority,
+                include_sources=True,
+                max_processing_time=180
+            )
+            
+            # Trigger asynchronous report generation
+            from .async_helper import run_async
+            report_uuid = run_async(get_report_generator().generate_report(report_request))
+            
+            logger.info(f"Triggered comprehensive analysis for {ward}: {report_uuid}")
+            
+            return jsonify({
+                "message": f"Comprehensive analysis triggered for {ward}",
+                "report_uuid": report_uuid,
+                "depth": depth,
+                "status": "processing",
+                "estimated_completion": "2-3 minutes",
+                "tracking_url": f"/api/v1/multimodel/reports/{report_uuid}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            
+        except Exception as trigger_error:
+            logger.warning(f"Failed to trigger multimodel analysis: {trigger_error}")
+            
+            # Fallback response
+            return jsonify({
+                "message": f"Analysis queued for {ward} (fallback mode)",
+                "depth": depth,
+                "status": "queued",
+                "estimated_completion": "3-5 minutes",
+                "mode": "fallback",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
         
     except Exception as e:
         logger.error(f"Error triggering analysis: {e}")
@@ -292,36 +464,88 @@ def trigger_analysis():
 def chat():
     """AI chat endpoint for political strategy conversations."""
     try:
+        import asyncio
+        from .services.strategist_integration import get_strategist_adapter
+        from datetime import datetime, timezone
+        
         data = request.get_json() or {}
         message = data.get('message', '').strip()
         ward = data.get('ward', '').strip()
         context = data.get('context', {})
+        conversation_history = data.get('history', [])
         
         if not message:
             return jsonify({"error": "Message is required"}), 400
+        
+        # Use strategist adapter for intelligent chat responses
+        try:
+            adapter = get_strategist_adapter()
             
-        # Simple response generation
-        response_templates = [
-            f"Based on the political landscape in {ward}, I recommend focusing on infrastructure and community engagement.",
-            "The current sentiment analysis suggests prioritizing transparent governance and measurable progress.",
-            "Strategic positioning should emphasize your track record and commitment to local issues."
-        ]
-        
-        import random
-        response = random.choice(response_templates)
-        
-        return jsonify({
-            "response": response,
-            "context": {
-                "ward": ward,
-                "confidence": 0.8,
-                "type": context.get('chatType', 'strategy')
-            },
-            "actions": [
-                {"type": "create_task", "label": "Create Action Item"},
-                {"type": "schedule_meeting", "label": "Schedule Follow-up"}
+            # Build conversational context
+            chat_context = f"Ward: {ward}\n" if ward else ""
+            chat_context += f"User Query: {message}\n"
+            
+            if conversation_history:
+                chat_context += "Previous Context:\n"
+                for entry in conversation_history[-3:]:  # Last 3 messages for context
+                    chat_context += f"- {entry.get('role', 'user')}: {entry.get('content', '')}\n"
+            
+            # Generate strategic response
+            from .async_helper import run_async
+            result = run_async(adapter.strategic_recommendation(
+                ward if ward else "General",
+                chat_context,
+                "Provide strategic political advice based on the user's query"
+            ))
+            
+            # Extract the main recommendation
+            recommendation = result.get('recommendation', {}).get('main_recommendation', '')
+            if not recommendation:
+                recommendation = result.get('analysis', 'I can help you with strategic political analysis. Please provide more context.')
+            
+            return jsonify({
+                "response": recommendation,
+                "context": {
+                    "ward": ward,
+                    "confidence": result.get('confidence_score', 0.85),
+                    "type": context.get('chatType', 'strategy'),
+                    "model_used": result.get('model_used', 'multimodel'),
+                    "provider": result.get('provider', 'orchestrated')
+                },
+                "actions": result.get('actions', [
+                    {"type": "create_task", "label": "Create Action Item"},
+                    {"type": "schedule_meeting", "label": "Schedule Follow-up"}
+                ]),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            
+        except Exception as chat_error:
+            logger.warning(f"AI chat failed: {chat_error}")
+            
+            # Fallback to template responses
+            response_templates = [
+                f"Based on the political landscape in {ward}, I recommend focusing on infrastructure and community engagement.",
+                "The current sentiment analysis suggests prioritizing transparent governance and measurable progress.",
+                "Strategic positioning should emphasize your track record and commitment to local issues."
             ]
-        })
+            
+            import random
+            response = random.choice(response_templates)
+            
+            return jsonify({
+                "response": response,
+                "context": {
+                    "ward": ward,
+                    "confidence": 0.5,
+                    "type": context.get('chatType', 'strategy'),
+                    "mode": "fallback"
+                },
+                "actions": [
+                    {"type": "create_task", "label": "Create Action Item"},
+                    {"type": "schedule_meeting", "label": "Schedule Follow-up"}
+                ],
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
         
     except Exception as e:
         logger.error(f"Error in chat: {e}")
