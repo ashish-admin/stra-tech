@@ -1,21 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
-// Core Dashboard Components
-import LocationMap from "./LocationMap.jsx";
-import StrategicSummary from "./StrategicSummary.jsx";
-import EmotionChart from "./EmotionChart.jsx";
-import CompetitiveAnalysis from "./CompetitiveAnalysis.jsx";
-import AlertsPanel from "./AlertsPanel.jsx";
+// Loading components
+import { LoadingSpinner, CardSkeleton } from "./ui/LoadingSkeleton.jsx";
+import { useKeyboardShortcuts, useKeyboardShortcutsHelp } from "../hooks/useKeyboardShortcuts.js";
+import { KeyboardShortcutsIndicator } from "./ui/KeyboardShortcutsIndicator.jsx";
 
-import TimeSeriesChart from "./TimeSeriesChart.jsx";
-import TopicAnalysis from "./TopicAnalysis.jsx";
-import CompetitorTrendChart from "./CompetitorTrendChart.jsx";
-import CompetitorBenchmark from "./CompetitorBenchmark.jsx";
-import PredictionSummary from "./PredictionSummary.jsx";
-
-import WardMetaPanel from "./WardMetaPanel";
-import EpaperFeed from "./EpaperFeed.jsx";
+// Enhanced lazy loaded tab components for performance optimization
+import { 
+  LazyOverviewTab,
+  LazySentimentTab,
+  LazyCompetitiveTab,
+  LazyGeographicTab,
+  LazyStrategistTab
+} from './enhanced/LazyTabComponents.jsx';
 import { joinApi } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 
@@ -43,12 +41,7 @@ import {
   IntelligenceActivityIndicator 
 } from "../features/strategist/components/ProgressIndicators";
 
-// Phase 3 Political Strategist Components
-import StrategistErrorBoundary from "../features/strategist/components/StrategistErrorBoundary";
-import IntelligenceFeed from "../features/strategist/components/IntelligenceFeed";
-import StrategistChat from "../features/strategist/components/StrategistChat";
-import StrategicWorkbench from "../features/strategist/components/StrategicWorkbench";
-import ScenarioSimulator from "../features/strategist/components/ScenarioSimulator";
+// Performance optimized: Heavy components now lazy loaded in tab components
 
 /** Keep this in sync with LocationMap normalization */
 function normalizeWardLabel(label) {
@@ -90,6 +83,7 @@ export default function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   // Stream A Enhanced SSE Integration
   const { 
@@ -240,258 +234,106 @@ export default function Dashboard() {
     setActiveTab(tabId);
   };
 
-  // Tab content rendering functions
-  const renderOverviewTab = () => (
-    <div className="space-y-6">
-      {/* Executive Summary */}
-      <ExecutiveSummary 
-        selectedWard={selectedWard}
-        onNavigateToTab={handleTabChange}
-      />
+  // Keyboard shortcuts integration
+  const { getShortcutInfo, announceAction } = useKeyboardShortcuts({
+    onWardSelect: setSelectedWard,
+    onTabChange: handleTabChange,
+    wardOptions,
+    currentWard: selectedWard,
+    currentTab: activeTab,
+    isEnabled: true
+  });
+  
+  // Initialize keyboard shortcuts help system
+  useKeyboardShortcutsHelp();
 
-      {/* Dashboard Health Indicator */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <DashboardHealthIndicator />
-        </div>
+  // Handle refresh events from keyboard shortcuts
+  useEffect(() => {
+    const handleRefresh = async (event) => {
+      const { tab, ward } = event.detail || {};
+      setRefreshing(true);
+      
+      try {
+        // Force reload of current data
+        const wardQuery = ward && ward !== "All" ? ward : "";
         
-        {/* Stream A Intelligence Activity */}
-        {selectedWard !== 'All' && (
-          <div className="space-y-2">
-            <ConnectionStatusIndicator 
-              connectionState={connectionState}
-              className="text-xs"
-            />
-            <IntelligenceActivityIndicator 
-              summary={intelligenceSummary}
-              className="text-xs"
-            />
-          </div>
-        )}
-      </div>
+        const [postsRes, compRes] = await Promise.all([
+          axios.get(
+            joinApi(
+              `api/v1/posts${wardQuery ? `?city=${encodeURIComponent(wardQuery)}` : ""}`
+            ),
+            { withCredentials: true }
+          ),
+          axios.get(
+            joinApi(
+              `api/v1/competitive-analysis?city=${encodeURIComponent(ward || "All")}`
+            ),
+            { withCredentials: true }
+          )
+        ]);
+        
+        const items = Array.isArray(postsRes.data)
+          ? postsRes.data
+          : Array.isArray(postsRes.data?.items)
+          ? postsRes.data.items
+          : [];
+        setPosts(items || []);
+        setCompAgg(compRes.data && typeof compRes.data === "object" ? compRes.data : {});
+        
+      } catch (refreshError) {
+        console.error('Refresh error:', refreshError);
+        setError('Failed to refresh data');
+      } finally {
+        setTimeout(() => setRefreshing(false), 500); // Brief delay for UX feedback
+      }
+    };
+    
+    window.addEventListener('lokdarpan:refresh', handleRefresh);
+    return () => window.removeEventListener('lokdarpan:refresh', handleRefresh);
+  }, [selectedWard]);
 
-      {/* Critical Intelligence Alerts */}
-      <CollapsibleSection
-        title="Intelligence Alerts"
-        priority="critical"
-        badge={tabBadges.overview}
-        defaultExpanded={true}
-      >
-        <ComponentErrorBoundary
-          componentName="Intelligence Alerts"
-          fallbackMessage="Real-time intelligence alerts are temporarily unavailable."
-        >
-          <AlertsPanel posts={filteredPosts} ward={selectedWard} />
-        </ComponentErrorBoundary>
-      </CollapsibleSection>
-
-      {/* Ward Demographics */}
-      <CollapsibleSection
-        title="Ward Demographics"
-        priority="normal"
-        defaultExpanded={false}
-      >
-        <ComponentErrorBoundary
-          componentName="Ward Meta Panel"
-          fallbackMessage="Ward demographic information is temporarily unavailable."
-        >
-          <WardMetaPanel wardId={wardIdForMeta} />
-        </ComponentErrorBoundary>
-      </CollapsibleSection>
-    </div>
+  // Performance optimized tab content rendering
+  const renderOverviewTab = () => (
+    <LazyOverviewTab
+      selectedWard={selectedWard}
+      filteredPosts={filteredPosts}
+      wardIdForMeta={wardIdForMeta}
+      connectionState={connectionState}
+      intelligenceSummary={intelligenceSummary}
+      tabBadges={tabBadges}
+      onNavigateToTab={handleTabChange}
+    />
   );
 
   const renderSentimentTab = () => (
-    <div className="space-y-6">
-      {/* Core Sentiment Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border rounded-md p-4">
-          <h3 className="font-medium mb-4">Sentiment Overview</h3>
-          {loading ? (
-            <div className="text-sm text-gray-500">Loading chart data…</div>
-          ) : (
-            <ComponentErrorBoundary
-              componentName="Sentiment Chart"
-              fallbackMessage="Sentiment visualization is temporarily unavailable."
-            >
-              <EmotionChart posts={filteredPosts} />
-            </ComponentErrorBoundary>
-          )}
-        </div>
-
-        <div className="bg-white border rounded-md p-4">
-          <h3 className="font-medium mb-4">Topic Analysis</h3>
-          <ComponentErrorBoundary
-            componentName="Topic Analysis"
-            fallbackMessage="Topic clustering analysis is temporarily unavailable."
-          >
-            <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
-          </ComponentErrorBoundary>
-        </div>
-      </div>
-
-      {/* Time Series Analysis */}
-      <CollapsibleSection
-        title="Historical Trends"
-        priority="high"
-        defaultExpanded={true}
-      >
-        <div className="bg-white border rounded-md p-4">
-          <h3 className="font-medium mb-4">Trend: Emotions & Share of Voice</h3>
-          <ComponentErrorBoundary
-            componentName="Time Series Chart"
-            fallbackMessage="Historical trend analysis is temporarily unavailable."
-          >
-            <TimeSeriesChart ward={selectedWard} days={30} />
-          </ComponentErrorBoundary>
-        </div>
-      </CollapsibleSection>
-
-      {/* Predictive Analysis */}
-      <CollapsibleSection
-        title="Predictive Outlook"
-        priority="normal"
-        defaultExpanded={false}
-      >
-        <div className="bg-white border rounded-md p-4">
-          <ComponentErrorBoundary
-            componentName="Predictive Analysis"
-            fallbackMessage="Electoral prediction analysis is temporarily unavailable."
-          >
-            <PredictionSummary ward={selectedWard} posts={filteredPosts} />
-          </ComponentErrorBoundary>
-        </div>
-      </CollapsibleSection>
-    </div>
+    <LazySentimentTab
+      selectedWard={selectedWard}
+      filteredPosts={filteredPosts}
+      keyword={keyword}
+      loading={loading}
+    />
   );
 
   const renderCompetitiveTab = () => (
-    <div className="space-y-6">
-      {/* Primary Competitive Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white border rounded-md p-4">
-          <h3 className="font-medium mb-4">Competitive Analysis</h3>
-          {loading ? (
-            <div className="text-sm text-gray-500">Loading analysis…</div>
-          ) : (
-            <ComponentErrorBoundary
-              componentName="Competitive Analysis"
-              fallbackMessage="Party comparison analysis is temporarily unavailable."
-            >
-              <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
-            </ComponentErrorBoundary>
-          )}
-        </div>
-
-        <div className="bg-white border rounded-md p-4">
-          <h3 className="font-medium mb-4">Competitive Benchmark</h3>
-          <ComponentErrorBoundary
-            componentName="Competitive Benchmark"
-            fallbackMessage="Performance benchmarking is temporarily unavailable."
-          >
-            <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
-          </ComponentErrorBoundary>
-        </div>
-      </div>
-
-      {/* Competitive Trends */}
-      <CollapsibleSection
-        title="Competitive Timeline"
-        priority="high"
-        defaultExpanded={true}
-      >
-        <div className="bg-white border rounded-md p-4">
-          <h3 className="font-medium mb-4">Competitor Trend</h3>
-          <ComponentErrorBoundary
-            componentName="Competitor Trend Chart"
-            fallbackMessage="Competitor timeline analysis is temporarily unavailable."
-          >
-            <CompetitorTrendChart ward={selectedWard} days={30} />
-          </ComponentErrorBoundary>
-        </div>
-      </CollapsibleSection>
-    </div>
+    <LazyCompetitiveTab
+      selectedWard={selectedWard}
+      filteredPosts={filteredPosts}
+      compAgg={compAgg}
+      loading={loading}
+    />
   );
 
   const renderGeographicTab = () => (
-    <div className="space-y-6">
-      {/* Map + Strategic Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 xl:col-span-8 bg-white border rounded-md">
-          <div className="p-4 font-medium">Geospatial Intelligence</div>
-          <div className="p-4">
-            <ComponentErrorBoundary
-              componentName="Interactive Map"
-              fallbackMessage="The interactive ward map is temporarily unavailable. Use the ward dropdown above for area selection."
-            >
-              <LocationMap
-                geojson={geojson}
-                selectedWard={selectedWard}
-                onWardSelect={setSelectedWard}
-                matchHeightRef={summaryRef}
-              />
-            </ComponentErrorBoundary>
-          </div>
-        </div>
-
-        <div className="lg:col-span-5 xl:col-span-4 bg-white border rounded-md" ref={summaryRef}>
-          <div className="p-4 font-medium">Strategic Summary</div>
-          <div className="p-4">
-            <ComponentErrorBoundary
-              componentName="Strategic Analysis"
-              fallbackMessage={`AI-powered strategic analysis for ${selectedWard || 'the selected ward'} is temporarily unavailable.`}
-            >
-              <StrategicSummary selectedWard={selectedWard} />
-            </ComponentErrorBoundary>
-          </div>
-        </div>
-      </div>
-
-      {/* Latest Regional News */}
-      <CollapsibleSection
-        title="Regional News Feed"
-        priority="normal"
-        defaultExpanded={true}
-      >
-        <ComponentErrorBoundary
-          componentName="Latest Headlines"
-          fallbackMessage="Latest news headlines are temporarily unavailable."
-        >
-          <EpaperFeed ward={selectedWard} limit={10} />
-        </ComponentErrorBoundary>
-      </CollapsibleSection>
-    </div>
+    <LazyGeographicTab
+      selectedWard={selectedWard}
+      geojson={geojson}
+      setSelectedWard={setSelectedWard}
+      summaryRef={summaryRef}
+    />
   );
 
   const renderStrategistTab = () => (
-    <div className="space-y-6">
-      {/* Political Strategist Suite */}
-      <div className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-2">
-        Political Strategist Suite
-      </div>
-      
-      {/* Intelligence Feed & Chat */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StrategistErrorBoundary componentName="Intelligence Feed">
-          <IntelligenceFeed ward={selectedWard} />
-        </StrategistErrorBoundary>
-        
-        <StrategistErrorBoundary componentName="AI Strategy Chat">
-          <StrategistChat />
-        </StrategistErrorBoundary>
-      </div>
-      
-      {/* Strategic Workbench & Scenario Simulator */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StrategistErrorBoundary componentName="Strategic Workbench">
-          <StrategicWorkbench />
-        </StrategistErrorBoundary>
-        
-        <StrategistErrorBoundary componentName="Scenario Simulator">
-          <ScenarioSimulator />
-        </StrategistErrorBoundary>
-      </div>
-    </div>
+    <LazyStrategistTab selectedWard={selectedWard} />
   );
 
   const renderTabContent = () => {
@@ -521,8 +363,14 @@ export default function Dashboard() {
         className="bg-white shadow-sm sticky top-0 z-20"
       />
 
-      {/* Global Filters */}
+      {/* Global Filters with Loading States */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
+        {refreshing && (
+          <div className="mb-3 flex items-center space-x-2 text-sm text-blue-600">
+            <LoadingSpinner size="xs" />
+            <span>Refreshing dashboard data...</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Emotion Filter</label>
@@ -573,9 +421,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content with Loading State Awareness */}
       <div className="container mx-auto px-6 py-6">
-        {renderTabContent()}
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <CardSkeleton title={true} description={true} content={4} />
+            <CardSkeleton title={true} description={true} content={3} />
+            <CardSkeleton title={true} description={false} content={2} />
+            <div className="lg:col-span-2 xl:col-span-3">
+              <CardSkeleton title={true} description={true} content={1} className="h-80" />
+            </div>
+          </div>
+        ) : (
+          renderTabContent()
+        )}
       </div>
 
       {/* Global Error Display */}
@@ -597,6 +456,13 @@ export default function Dashboard() {
           enableBrowserNotifications={true}
         />
       </ComponentErrorBoundary>
+
+      {/* Keyboard Shortcuts Indicator */}
+      <KeyboardShortcutsIndicator 
+        position="bottom-right"
+        compact={false}
+        showOnHover={true}
+      />
     </div>
   );
 }

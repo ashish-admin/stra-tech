@@ -86,7 +86,23 @@ def _post_emotion(p):
             return str(getattr(p, attr))
     return "Unspecified"
 
-def _party_of(author: Author):
+def _party_of(post: Post, author: Author):
+    # First, check if post has direct party assignment
+    if hasattr(post, 'party') and post.party:
+        party = str(post.party).strip()
+        # Normalize party names
+        if party.upper() in ['BRS', 'TRS', 'TELANGANA RASHTRA SAMITHI']:
+            return 'BRS'
+        elif party.upper() in ['BJP', 'BHARATIYA JANATA PARTY']:
+            return 'BJP'
+        elif party.upper() in ['INC', 'CONGRESS', 'INDIAN NATIONAL CONGRESS']:
+            return 'INC'  
+        elif party.upper() in ['AIMIM', 'ALL INDIA MAJLIS-E-ITTEHADUL MUSLIMEEN']:
+            return 'AIMIM'
+        elif party.upper() != 'OTHER':
+            return party
+    
+    # Fallback to author-based detection
     if not author:
         return "Other"
     if getattr(author, "party", None):
@@ -151,7 +167,7 @@ def get_trends():
         emotion_keys.add(emo)
         day_emotions[dkey][emo] += 1
 
-        party = _party_of(author)
+        party = _party_of(post, author)
         party_keys.add(party)
         day_parties[dkey][party] += 1
 

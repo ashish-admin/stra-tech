@@ -84,7 +84,15 @@ export default function CompetitorTrendChart({ ward = "All", days = 30 }) {
   }, [ward, days]);
 
   const hasData = useMemo(
-    () => series.length && series.some((d) => PARTIES.some((p) => d[p] > 0)),
+    () => {
+      if (!series.length) return false;
+      // Check if we have at least 2 parties with meaningful data (>1% share)
+      const dataPoints = series.some((d) => {
+        const activeParties = PARTIES.filter(p => d[p] > 1).length;
+        return activeParties >= 2;
+      });
+      return dataPoints;
+    },
     [series]
   );
 
@@ -98,20 +106,52 @@ export default function CompetitorTrendChart({ ward = "All", days = 30 }) {
 
   if (!hasData) {
     return (
-      <div className="text-sm text-gray-500">
-        No competitor trend data for the selected ward.
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <div className="text-sm text-gray-500 mb-2">
+          ⚠️ Limited Competition Data
+        </div>
+        <div className="text-xs text-gray-400 mb-3">
+          Current ward shows minimal party competition data.
+          {series.length > 0 && (
+            <span className="block mt-1">
+              {series.length} days of data available, mostly "Other" party mentions.
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-blue-600">
+          💡 Try selecting a different ward or check back after more data is ingested.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={series} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+    <div className="w-full" style={{ minHeight: '320px', height: '320px' }}>
+      <div className="mb-2 text-xs text-gray-500">
+        📊 Party Share of Voice Over Time (showing {series.length} days)
+      </div>
+      <ResponsiveContainer width="100%" height={280}>
+        <LineChart data={series} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" minTickGap={20} />
-          <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-          <Tooltip formatter={(v) => `${v}%`} />
+          <XAxis 
+            dataKey="date" 
+            minTickGap={20} 
+            angle={-45}
+            textAnchor="end"
+            height={60}
+            fontSize={11}
+          />
+          <YAxis 
+            domain={[0, 100]} 
+            tickFormatter={(v) => `${v}%`}
+            fontSize={11}
+            width={50}
+          />
+          <Tooltip 
+            formatter={(v) => [`${v}%`, 'Share of Voice']}
+            labelFormatter={(label) => `Date: ${label}`}
+            contentStyle={{ fontSize: '12px' }}
+          />
           <Legend />
           {PARTIES.map((p) => (
             <Line

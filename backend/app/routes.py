@@ -220,9 +220,11 @@ def get_posts():
             "id": r.id,
             "text": r.text,
             "emotion": r.emotion,
+            "party": r.party,  # Add party field
             "author": author_map.get(r.author_id, "Unknown"),
             "city": r.city,
             "created_at": r.created_at.isoformat() if r.created_at else None,
+            "mentions_total": r.mentions_total if hasattr(r, 'mentions_total') else None,
         })
     return jsonify({"items": items})
 

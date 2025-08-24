@@ -3,6 +3,47 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Enable code splitting for better performance
+    rollupOptions: {
+      output: {
+        // Manual chunks for vendor libraries
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'chart-vendor': ['chart.js', 'react-chartjs-2', 'recharts'],
+          'map-vendor': ['leaflet', 'react-leaflet'],
+          'query-vendor': ['@tanstack/react-query'],
+          'ui-vendor': ['lucide-react'],
+        },
+        // Use content-based file names
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    },
+    // Increase chunk size warning limit for vendor chunks
+    chunkSizeWarningLimit: 1000,
+    // Enable source maps for production debugging
+    sourcemap: false,
+    // Minify with terser for better compression
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true
+      }
+    }
+  },
+  // Performance optimizations
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'axios',
+      '@tanstack/react-query',
+      'lucide-react'
+    ]
+  },
   server: {
     host: true, // Allow external connections
     cors: true, // Enable CORS

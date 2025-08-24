@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import { AlertTriangle, TrendingUp, RefreshCw, BarChart3 } from "lucide-react";
+import { ChartSkeleton, LoadingSpinner } from "./ui/LoadingSkeleton.jsx";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -149,14 +150,11 @@ export default function TimeSeriesChart({ ward = "All", days = 30 }) {
 
   if (loading || isRetrying) {
     return (
-      <div className="flex items-center justify-center h-64 bg-gray-50 rounded-lg">
-        <div className="flex flex-col items-center space-y-2">
-          <RefreshCw className={`h-6 w-6 text-gray-400 ${(loading || isRetrying) ? 'animate-spin' : ''}`} />
-          <div className="text-sm text-gray-500">
-            {isRetrying ? `Retrying... (${retryCount}/${maxRetries})` : 'Loading trend data...'}
-          </div>
-        </div>
-      </div>
+      <ChartSkeleton 
+        height="h-64" 
+        showLegend={true}
+        className=""
+      />
     );
   }
 

@@ -68,6 +68,12 @@ class Config:
     AUDIT_LOG_ENABLED = os.environ.get('AUDIT_LOG_ENABLED', 'True').lower() == 'true'
     AUDIT_LOG_LEVEL = os.environ.get('AUDIT_LOG_LEVEL', 'INFO')
     DATA_RETENTION_DAYS = int(os.environ.get('DATA_RETENTION_DAYS', '365'))
+    
+    # Error Logging Configuration
+    if os.environ.get('FLASK_ENV') == 'development':
+        ERROR_LOG_FILE = 'logs/errors.log'  # Use local directory in development
+    else:
+        ERROR_LOG_FILE = os.environ.get('ERROR_LOG_FILE', '/var/log/lokdarpan/errors.log')
 
     # Input Validation
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file upload

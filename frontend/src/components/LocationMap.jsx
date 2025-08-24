@@ -5,6 +5,7 @@ import { fetchJson } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 import useViewport from "../hooks/useViewport";
 import { AlertTriangle, Map as MapIcon, RefreshCw, Navigation } from "lucide-react";
+import { MapSkeleton, LoadingSpinner } from "./ui/LoadingSkeleton.jsx";
 
 /* ---------- helpers ---------- */
 function normalizeWardLabel(label) {
@@ -530,16 +531,10 @@ export default function LocationMap({
   // Recovery/loading state
   if (isRecovering) {
     return (
-      <div
-        ref={wrapperRef}
-        className="relative w-full rounded-md border overflow-hidden bg-blue-50"
-        style={{ height: 360 }}
-      >
-        <div className="flex flex-col items-center justify-center h-full">
-          <RefreshCw className="h-8 w-8 text-blue-600 animate-spin mb-3" />
-          <p className="text-sm text-blue-700">Recovering map functionality...</p>
-        </div>
-      </div>
+      <MapSkeleton 
+        height={360}
+        className=""
+      />
     );
   }
 

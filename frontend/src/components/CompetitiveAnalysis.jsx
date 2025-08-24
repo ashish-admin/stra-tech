@@ -42,7 +42,19 @@ export default function CompetitiveAnalysis({ data = {}, posts = [] }) {
   const parties = Object.keys(src);
 
   if (!parties.length) {
-    return <div className="text-sm text-gray-500">No competitive analysis available for the selected ward.</div>;
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+        <div className="text-sm text-gray-500 mb-2">⚠️ No Competitive Analysis Available</div>
+        <div className="text-xs text-gray-400">
+          Current ward has insufficient party competition data.
+          {posts?.length > 0 && (
+            <span className="block mt-1">
+              Found {posts.length} posts but could not determine party affiliations.
+            </span>
+          )}
+        </div>
+      </div>
+    );
   }
 
   // Render stacked bars: positive / negative / other

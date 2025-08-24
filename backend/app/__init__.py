@@ -35,6 +35,11 @@ from .multimodel_api import multimodel_bp
 from .strategist_api import strategist_bp as compat_strategist_bp
 from .models import *  # Import all models
 
+# Enhanced error tracking and analytics system
+from .error_tracking import init_error_tracking
+from .error_api import error_api as error_bp
+from .error_analytics import analytics_bp
+
 # Political Strategist module - Check if exists
 strategist_bp = None
 try:
@@ -173,11 +178,20 @@ def create_app(config_class: str = "config.Config") -> Flask:
         # Register compatibility strategist API (always available)
         app.register_blueprint(compat_strategist_bp)
         
+        # Register enhanced error tracking and analytics
+        app.register_blueprint(error_bp)
+        app.register_blueprint(analytics_bp)
+        
+        # Initialize error tracking system
+        init_error_tracking(app)
+        
         if strategist_bp:
             print("Advanced Political Strategist module available")
             # Could register advanced features here
         else:
             print("Using compatibility Political Strategist API")
+        
+        print("Enhanced error tracking and analytics system initialized")
         
         # Observability is now included in strategist_bp
         return app
