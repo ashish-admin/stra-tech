@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { 
   BarChart3, 
   Heart, 
@@ -110,8 +110,6 @@ const DashboardTabs = ({
   enableKeyboardNav = true,
   ...props 
 }) => {
-  const [currentTab, setCurrentTab] = useState(activeTab);
-
   // Handle keyboard navigation (Alt+1-5 for tabs)
   useEffect(() => {
     if (!enableKeyboardNav) return;
@@ -131,10 +129,10 @@ const DashboardTabs = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enableKeyboardNav]);
+  }, [enableKeyboardNav, onTabChange]);
 
   const handleTabChange = (tabId) => {
-    setCurrentTab(tabId);
+    // Directly call parent's onTabChange - no internal state management
     onTabChange?.(tabId);
     
     // Update URL parameter for deep linking
@@ -143,15 +141,14 @@ const DashboardTabs = ({
     window.history.replaceState({}, '', url);
   };
 
-  // Initialize tab from URL parameter
+  // Initialize tab from URL parameter on mount only
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlTab = urlParams.get('tab');
-    if (urlTab && TAB_CONFIGURATION[urlTab] && urlTab !== currentTab) {
-      setCurrentTab(urlTab);
+    if (urlTab && TAB_CONFIGURATION[urlTab] && urlTab !== activeTab) {
       onTabChange?.(urlTab);
     }
-  }, []);
+  }, [onTabChange, activeTab]); // Include dependencies but effect runs only when needed
 
   return (
     <div 
@@ -166,7 +163,7 @@ const DashboardTabs = ({
           <TabButton
             key={tab.id}
             tab={tab}
-            isActive={currentTab === tab.id}
+            isActive={activeTab === tab.id}
             onClick={handleTabChange}
             badge={badges[tab.id]}
             data-testid={`tab-${tab.id}`}
@@ -178,9 +175,9 @@ const DashboardTabs = ({
       {/* Active tab description */}
       <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
         <p className="text-xs text-gray-600">
-          {TAB_CONFIGURATION[currentTab]?.description}
+          {TAB_CONFIGURATION[activeTab]?.description}
           <span className="ml-2 text-gray-400">
-            (Alt+{Object.keys(TAB_CONFIGURATION).indexOf(currentTab) + 1})
+            (Alt+{Object.keys(TAB_CONFIGURATION).indexOf(activeTab) + 1})
           </span>
         </p>
       </div>

@@ -1,63 +1,93 @@
 import React, { useMemo } from "react";
+import { useOptimizedPrediction } from "../hooks/useOptimizedAPI";
 
-const POSITIVE = new Set(["joy", "hopeful", "admiration", "pride", "positive", "support", "confidence"]);
-const NEGATIVE = new Set(["anger", "frustration", "fear", "sadness", "disgust", "negative"]);
+export default function PredictionSummary({ ward = "All" }) {
+  // Handle the "All" case with a specific message
+  if (ward === "All") {
+    return (
+      <div className="text-sm text-gray-500">
+        Select a specific ward to view electoral predictions. Predictions are ward-specific and require detailed local analysis.
+      </div>
+    );
+  }
 
-function partyFromSource(p) {
-  const src = (p.source || p.author || p.publisher || "").toLowerCase();
-  if (/bjp|bharatiya/.test(src)) return "BJP";
-  if (/brs|trs\b|telangana rashtra/.test(src)) return "BRS";
-  if (/congress|inc\b|telangana congress/.test(src)) return "INC";
-  if (/aimim/.test(src)) return "AIMIM";
-  return "OTHER";
-}
-function emotionOf(p) {
-  return (p.emotion || p.detected_emotion || p.emotion_label || "").toLowerCase();
-}
+  // Use the ward name directly as ward_id (per Dashboard.jsx pattern)
+  const { data: prediction, isLoading, isError, error } = useOptimizedPrediction(ward);
 
-export default function PredictionSummary({ posts = [], ward = "All" }) {
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="text-sm">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded mb-2"></div>
+          <div className="h-24 bg-gray-200 rounded mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <div className="text-sm text-red-600">
+        <div className="mb-2">
+          Unable to load prediction data for {ward}.
+        </div>
+        <div className="text-xs text-gray-500">
+          {error?.message || "Please try again later."}
+        </div>
+      </div>
+    );
+  }
+
+  // No data or invalid data structure
+  if (!prediction?.scores || typeof prediction.scores !== 'object') {
+    return (
+      <div className="text-sm text-gray-500">
+        Prediction data not available for {ward}. This may be due to insufficient data or ongoing analysis.
+      </div>
+    );
+  }
+
+  // Process the scores from API
   const rows = useMemo(() => {
-    const by = {};
-    posts.forEach((p) => {
-      const party = partyFromSource(p);
-      by[party] = by[party] || { pos: 0, neg: 0, total: 0 };
-      by[party].total += 1;
-      const e = emotionOf(p);
-      if (POSITIVE.has(e)) by[party].pos += 1;
-      else if (NEGATIVE.has(e)) by[party].neg += 1;
-    });
+    const scores = prediction.scores || {};
+    const parties = Object.entries(scores)
+      .map(([party, score]) => ({
+        party: party.toUpperCase(),
+        score: Number(score) || 0
+      }))
+      .sort((a, b) => b.score - a.score); // Sort by score descending
+    
+    return parties;
+  }, [prediction.scores]);
 
-    // simple score: pos*2 - neg, normalize to [0,1]
-    const scored = Object.entries(by).map(([party, v]) => {
-      const raw = v.pos * 2 - v.neg;
-      return { party, ...v, raw };
-    });
-    if (!scored.length) return [];
-
-    const min = Math.min(...scored.map((r) => r.raw));
-    const max = Math.max(...scored.map((r) => r.raw));
-    return scored.map((r) => ({
-      ...r,
-      prob: max === min ? 0.5 : (r.raw - min) / (max - min),
-    })).sort((a, b) => b.prob - a.prob);
-  }, [posts]);
-
-  if (!rows.length) return <div className="text-sm text-gray-500">Insufficient signals to estimate outlook.</div>;
+  if (!rows.length) {
+    return (
+      <div className="text-sm text-gray-500">
+        No prediction data available for {ward}.
+      </div>
+    );
+  }
 
   const leader = rows[0];
+  const confidence = prediction.confidence ? Math.round(prediction.confidence * 100) : null;
+
   return (
     <div className="text-sm">
       <div className="mb-2">
         If the election were held today in <span className="font-semibold">{ward}</span>, the model
-        indicates a leading chance for <span className="font-semibold">{leader.party}</span>.
+        indicates a leading chance for <span className="font-semibold">{leader.party}</span>{" "}
+        with {Math.round(leader.score)}% support.
       </div>
+      
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="text-left text-gray-500">
             <tr>
               <th className="py-1">Party</th>
-              <th className="py-1">Signals</th>
-              <th className="py-1">Score</th>
+              <th className="py-1">Support %</th>
               <th className="py-1">Win Prob.</th>
             </tr>
           </thead>
@@ -65,16 +95,24 @@ export default function PredictionSummary({ posts = [], ward = "All" }) {
             {rows.map((r) => (
               <tr key={r.party} className="border-t">
                 <td className="py-1">{r.party}</td>
-                <td className="py-1">{r.total}</td>
-                <td className="py-1">{(r.pos * 2 - r.neg)}</td>
-                <td className="py-1">{Math.round(r.prob * 100)}%</td>
+                <td className="py-1">{Math.round(r.score * 10) / 10}%</td>
+                <td className="py-1">
+                  {r === leader ? "Leading" : r.score >= 30 ? "Competitive" : "Trailing"}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="text-xs text-gray-500 mt-2">
-        *Heuristic model using sentiment-derived signals. Calibrate with ward voters & historic outcomes for stronger accuracy.
+      
+      {confidence && (
+        <div className="text-xs text-gray-600 mt-2">
+          Model Confidence: {confidence}%
+        </div>
+      )}
+      
+      <div className="text-xs text-gray-500 mt-1">
+        *Predictions based on AI analysis of local political intelligence. Results are estimates and should be interpreted with local knowledge.
       </div>
     </div>
   );

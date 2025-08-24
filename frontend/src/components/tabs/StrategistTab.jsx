@@ -19,7 +19,7 @@ const StrategistTab = ({ selectedWard }) => {
         </StrategistErrorBoundary>
         
         <StrategistErrorBoundary componentName="AI Strategy Chat">
-          <StrategistChat />
+          <StrategistChat selectedWard={selectedWard} />
         </StrategistErrorBoundary>
       </div>
       

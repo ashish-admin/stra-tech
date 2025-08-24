@@ -352,7 +352,7 @@ export default function Dashboard() {
           componentName="Predictive Analysis"
           fallbackMessage="Electoral prediction analysis is temporarily unavailable."
         >
-          <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+          <PredictionSummary ward={selectedWard} />
         </ComponentErrorBoundary>
       </div>
 

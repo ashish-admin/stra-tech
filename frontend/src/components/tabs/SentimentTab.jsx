@@ -69,7 +69,7 @@ const SentimentTab = ({
             componentName="Predictive Analysis"
             fallbackMessage="Electoral prediction analysis is temporarily unavailable."
           >
-            <PredictionSummary ward={selectedWard} posts={filteredPosts} />
+            <PredictionSummary ward={selectedWard} />
           </ComponentErrorBoundary>
         </div>
       </CollapsibleSection>

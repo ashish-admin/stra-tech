@@ -73,16 +73,75 @@ export default function IntelligenceFeed({
 
   // Use enhanced SSE hook if currentWard is available
   const sseData = useIntelligenceFeed(currentWard || ward, filters);
+  const [fallbackAlerts, setFallbackAlerts] = useState([]);
+  const [isLoadingFallback, setIsLoadingFallback] = useState(false);
   
-  // Merge prop data with SSE data
+  // Load fallback data from alerts API when SSE is not connected
+  const loadFallbackAlerts = useCallback(async () => {
+    const activeWard = currentWard || ward;
+    if (!activeWard || activeWard === 'All' || sseData.intelligence.length > 0) return;
+    
+    setIsLoadingFallback(true);
+    try {
+      const response = await fetch(`/api/v1/alerts/${encodeURIComponent(activeWard)}`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.opportunities) {
+          let opportunities = [];
+          
+          // Handle both string and array formats
+          if (typeof data.opportunities === 'string') {
+            opportunities = data.opportunities.split('\n').filter(opp => opp.trim());
+          } else if (Array.isArray(data.opportunities)) {
+            opportunities = data.opportunities;
+          }
+          
+          const formattedAlerts = opportunities.map((opp, index) => ({
+            id: `fallback-${index}`,
+            title: typeof opp === 'string' ? `Intelligence Alert ${index + 1}` : (opp.title || `Alert ${index + 1}`),
+            message: typeof opp === 'string' ? opp : (opp.description || opp.message || opp),
+            content: typeof opp === 'string' ? opp : (opp.content || opp.description || opp.message || opp),
+            type: 'opportunity',
+            priority: 'medium',
+            timestamp: Date.now() - (index * 60000), // Stagger timestamps
+            receivedAt: Date.now() - (index * 60000),
+            category: 'fallback',
+            isAlert: true
+          }));
+          setFallbackAlerts(formattedAlerts);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load fallback alerts:', error);
+    } finally {
+      setIsLoadingFallback(false);
+    }
+  }, [currentWard, ward, sseData.intelligence.length]);
+
+  // Load fallback data when SSE is not providing intelligence
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadFallbackAlerts();
+    }, 2000); // Wait 2 seconds for SSE to connect before falling back
+    
+    return () => clearTimeout(timer);
+  }, [loadFallbackAlerts]);
+  
+  // Merge prop data with SSE data and fallback data
   const allIntelligence = useMemo(() => {
     const propData = intelligence.map(item => ({ ...item, category: 'prop' }));
     const sseIntelligence = sseData.intelligence.map(item => ({ ...item, category: 'intelligence' }));
     const sseAlerts = sseData.alerts.map(item => ({ ...item, category: 'alert' }));
     
-    return [...propData, ...sseIntelligence, ...sseAlerts]
+    // Use fallback alerts if no SSE data is available
+    const alertsToUse = sseAlerts.length > 0 ? sseAlerts : fallbackAlerts;
+    
+    return [...propData, ...sseIntelligence, ...alertsToUse]
       .sort((a, b) => (b.receivedAt || b.timestamp || 0) - (a.receivedAt || a.timestamp || 0));
-  }, [intelligence, sseData.intelligence, sseData.alerts]);
+  }, [intelligence, sseData.intelligence, sseData.alerts, fallbackAlerts]);
 
   const filteredIntelligence = allIntelligence.filter(item => {
     if (filter === 'all') return true;
@@ -137,6 +196,16 @@ export default function IntelligenceFeed({
                 <div className="flex items-center space-x-1 text-green-600">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-xs font-medium">LIVE</span>
+                </div>
+              ) : fallbackAlerts.length > 0 ? (
+                <div className="flex items-center space-x-1 text-blue-600">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-xs font-medium">FALLBACK</span>
+                </div>
+              ) : isLoadingFallback ? (
+                <div className="flex items-center space-x-1 text-yellow-600">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-medium">LOADING</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1 text-gray-500">

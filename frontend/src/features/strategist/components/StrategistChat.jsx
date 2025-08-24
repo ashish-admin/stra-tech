@@ -78,6 +78,7 @@ const SUGGESTED_PROMPTS = {
 };
 
 const StrategistChat = ({ 
+  selectedWard,
   initialChatType = 'strategy',
   conversationId = null,
   height = '600px' 
@@ -87,14 +88,17 @@ const StrategistChat = ({
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(conversationId);
   
+  // Use selectedWard prop or fall back to WardContext
+  const activeWard = selectedWard || currentWard;
+  
   // Load conversations on mount
   useEffect(() => {
     loadConversations();
-  }, [currentWard]);
+  }, [activeWard]);
   
   const loadConversations = async () => {
     try {
-      const response = await fetch(`/api/v1/strategist/conversations?ward=${encodeURIComponent(currentWard || '')}`, {
+      const response = await fetch(`/api/v1/strategist/conversations?ward=${encodeURIComponent(activeWard || '')}`, {
         credentials: 'include'
       });
       
@@ -123,7 +127,7 @@ const StrategistChat = ({
     });
   };
 
-  if (!currentWard || currentWard === 'All') {
+  if (!activeWard || activeWard === 'All') {
     return (
       <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg">
         <div className="text-center">

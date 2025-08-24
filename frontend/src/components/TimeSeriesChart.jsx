@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, memo } from "react";
 import axios from "axios";
 import {
   ResponsiveContainer,
@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { AlertTriangle, TrendingUp, RefreshCw, BarChart3 } from "lucide-react";
 import { ChartSkeleton, LoadingSpinner } from "./ui/LoadingSkeleton.jsx";
+import { EnhancedCard } from "./ui/MicroInteractions.jsx";
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -210,9 +211,9 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
     <EnhancedCard className="p-4 professional-card" hoverable glowOnHover>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <MicroInteraction type="hover" intensity="subtle">
+          <div className="hover:scale-105 transition-transform duration-200">
             <TrendingUp className="h-5 w-5 text-blue-500" />
-          </MicroInteraction>
+          </div>
           <div>
             <h3 className="font-semibold text-gray-900">
               Sentiment Trends Over Time
@@ -222,28 +223,47 @@ const TimeSeriesChart = memo(function TimeSeriesChart({
             </p>
           </div>
         </div>
-        
-        {lastUpdated && (
-          <div className="text-xs text-gray-500 text-right">
-            <div>Updated:</div>
-            <div className="font-mono">{lastUpdated.toLocaleTimeString()}</div>
-          </div>
-        )}
       </div>
       
-      <ProfessionalLineChart
-        data={series}
-        lines={chartLines}
-        height={height}
-        animationDuration={animationEnabled ? 1000 : 0}
-        staggerDelay={animationEnabled ? 150 : 0}
-        className="chart-professional-enter"
-        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-        showGrid={true}
-        showTooltip={true}
-        showLegend={true}
-        responsive={true}
-      />
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart
+          data={series}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "white",
+              border: "1px solid #e2e8f0",
+              borderRadius: "8px",
+              fontSize: "12px",
+            }}
+          />
+          <Legend />
+          {EMOTIONS.map((emotion) => (
+            <Line
+              key={emotion}
+              type="monotone"
+              dataKey={emotion}
+              stroke={EMOTION_COLORS[emotion]}
+              strokeWidth={2}
+              dot={false}
+              animationDuration={animationEnabled ? 1000 : 0}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
       
       {/* Data quality indicator */}
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">

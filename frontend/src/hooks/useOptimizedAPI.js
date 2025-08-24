@@ -11,7 +11,8 @@ const queryKeys = {
   trends: (ward = 'All', days = 30) => ['trends', ward, days],
   pulse: (ward, days = 7) => ['pulse', ward, days],
   wardMeta: (wardId) => ['ward-meta', wardId],
-  alerts: (ward) => ['alerts', ward]
+  alerts: (ward) => ['alerts', ward],
+  prediction: (wardId) => ['prediction', wardId]
 };
 
 // Optimized API configuration
@@ -114,6 +115,23 @@ export const useOptimizedWardMeta = (wardId) => {
   });
 };
 
+// Ward prediction data hook
+export const useOptimizedPrediction = (wardId) => {
+  return useQuery({
+    queryKey: queryKeys.prediction(wardId),
+    queryFn: async () => {
+      const response = await axios.get(
+        joinApi(`api/v1/prediction/${encodeURIComponent(wardId)}`),
+        { withCredentials: true }
+      );
+      return response.data || {};
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - predictions change moderately
+    cacheTime: 20 * 60 * 1000,
+    enabled: !!wardId && wardId !== 'All'
+  });
+};
+
 // Custom hook for prefetching data
 export const useOptimizedPrefetch = () => {
   const queryClient = useQueryClient();
@@ -166,10 +184,26 @@ export const useOptimizedPrefetch = () => {
     });
   }, [queryClient]);
 
+  const prefetchPrediction = useCallback((wardId) => {
+    if (!wardId || wardId === 'All') return;
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.prediction(wardId),
+      queryFn: async () => {
+        const response = await axios.get(
+          joinApi(`api/v1/prediction/${encodeURIComponent(wardId)}`),
+          { withCredentials: true }
+        );
+        return response.data || {};
+      },
+      staleTime: 10 * 60 * 1000
+    });
+  }, [queryClient]);
+
   return {
     prefetchPosts,
     prefetchCompetitive,
-    prefetchTrends
+    prefetchTrends,
+    prefetchPrediction
   };
 };
 
@@ -237,6 +271,10 @@ export const useCacheInvalidation = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.competitive(ward) });
   }, [queryClient]);
   
+  const invalidatePrediction = useCallback((wardId) => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.prediction(wardId) });
+  }, [queryClient]);
+  
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries();
   }, [queryClient]);
@@ -244,6 +282,7 @@ export const useCacheInvalidation = () => {
   return {
     invalidatePosts,
     invalidateCompetitive,
+    invalidatePrediction,
     invalidateAll
   };
 };
