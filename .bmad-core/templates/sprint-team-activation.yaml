@@ -1,0 +1,186 @@
+# Sprint Team Activation Template
+# Auto-activation matrix for LokDarpan sprint continuation
+
+team_activation_matrix:
+  
+  # Story 3.1.1: Enhanced Multi-Model Orchestration
+  story_3_1_1_orchestration:
+    primary_agent: "dev"
+    supporting_agents: ["pm", "qa"]
+    external_specialist: "ai_ml_engineer"
+    estimated_effort: "4-6 hours"
+    auto_trigger_conditions:
+      - "ai-model-routing"
+      - "cost-optimization" 
+      - "confidence-scoring"
+    agent_responsibilities:
+      dev: "Implement smart routing logic, fallback chains, confidence scoring framework"
+      pm: "Refine AI model selection criteria, validate cost optimization targets"
+      qa: "Test multi-model scenarios, validate 40% cost reduction, orchestration reliability"
+      ai_ml_engineer: "Design confidence algorithms, optimize model selection logic"
+
+  # Story 3.1.2: Strategic Analysis Pipeline Completion  
+  story_3_1_2_pipeline:
+    primary_agent: "dev"
+    supporting_agents: ["qa", "pm"]
+    external_specialist: "ai_ml_engineer"
+    estimated_effort: "5-7 hours"
+    auto_trigger_conditions:
+      - "credibility-scoring"
+      - "fact-checking"
+      - "bias-detection"
+    agent_responsibilities:
+      dev: "Implement credibility scoring, integrate fact-checking APIs, bias detection mechanisms"
+      pm: "Define political bias criteria, validate credibility scoring accuracy"
+      qa: "Test analysis pipeline quality, validate fact-checking integration, bias detection accuracy"
+      ai_ml_engineer: "Design credibility algorithms, optimize bias detection models"
+
+  # Story 3.2.2: AI Service Circuit Breaker
+  story_3_2_2_circuit_breaker:
+    primary_agent: "dev" 
+    supporting_agents: ["qa"]
+    external_specialist: null
+    estimated_effort: "3-4 hours"
+    auto_trigger_conditions:
+      - "circuit-breaker"
+      - "service-health-monitoring"
+      - "graceful-degradation"
+    agent_responsibilities:
+      dev: "Implement circuit breaker pattern, service health monitoring, graceful degradation logic"
+      qa: "Test failure scenarios, validate <2s failover times, verify service recovery"
+
+  # Backend Quality Hardening
+  backend_quality_hardening:
+    primary_agent: "dev"
+    supporting_agents: ["qa"]
+    external_specialist: null
+    estimated_effort: "6-8 hours"
+    auto_trigger_conditions:
+      - "test-coverage-80-percent"
+      - "security-vulnerability-assessment"  
+      - "structured-logging"
+      - "health-check-endpoints"
+    agent_responsibilities:
+      dev: "Achieve 80%+ test coverage, implement security fixes, structured logging, health endpoints"
+      qa: "Validate test coverage, conduct security assessment, verify health monitoring"
+
+  # Production Deployment Preparation  
+  production_deployment:
+    primary_agent: "qa"
+    supporting_agents: ["dev"]
+    external_specialist: "devops_engineer"
+    estimated_effort: "4-6 hours"
+    auto_trigger_conditions:
+      - "production-readiness"
+      - "deployment-automation"
+      - "monitoring-setup"
+    agent_responsibilities:
+      qa: "Production readiness validation, end-to-end testing, quality gate enforcement"
+      dev: "Deployment script validation, production configuration review"
+      devops_engineer: "Infrastructure automation, monitoring setup, deployment pipeline"
+
+# External Team Member Requirements
+external_team_coordination:
+  
+  ai_ml_engineer:
+    required_stories: ["story_3_1_1_orchestration", "story_3_1_2_pipeline"]
+    total_estimated_hours: "12-16 hours"
+    schedule_distribution: "3-4 hours/day over 3-4 days"
+    coordination_agent: "dev"
+    deliverables:
+      - "Multi-model routing algorithms"
+      - "Confidence scoring mathematical models" 
+      - "Credibility assessment frameworks"
+      - "Bias detection optimization"
+    communication_schedule:
+      - "Daily sync with dev agent during implementation"
+      - "Mid-point technical review with qa agent"
+      - "Final validation with pm agent"
+
+  devops_engineer:
+    required_stories: ["production_deployment"]
+    total_estimated_hours: "8-12 hours"
+    schedule_distribution: "4-6 hours/day over 2 days"
+    coordination_agent: "qa"
+    deliverables:
+      - "Production infrastructure automation"
+      - "Monitoring and alerting setup"
+      - "Deployment pipeline configuration"
+      - "Campaign team operational runbooks"
+    communication_schedule:
+      - "Initial requirements gathering with qa agent"
+      - "Production deployment validation with dev agent"
+      - "Final handoff training with all agents"
+
+# Agent Auto-Activation Triggers  
+auto_activation_triggers:
+  
+  pm_activation:
+    story_keywords: ["requirements", "acceptance-criteria", "political-strategist", "campaign"]
+    command_triggers: ["*create-brownfield-story", "*create-prd", "*correct-course"]
+    escalation_conditions: ["scope-changes", "stakeholder-alignment-needed"]
+
+  sm_activation:
+    story_keywords: ["story-breakdown", "task-coordination", "sprint-timeline"]
+    command_triggers: ["*draft", "*story-checklist", "*execute-checklist"] 
+    escalation_conditions: ["timeline-pressure", "resource-conflicts"]
+
+  dev_activation:
+    story_keywords: ["implementation", "ai-orchestration", "backend", "testing"]
+    command_triggers: ["*develop-story", "*run-tests", "*explain"]
+    escalation_conditions: ["technical-blockers", "integration-failures"]
+
+  qa_activation:
+    story_keywords: ["quality-validation", "testing", "production-readiness"]
+    command_triggers: ["*review", "*gate", "*nfr-assess", "*test-design"]
+    escalation_conditions: ["quality-gate-failures", "production-risks"]
+
+# Success Criteria Mapping
+success_criteria_by_agent:
+
+  pm_success_metrics:
+    - "Political Strategist requirements fully defined and validated"
+    - "Campaign team workflow alignment confirmed"
+    - "AI model selection criteria documented and approved" 
+    - "Cost optimization targets (40% reduction) validated"
+
+  sm_success_metrics:
+    - "All remaining stories broken down into actionable tasks"
+    - "Sprint timeline maintained with 5-7 day completion"
+    - "Daily coordination between agents successful"
+    - "Resource conflicts resolved and external team scheduled"
+
+  dev_success_metrics:
+    - "Stories 3.1.1, 3.1.2, 3.2.2 implemented and functional"
+    - "Backend test coverage achieved (80%+)" 
+    - "Security vulnerability assessment completed (95%+ score)"
+    - "All quality gates passed for production deployment"
+
+  qa_success_metrics:
+    - "Political Strategist end-to-end validation completed"
+    - "Production readiness assessment passed"
+    - "All quality gates validated and documented"
+    - "Campaign team training validation successful"
+
+# Risk Mitigation by Agent
+risk_mitigation_by_agent:
+
+  pm_risk_mitigation:
+    scope_creep: "Fixed scope with change control process"
+    stakeholder_alignment: "Daily stakeholder communication and sign-off"
+    requirements_drift: "Frozen requirements with clear acceptance criteria"
+
+  sm_risk_mitigation:
+    timeline_pressure: "Buffer time utilization and scope reduction options"
+    resource_conflicts: "Cross-training and parallel task execution"
+    coordination_failure: "Daily standups and clear escalation paths"
+
+  dev_risk_mitigation:
+    technical_complexity: "Incremental implementation with feature flags"
+    ai_service_integration: "Fallback mechanisms and circuit breaker patterns"
+    quality_vs_speed: "Quality gates cannot be compromised principle"
+
+  qa_risk_mitigation:
+    quality_gate_blocking: "Parallel testing and additional validation resources"
+    production_risk: "Comprehensive staging environment validation"
+    integration_failure: "Rollback procedures and contingency planning"
