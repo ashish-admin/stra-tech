@@ -1,0 +1,62 @@
+{
+  "name": "LokDarpan Political Intelligence Dashboard",
+  "short_name": "LokDarpan",
+  "description": "Real-time political intelligence and campaign analytics platform for strategic decision making",
+  "version": "1.3.0",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "categories": ["politics", "analytics", "business", "productivity"],
+  "lang": "en-US",
+  "dir": "ltr",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16 32x32 48x48",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Main political intelligence dashboard",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/favicon.ico",
+          "sizes": "48x48"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Main Dashboard View"
+    },
+    {
+      "src": "/screenshots/dashboard-narrow.png", 
+      "sizes": "640x1136",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Dashboard View"
+    }
+  ],
+  "prefer_related_applications": false,
+  "offline_enabled": true,
+  "cache_strategy": "stale-while-revalidate",
+  "features": [
+    "offline-access",
+    "real-time-updates", 
+    "performance-monitoring",
+    "advanced-caching"
+  ]
+}
