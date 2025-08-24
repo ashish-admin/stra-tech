@@ -21,11 +21,21 @@ class SSEErrorBoundary extends React.Component {
       retryCount: 0,
       isOnline: navigator.onLine,
       lastErrorTime: null,
-      errorType: null
+      errorType: null,
+      campaignMode: props.campaignMode || false,
+      connectionHealth: null,
+      fallbackMode: 'none',
+      recoveryStrategy: null
     };
     
-    this.maxRetries = props.maxRetries || 3;
+    // Campaign-aware retry configuration
+    this.maxRetries = props.maxRetries || (props.campaignMode ? 10 : 3);
     this.retryDelay = props.retryDelay || 5000;
+    this.campaignRetryDelay = props.campaignRetryDelay || 2000;
+    
+    // Integration with SSE Connection Manager
+    this.sseConnectionManager = null;
+    this.healthMonitorInterval = null;
   }
 
   static getDerivedStateFromError(error) {
@@ -75,14 +85,32 @@ class SSEErrorBoundary extends React.Component {
     // Listen for online/offline events
     window.addEventListener('online', this.handleOnline);
     window.addEventListener('offline', this.handleOffline);
+    
+    // Setup SSE Connection Manager integration for campaign mode
+    if (this.state.campaignMode) {
+      this.setupSSEIntegration();
+    }
+    
+    // Start health monitoring
+    this.startHealthMonitoring();
+    
+    // Listen for SSE Manager health events
+    document.addEventListener('sse_manager_health_alert', this.handleSSEHealthAlert);
+    document.addEventListener('sse_manager_health_report', this.handleSSEHealthReport);
   }
 
   componentWillUnmount() {
     window.removeEventListener('online', this.handleOnline);
     window.removeEventListener('offline', this.handleOffline);
+    document.removeEventListener('sse_manager_health_alert', this.handleSSEHealthAlert);
+    document.removeEventListener('sse_manager_health_report', this.handleSSEHealthReport);
     
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
+    }
+    
+    if (this.healthMonitorInterval) {
+      clearInterval(this.healthMonitorInterval);
     }
   }
 
@@ -96,7 +124,162 @@ class SSEErrorBoundary extends React.Component {
   };
 
   handleOffline = () => {
-    this.setState({ isOnline: false });
+    this.setState({ isOnline: false, fallbackMode: 'offline' });
+  };
+
+  // Setup SSE Connection Manager integration
+  setupSSEIntegration = () => {
+    try {
+      // Dynamic import to avoid dependency issues
+      import('../lib/SSEConnectionManager').then((module) => {
+        this.sseConnectionManager = module.default;
+        console.log('🔗 SSE Error Boundary integrated with Connection Manager');
+      }).catch((err) => {
+        console.warn('SSE Connection Manager not available:', err);
+      });
+    } catch (error) {
+      console.warn('Failed to setup SSE integration:', error);
+    }
+  };
+
+  // Handle SSE health alerts
+  handleSSEHealthAlert = (event) => {
+    const { type, severity, message } = event.detail || {};
+    
+    if (severity === 'error' || severity === 'critical') {
+      this.setState({
+        connectionHealth: {
+          status: 'degraded',
+          severity,
+          message,
+          timestamp: Date.now()
+        }
+      });
+    }
+  };
+
+  // Handle SSE health reports
+  handleSSEHealthReport = (event) => {
+    const report = event.detail || {};
+    
+    this.setState({
+      connectionHealth: {
+        status: report.healthyConnections > report.failedConnections ? 'healthy' : 'degraded',
+        healthyConnections: report.healthyConnections,
+        failedConnections: report.failedConnections,
+        totalConnections: report.totalConnections,
+        timestamp: report.timestamp
+      }
+    });
+  };
+
+  // Start health monitoring
+  startHealthMonitoring = () => {
+    if (this.healthMonitorInterval) {
+      clearInterval(this.healthMonitorInterval);
+    }
+    
+    this.healthMonitorInterval = setInterval(() => {
+      this.checkComponentHealth();
+    }, 30000); // Check every 30 seconds
+  };
+
+  // Check component health
+  checkComponentHealth = () => {
+    const { connectionHealth, campaignMode, hasError } = this.state;
+    
+    // Proactive error recovery for campaign mode
+    if (campaignMode && connectionHealth?.status === 'degraded' && !hasError) {
+      console.log('🚨 Proactive error recovery - connection health degraded');
+      this.initiateProactiveRecovery();
+    }
+    
+    // Check for stale components
+    if (connectionHealth && Date.now() - connectionHealth.timestamp > 120000) {
+      // Health data is older than 2 minutes
+      this.setState({
+        connectionHealth: {
+          ...connectionHealth,
+          status: 'stale'
+        }
+      });
+    }
+  };
+
+  // Initiate proactive recovery
+  initiateProactiveRecovery = () => {
+    const strategy = this.determineRecoveryStrategy();
+    
+    this.setState({
+      recoveryStrategy: strategy
+    });
+    
+    switch (strategy) {
+      case 'fallback_mode':
+        this.activateFallbackMode();
+        break;
+      case 'component_refresh':
+        this.refreshComponent();
+        break;
+      case 'connection_reset':
+        this.resetConnections();
+        break;
+      default:
+        console.log('No recovery strategy needed');
+    }
+  };
+
+  // Determine recovery strategy based on error type and campaign context
+  determineRecoveryStrategy = () => {
+    const { errorType, campaignMode, connectionHealth, isOnline } = this.state;
+    
+    if (!isOnline) {
+      return 'offline_mode';
+    }
+    
+    if (campaignMode && connectionHealth?.failedConnections > 0) {
+      if (connectionHealth.failedConnections >= connectionHealth.totalConnections) {
+        return 'connection_reset';
+      } else {
+        return 'fallback_mode';
+      }
+    }
+    
+    switch (errorType) {
+      case 'network':
+      case 'timeout':
+        return campaignMode ? 'fallback_mode' : 'component_refresh';
+      case 'sse':
+        return 'connection_reset';
+      case 'rate_limit':
+        return 'fallback_mode';
+      default:
+        return 'component_refresh';
+    }
+  };
+
+  // Activate fallback mode
+  activateFallbackMode = () => {
+    this.setState({ fallbackMode: 'polling' });
+    
+    if (this.sseConnectionManager) {
+      // Trigger fallback mode in connection manager
+      console.log('📡 Activating fallback mode through Connection Manager');
+    }
+  };
+
+  // Refresh component
+  refreshComponent = () => {
+    console.log('🔄 Refreshing component for recovery');
+    this.handleRetry();
+  };
+
+  // Reset connections
+  resetConnections = () => {
+    if (this.sseConnectionManager) {
+      console.log('🔌 Resetting all SSE connections');
+      // Connection manager will handle reconnection
+    }
   };
 
   classifyError = (error) => {
@@ -129,31 +312,81 @@ class SSEErrorBoundary extends React.Component {
   };
 
   handleRetry = () => {
-    if (this.state.retryCount >= this.maxRetries) {
+    const { campaignMode, retryCount } = this.state;
+    const effectiveMaxRetries = campaignMode ? this.maxRetries * 2 : this.maxRetries;
+    
+    if (retryCount >= effectiveMaxRetries) {
+      // Max retries reached - activate fallback strategy
+      if (campaignMode) {
+        console.log('🚨 Campaign mode: Max retries reached, activating emergency fallback');
+        this.activateEmergencyFallback();
+      }
       return;
     }
 
-    const newRetryCount = this.state.retryCount + 1;
+    const newRetryCount = retryCount + 1;
     
     this.setState({
       retryCount: newRetryCount,
       hasError: false,
       error: null,
       errorInfo: null,
-      errorType: null
+      errorType: null,
+      recoveryStrategy: null
     });
 
     // If we're at max retries, don't schedule another retry
-    if (newRetryCount >= this.maxRetries) {
+    if (newRetryCount >= effectiveMaxRetries) {
       return;
     }
 
-    // Schedule next retry with exponential backoff
-    const delay = this.retryDelay * Math.pow(2, newRetryCount - 1);
+    // Campaign-aware retry delay
+    const baseDelay = campaignMode ? this.campaignRetryDelay : this.retryDelay;
+    let delay;
+    
+    if (campaignMode) {
+      // Faster initial retries for campaign mode, then exponential backoff
+      if (newRetryCount <= 3) {
+        delay = baseDelay;
+      } else if (newRetryCount <= 6) {
+        delay = baseDelay * 2;
+      } else {
+        delay = baseDelay * Math.pow(1.5, newRetryCount - 6);
+      }
+    } else {
+      // Standard exponential backoff
+      delay = baseDelay * Math.pow(2, newRetryCount - 1);
+    }
+    
+    // Cap delay at reasonable maximum
+    delay = Math.min(delay, 30000); // Max 30 seconds
+
+    console.log(`🔄 Retry ${newRetryCount}/${effectiveMaxRetries} scheduled in ${delay}ms ${campaignMode ? '(Campaign Mode)' : ''}`);
+    
     this.retryTimer = setTimeout(() => {
       // The component will re-mount and retry automatically
       this.forceUpdate();
     }, delay);
+  };
+
+  // Activate emergency fallback for campaign mode
+  activateEmergencyFallback = () => {
+    this.setState({
+      fallbackMode: 'emergency',
+      recoveryStrategy: 'emergency_fallback'
+    });
+    
+    // Emit emergency event for campaign teams
+    const emergencyEvent = new CustomEvent('sse_emergency_fallback', {
+      detail: {
+        component: this.props.componentName || 'SSE Component',
+        timestamp: Date.now(),
+        retryCount: this.state.retryCount,
+        errorType: this.state.errorType
+      }
+    });
+    
+    document.dispatchEvent(emergencyEvent);
   };
 
   handleReset = () => {
@@ -243,7 +476,11 @@ class SSEErrorBoundary extends React.Component {
       error, 
       retryCount, 
       isOnline,
-      errorType 
+      errorType,
+      campaignMode,
+      connectionHealth,
+      fallbackMode,
+      recoveryStrategy
     } = this.state;
     
     const { 
@@ -264,7 +501,8 @@ class SSEErrorBoundary extends React.Component {
 
     const errorDisplay = this.getErrorDisplay();
     const Icon = errorDisplay.icon;
-    const canRetry = enableRetry && errorDisplay.canRetry && retryCount < this.maxRetries;
+    const effectiveMaxRetries = campaignMode ? this.maxRetries * 2 : this.maxRetries;
+    const canRetry = enableRetry && errorDisplay.canRetry && retryCount < effectiveMaxRetries;
 
     return (
       <div className={`border border-${errorDisplay.color}-200 bg-${errorDisplay.color}-50 rounded-lg p-6`}>
@@ -278,6 +516,26 @@ class SSEErrorBoundary extends React.Component {
               </h3>
               
               <div className="flex items-center space-x-2">
+                {/* Campaign mode indicator */}
+                {campaignMode && (
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                    Campaign Mode
+                  </span>
+                )}
+                
+                {/* Fallback mode indicator */}
+                {fallbackMode !== 'none' && (
+                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                    fallbackMode === 'emergency' ? 'bg-red-100 text-red-800' :
+                    fallbackMode === 'offline' ? 'bg-gray-100 text-gray-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {fallbackMode === 'emergency' ? 'Emergency' : 
+                     fallbackMode === 'offline' ? 'Offline' :
+                     'Fallback'}
+                  </span>
+                )}
+                
                 {/* Connection status */}
                 <div className="flex items-center space-x-1">
                   <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -289,7 +547,7 @@ class SSEErrorBoundary extends React.Component {
                 {/* Retry count indicator */}
                 {retryCount > 0 && (
                   <span className="text-xs text-gray-600">
-                    Attempt {retryCount}/{this.maxRetries}
+                    Attempt {retryCount}/{effectiveMaxRetries}
                   </span>
                 )}
               </div>

@@ -36,6 +36,14 @@ export const useKeyboardShortcuts = ({
     's': () => openStrategistTab(),
     'm': () => focusMap(),
     
+    // Sprint 2 Enhanced Features
+    'k': (event) => event.ctrlKey ? openWardSearchModal() : null, // Ctrl+K for ward search
+    'F11': () => toggleFullScreenMode(), // Alt+F for full screen
+    
+    // Executive Summary Navigation (Arrow keys)
+    'ArrowUp': (event) => event.target.closest('[data-component="executive-summary"]') ? navigateExecutiveSummary('up') : null,
+    'ArrowDown': (event) => event.target.closest('[data-component="executive-summary"]') ? navigateExecutiveSummary('down') : null,
+    
     // Accessibility
     'Escape': () => closeModals(),
     '?': () => showKeyboardHelp(),
@@ -151,6 +159,50 @@ export const useKeyboardShortcuts = ({
     announceAction('Viewing area pulse');
   }, [onTabChange]);
 
+  // Sprint 2 Enhanced Features
+  const openWardSearchModal = useCallback(() => {
+    // Dispatch event to open ward search modal
+    window.dispatchEvent(new CustomEvent('lokdarpan:open-ward-search'));
+    announceAction('Opening ward search');
+  }, []);
+
+  const toggleFullScreenMode = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      announceAction('Exited full screen');
+    } else {
+      document.documentElement.requestFullscreen?.();
+      announceAction('Entered full screen');
+    }
+  }, []);
+
+  const navigateExecutiveSummary = useCallback((direction) => {
+    const summaryCards = document.querySelectorAll('[data-component="executive-summary"] [data-card-index]');
+    const focusedCard = document.activeElement.closest('[data-card-index]');
+    
+    if (!summaryCards.length) return;
+    
+    let currentIndex = focusedCard ? 
+      parseInt(focusedCard.getAttribute('data-card-index')) : 0;
+    
+    if (direction === 'up' && currentIndex > 0) {
+      currentIndex--;
+    } else if (direction === 'down' && currentIndex < summaryCards.length - 1) {
+      currentIndex++;
+    } else if (direction === 'up') {
+      currentIndex = summaryCards.length - 1; // Wrap to last
+    } else {
+      currentIndex = 0; // Wrap to first
+    }
+    
+    const targetCard = summaryCards[currentIndex];
+    if (targetCard) {
+      targetCard.focus();
+      targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      announceAction(`Focused summary card ${currentIndex + 1} of ${summaryCards.length}`);
+    }
+  }, []);
+
   const announceAction = useCallback((message) => {
     // Create accessible announcement for screen readers
     const announcement = document.createElement('div');
@@ -186,8 +238,23 @@ export const useKeyboardShortcuts = ({
     const key = event.key;
     const hasModifier = event.ctrlKey || event.metaKey || event.altKey;
     
-    // Allow Ctrl/Cmd shortcuts to pass through
-    if (hasModifier && !['Escape', 'F1'].includes(key)) {
+    // Special handling for Sprint 2 enhanced shortcuts
+    if (event.ctrlKey && key.toLowerCase() === 'k') {
+      event.preventDefault();
+      event.stopPropagation();
+      openWardSearchModal();
+      return;
+    }
+    
+    if (event.altKey && key.toLowerCase() === 'f') {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleFullScreenMode();
+      return;
+    }
+    
+    // Allow other Ctrl/Cmd shortcuts to pass through (except our custom ones)
+    if (hasModifier && !['Escape', 'F1', 'F11'].includes(key)) {
       return;
     }
     

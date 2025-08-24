@@ -13,6 +13,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, Activity, CheckCircle2, Clock, Wifi, WifiOff, Play, Pause, RotateCcw, Settings, TrendingUp, Shield, Zap } from 'lucide-react';
 import { useEnhancedSSE } from '../hooks/useEnhancedSSE';
 import SSEErrorBoundary from '../../../components/SSEErrorBoundary';
+import SSEProgressIndicator from '../../../components/SSEProgressIndicator';
+import SSEConnectionManager from '../../../lib/SSEConnectionManager';
 
 const StrategistStream = ({ 
   ward, 
@@ -41,7 +43,11 @@ const StrategistStream = ({
     includeConfidence: true
   });
 
-  // Enhanced SSE hook with streaming support
+  // Enhanced SSE connection through centralized manager
+  const [sseClient, setSSEClient] = useState(null);
+  const [connectionHealth, setConnectionHealth] = useState(null);
+  
+  // Enhanced SSE hook with streaming support and connection manager integration
   const {
     connectionState,
     isConnected,
@@ -53,9 +59,12 @@ const StrategistStream = ({
     status
   } = useEnhancedSSE(ward, {
     baseUrl: '/api/v1/multimodel',
-    maxRetries: 3,
+    campaignMode: true,
+    maxRetries: 20, // Extended retries for campaign mode
     retryBaseDelay: 2000,
-    heartbeatInterval: 30000
+    heartbeatInterval: 30000,
+    priorityRecovery: true,
+    fallbackEnabled: true
   });
 
   // Stream event handlers
@@ -135,57 +144,140 @@ const StrategistStream = ({
     }
   });
 
-  // Start streaming analysis
-  const startAnalysis = useCallback(() => {
-    if (!ward || streamState.isActive) return;
+  // Initialize SSE connection through centralized manager
+  useEffect(() => {
+    if (!ward || ward === 'All') return;
 
-    // Create custom SSE connection for streaming endpoint
-    const streamUrl = `/api/v1/multimodel/strategist/stream/${encodeURIComponent(ward)}?` + new URLSearchParams({
+    // Get managed connection from SSE Connection Manager
+    const client = SSEConnectionManager.getConnection(ward, {
+      mode: 'stream',
       depth: streamParams.depth,
       context: streamParams.context,
-      include_progress: streamParams.includeProgress.toString(),
-      include_confidence: streamParams.includeConfidence.toString()
+      includeProgress: streamParams.includeProgress,
+      includeConfidence: streamParams.includeConfidence,
+      campaignMode: true,
+      priorityRecovery: true
     });
 
-    const eventSource = new EventSource(streamUrl, { withCredentials: true });
-    
-    // Setup event listeners
-    eventSource.onopen = (event) => {
-      setStreamState(prev => ({ ...prev, error: null, isActive: true }));
-    };
+    setSSEClient(client);
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const handler = streamEventHandlers.current[data.type];
+    // Setup event handlers for managed connection
+    const setupConnectionHandlers = () => {
+      // Connection events
+      client.on('connect', (data) => {
+        setStreamState(prev => ({
+          ...prev,
+          error: null,
+          isActive: true,
+          connectionQuality: 'excellent'
+        }));
+        setConnectionHealth(data);
+      });
+
+      client.on('disconnect', (data) => {
+        setStreamState(prev => ({
+          ...prev,
+          isActive: false,
+          connectionQuality: 'poor',
+          error: data.reason === 'manual_disconnect' ? null : 'Connection lost'
+        }));
+      });
+
+      client.on('error', (data) => {
+        setStreamState(prev => ({
+          ...prev,
+          error: data.error,
+          isActive: false,
+          connectionQuality: 'critical'
+        }));
+      });
+
+      // Analysis events
+      client.on('multimodel-analysis', (data) => {
+        const handler = streamEventHandlers.current['analysis-complete'];
         if (handler) {
           handler(data);
         }
-      } catch (error) {
-        console.warn('Failed to parse SSE message:', error);
+      });
+
+      client.on('analysis-progress', (data) => {
+        const handler = streamEventHandlers.current['analysis-progress'];
+        if (handler) {
+          handler(data);
+        }
+      });
+
+      client.on('confidence-update', (data) => {
+        const handler = streamEventHandlers.current['confidence-update'];
+        if (handler) {
+          handler(data);
+        }
+      });
+
+      // Fallback mode events
+      client.on('fallback_activated', (data) => {
+        setStreamState(prev => ({
+          ...prev,
+          connectionQuality: 'fair',
+          fallbackMode: data.mode
+        }));
+      });
+
+      client.on('fallback_data', (data) => {
+        // Handle fallback data similar to real-time events
+        const handler = streamEventHandlers.current['analysis-progress'];
+        if (handler && data.progress) {
+          handler(data);
+        }
+      });
+    };
+
+    setupConnectionHandlers();
+
+    return () => {
+      // Cleanup handled by SSE Connection Manager
+      if (client) {
+        client.off('connect');
+        client.off('disconnect'); 
+        client.off('error');
+        client.off('multimodel-analysis');
+        client.off('analysis-progress');
+        client.off('confidence-update');
+        client.off('fallback_activated');
+        client.off('fallback_data');
       }
     };
+  }, [ward, streamParams]);
 
-    eventSource.onerror = (event) => {
-      console.error('SSE connection error:', event);
-      setStreamState(prev => ({ 
-        ...prev, 
-        error: 'Connection lost', 
-        isActive: false,
-        connectionQuality: 'poor' 
-      }));
-      eventSource.close();
-    };
+  // Start streaming analysis through managed connection
+  const startAnalysis = useCallback(() => {
+    if (!ward || streamState.isActive || !sseClient) return;
 
-    // Store event source for cleanup
-    streamState.eventSource = eventSource;
-  }, [ward, streamParams, streamState.isActive]);
+    console.log('🚀 Starting strategic analysis stream for:', ward);
+    
+    setStreamState(prev => ({
+      ...prev,
+      isActive: true,
+      currentStage: 'initializing',
+      progress: 0,
+      error: null
+    }));
 
-  // Stop streaming analysis
+    // Connect with current parameters
+    sseClient.connect();
+    
+    // Trigger analysis start event
+    streamEventHandlers.current['analysis-start']({
+      ward,
+      parameters: streamParams,
+      estimated_duration: streamParams.depth === 'quick' ? 30 : streamParams.depth === 'deep' ? 180 : 90
+    });
+  }, [ward, streamParams, streamState.isActive, sseClient]);
+
+  // Stop streaming analysis through managed connection
   const stopAnalysis = useCallback(() => {
-    if (streamState.eventSource) {
-      streamState.eventSource.close();
-      streamState.eventSource = null;
+    if (sseClient) {
+      sseClient.disconnect();
     }
     
     setStreamState(prev => ({
@@ -194,7 +286,7 @@ const StrategistStream = ({
       currentStage: null,
       progress: 0
     }));
-  }, [streamState.eventSource]);
+  }, [sseClient]);
 
   // Reset analysis state
   const resetAnalysis = useCallback(() => {
@@ -206,18 +298,29 @@ const StrategistStream = ({
       confidence: null,
       eta: null,
       analysisResult: null,
-      error: null
+      error: null,
+      connectionQuality: 'unknown'
     }));
   }, [stopAnalysis]);
 
-  // Cleanup on unmount
+  // Enhanced reconnection through managed connection
+  const handleReconnect = useCallback(() => {
+    if (sseClient) {
+      console.log('🔄 Manual reconnection requested');
+      sseClient.reconnect();
+    } else {
+      // Fallback to hook-based reconnection
+      reconnect();
+    }
+  }, [sseClient, reconnect]);
+
+  // Cleanup on unmount - handled by SSE Connection Manager
   useEffect(() => {
     return () => {
-      if (streamState.eventSource) {
-        streamState.eventSource.close();
-      }
+      // Connection manager handles cleanup automatically
+      console.log('🧹 StrategistStream unmounting - cleanup handled by SSE Manager');
     };
-  }, [streamState.eventSource]);
+  }, []);
 
   // Stage display configuration
   const getStageDisplay = (stage) => {
@@ -418,18 +521,28 @@ const StrategistStream = ({
           disabled={streamState.isActive}
         />
         
-        {/* Progress Display */}
-        {streamState.isActive && (
-          <ProgressBar 
+        {/* Enhanced Progress Display with SSE Progress Indicator */}
+        {(streamState.isActive || streamState.analysisResult) && (
+          <SSEProgressIndicator 
             progress={streamState.progress}
-            stage={streamState.currentStage}
+            connectionStatus={{
+              isConnected,
+              connectionQuality: streamState.connectionQuality,
+              fallbackMode: streamState.fallbackMode
+            }}
+            analysisStage={streamState.currentStage}
             eta={streamState.eta}
+            confidence={streamState.confidence}
+            fallbackMode={streamState.fallbackMode || 'none'}
+            campaignMode={true}
+            sessionId={sseClient?.sessionId || 'unknown'}
+            size="medium"
+            showDetails={true}
+            showConnectionHealth={true}
+            onRetryConnection={handleReconnect}
+            onPauseAnalysis={streamState.isActive ? stopAnalysis : null}
+            onResumeAnalysis={!streamState.isActive && streamState.currentStage ? startAnalysis : null}
           />
-        )}
-        
-        {/* Confidence Display */}
-        {streamState.confidence && (
-          <ConfidenceIndicator confidence={streamState.confidence} />
         )}
         
         {/* Error Display */}
@@ -502,7 +615,7 @@ const StrategistStream = ({
           
           {streamState.error && !streamState.isActive && (
             <button
-              onClick={reconnect}
+              onClick={handleReconnect}
               className="flex items-center space-x-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
             >
               <Wifi size={16} />

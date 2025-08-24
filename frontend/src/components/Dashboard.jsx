@@ -4,6 +4,7 @@ import axios from "axios";
 // Loading components
 import { LoadingSpinner, CardSkeleton } from "./ui/LoadingSkeleton.jsx";
 import { useKeyboardShortcuts, useKeyboardShortcutsHelp } from "../hooks/useKeyboardShortcuts.js";
+import { SkipNavigation, LiveRegion, KeyboardNavigationIndicator } from "./ui/AccessibilityEnhancements.jsx";
 import { KeyboardShortcutsIndicator } from "./ui/KeyboardShortcutsIndicator.jsx";
 
 // Enhanced lazy loaded tab components for performance optimization
@@ -33,6 +34,7 @@ import {
 import DashboardTabs from "./DashboardTabs.jsx";
 import ExecutiveSummary from "./ExecutiveSummary.jsx";
 import CollapsibleSection from "./CollapsibleSection.jsx";
+import LanguageSwitcher from "./LanguageSwitcher.jsx";
 
 // Stream A Integration
 import { useEnhancedSSE } from "../features/strategist/hooks/useEnhancedSSE";
@@ -234,15 +236,25 @@ export default function Dashboard() {
     setActiveTab(tabId);
   };
 
-  // Keyboard shortcuts integration
-  const { getShortcutInfo, announceAction } = useKeyboardShortcuts({
+  // Professional keyboard shortcuts integration
+  const { 
+    getShortcutInfo, 
+    announceAction, 
+    isNavigatingWithKeyboard, 
+    focusVisible 
+  } = useKeyboardShortcuts({
     onWardSelect: setSelectedWard,
     onTabChange: handleTabChange,
     wardOptions,
     currentWard: selectedWard,
     currentTab: activeTab,
-    isEnabled: true
+    isEnabled: true,
+    accessibilityMode: true,
+    announceActions: true
   });
+  
+  // Live region for accessibility announcements
+  const [liveMessage, setLiveMessage] = useState('');
   
   // Initialize keyboard shortcuts help system
   useKeyboardShortcutsHelp();
@@ -355,6 +367,14 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Skip Navigation for Accessibility */}
+      <SkipNavigation />
+      
+      {/* Keyboard Navigation Indicator */}
+      <KeyboardNavigationIndicator isActive={isNavigatingWithKeyboard} />
+      
+      {/* Live Region for Screen Reader Announcements */}
+      <LiveRegion message={liveMessage} />
       {/* Tab Navigation */}
       <DashboardTabs
         activeTab={activeTab}
@@ -371,7 +391,7 @@ export default function Dashboard() {
             <span>Refreshing dashboard data...</span>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">Emotion Filter</label>
             <select
@@ -417,6 +437,11 @@ export default function Dashboard() {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
+          </div>
+          
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">Language</label>
+            <LanguageSwitcher className="w-full" />
           </div>
         </div>
       </div>

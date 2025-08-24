@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { joinApi } from '../lib/api';
+import { ExecutiveSummarySkeleton, SmoothTransition } from './ui/LoadingSkeleton';
 
 // Helper function to calculate campaign health score
 const calculateCampaignHealth = (sentimentData, engagementData, momentum) => {
@@ -27,7 +28,7 @@ const calculateCampaignHealth = (sentimentData, engagementData, momentum) => {
   return Math.round((sentimentScore * 0.4) + (engagementScore * 0.3) + (momentumScore * 0.3));
 };
 
-// Individual summary card component
+// Individual summary card component with Sprint 2 enhancements
 const SummaryCard = ({ 
   title, 
   value, 
@@ -37,7 +38,8 @@ const SummaryCard = ({
   onClick = null,
   loading = false,
   subtitle = null,
-  actionLabel = null
+  actionLabel = null,
+  cardIndex = 0 // For keyboard navigation
 }) => {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -53,12 +55,23 @@ const SummaryCard = ({
   return (
     <div 
       className={`
-        p-4 rounded-lg border transition-all duration-200 cursor-pointer
+        executive-summary-card p-4 rounded-lg border transition-smooth
         ${colorClasses[color] || colorClasses.blue}
         ${onClick ? 'hover:shadow-md transform hover:-translate-y-0.5' : ''}
-        ${loading ? 'animate-pulse' : ''}
+        ${loading ? 'animate-pulse-enhanced' : ''}
       `}
       onClick={onClick}
+      tabIndex={0}
+      role="button"
+      aria-label={`${title}: ${loading ? 'Loading' : value}${trend !== null ? `, trend ${trend > 0 ? 'up' : 'down'} ${Math.abs(trend)}%` : ''}`}
+      data-card-index={cardIndex}
+      data-component="executive-summary-card"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
     >
       <div className="flex items-center justify-between mb-2">
         <Icon className="w-5 h-5" />
@@ -261,13 +274,16 @@ const ExecutiveSummary = ({
   }
 
   return (
-    <div className={`executive-summary space-y-4 ${className}`}>
+    <div className={`executive-summary space-y-4 ${className}`} data-component="executive-summary">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Campaign Overview</h2>
           <p className="text-sm text-gray-600">
             {selectedWard === 'All' ? 'All Wards' : selectedWard} • Executive Summary
+            {loading && (
+              <span className="ml-2 text-blue-600 animate-pulse-enhanced">Loading...</span>
+            )}
           </p>
         </div>
         {lastUpdated && (
@@ -278,8 +294,13 @@ const ExecutiveSummary = ({
         )}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Summary Cards with Smooth Transition */}
+      <SmoothTransition
+        loading={loading && !campaignHealth}
+        skeleton={<ExecutiveSummarySkeleton />}
+        duration={300}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Campaign Health */}
         <SummaryCard
           title="Campaign Health"
@@ -288,10 +309,11 @@ const ExecutiveSummary = ({
           icon={Activity}
           color={campaignHealth?.status === 'good' ? 'green' : 
                 campaignHealth?.status === 'caution' ? 'orange' : 'red'}
-          onClick={() => onNavigateToTab?.('sentiment')}
-          actionLabel="View Sentiment"
+          onClick={() => onNavigateToTab?.('overview')}
+          actionLabel="View Overview"
           loading={loading}
           subtitle={campaignHealth?.status || 'Calculating...'}
+          cardIndex={0}
         />
 
         {/* Top Issues */}
@@ -301,15 +323,17 @@ const ExecutiveSummary = ({
           icon={Users}
           color="blue"
           onClick={() => onNavigateToTab?.('sentiment')}
-          actionLabel="View Topics"
+          actionLabel="View Sentiment"
           loading={loading}
           subtitle={topIssues[0] ? `${topIssues[0].mentions} mentions` : 'No trending topics'}
+          cardIndex={1}
         />
 
         {/* Competitive Position */}
         <SummaryCard
           title="Leading Party"
           value={loading ? '...' : competitivePosition?.leading || 'No Data'}
+          cardIndex={2}
           trend={competitivePosition?.trend}
           icon={Target}
           color="purple"
@@ -326,9 +350,10 @@ const ExecutiveSummary = ({
           icon={AlertTriangle}
           color={criticalAlerts.length > 0 ? 'red' : 'green'}
           onClick={() => onNavigateToTab?.('overview')}
-          actionLabel="View Alerts"
+          actionLabel="View Overview"
           loading={loading}
           subtitle={criticalAlerts.length > 0 ? 'Requires attention' : 'All clear'}
+          cardIndex={3}
         />
 
         {/* Momentum */}
@@ -340,11 +365,13 @@ const ExecutiveSummary = ({
           color={momentum?.engagement >= 60 ? 'green' : 
                 momentum?.engagement >= 40 ? 'orange' : 'red'}
           onClick={() => onNavigateToTab?.('sentiment')}
-          actionLabel="View Trends"
+          actionLabel="View Engagement"
           loading={loading}
           subtitle={momentum ? `${momentum.posts} posts analyzed` : 'Calculating...'}
+          cardIndex={4}
         />
       </div>
+      </SmoothTransition>
 
       {/* Quick Insights */}
       {!loading && (topIssues.length > 0 || criticalAlerts.length > 0) && (

@@ -48,7 +48,15 @@ function fmtDate(d) {
   }
 }
 
-export default function TimeSeriesChart({ ward = "All", days = 30 }) {
+// Professional Time Series Chart with Performance Optimizations
+const TimeSeriesChart = memo(function TimeSeriesChart({ 
+  ward = "All", 
+  days = 30,
+  onDataLoad,
+  onError,
+  animationEnabled = true,
+  height = 300
+}) {
   const [series, setSeries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -199,43 +207,64 @@ export default function TimeSeriesChart({ ward = "All", days = 30 }) {
   }
 
   return (
-    <div className="w-full h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={series} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" minTickGap={20} />
-          <YAxis yAxisId="left" />
-          <YAxis yAxisId="right" orientation="right" />
-          <Tooltip />
-          <Legend />
-          {/* Mentions on right axis */}
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="mentions"
-            stroke="#64748b"
-            strokeWidth={2}
-            dot={false}
-            name="Mentions (total)"
-          />
-          {/* A few key emotions by default; you can turn on all if you like */}
-          {["Positive", "Anger", "Negative"].map((k) => (
-            <Line
-              key={k}
-              yAxisId="left"
-              type="monotone"
-              dataKey={k}
-              stroke={EMOTION_COLORS[k]}
-              strokeWidth={2}
-              dot={false}
-              name={k}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <EnhancedCard className="p-4 professional-card" hoverable glowOnHover>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <MicroInteraction type="hover" intensity="subtle">
+            <TrendingUp className="h-5 w-5 text-blue-500" />
+          </MicroInteraction>
+          <div>
+            <h3 className="font-semibold text-gray-900">
+              Sentiment Trends Over Time
+            </h3>
+            <p className="text-sm text-gray-600">
+              {ward !== 'All' ? ward : 'All Wards'} • Last {days} days
+            </p>
+          </div>
+        </div>
+        
+        {lastUpdated && (
+          <div className="text-xs text-gray-500 text-right">
+            <div>Updated:</div>
+            <div className="font-mono">{lastUpdated.toLocaleTimeString()}</div>
+          </div>
+        )}
+      </div>
+      
+      <ProfessionalLineChart
+        data={series}
+        lines={chartLines}
+        height={height}
+        animationDuration={animationEnabled ? 1000 : 0}
+        staggerDelay={animationEnabled ? 150 : 0}
+        className="chart-professional-enter"
+        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+        showGrid={true}
+        showTooltip={true}
+        showLegend={true}
+        responsive={true}
+      />
+      
+      {/* Data quality indicator */}
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+        <div className="flex items-center space-x-2">
+          <div className={`w-2 h-2 rounded-full ${
+            hasData ? 'bg-green-500' : 'bg-yellow-500'
+          }`} />
+          <span className="text-xs text-gray-600">
+            {series.length} data points
+          </span>
+        </div>
+        
+        <div className="text-xs text-gray-500">
+          {hasData ? 'Live data' : 'No activity'}
+        </div>
+      </div>
+    </EnhancedCard>
   );
-}
+});
+
+export default TimeSeriesChart;
 
 /**
  * Fallback Data Table Component
