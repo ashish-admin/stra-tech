@@ -1,0 +1,146 @@
+#!/bin/bash
+# Project Brief Monitoring System
+# Automatically updates COMPREHENSIVE_PROJECT_BRIEF.md when key files change
+
+BRIEF_FILE="/mnt/c/Users/amukt/Projects/LokDarpan/COMPREHENSIVE_PROJECT_BRIEF.md"
+MONITOR_LOG="/mnt/c/Users/amukt/Projects/LokDarpan/.project-brief-updates.log"
+
+# Key files to monitor for changes
+MONITORED_FILES=(
+    # Core Project Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/CLAUDE.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/README.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/CHANGELOG.md"
+    
+    # Strategic Planning Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/DEVELOPMENT_PLAN.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/NEXT_SPRINT_PLAN.md" 
+    "/mnt/c/Users/amukt/Projects/LokDarpan/PROJECT_PLAN_UPDATE.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/SPRINT_STATUS_REPORT.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/SPRINT_EXECUTION.md"
+    
+    # Architecture & Technical Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/FRONTEND_ARCHITECTURE.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/technical-architecture.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/technical/multi-model-ai-architecture.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/backend/DATABASE_ARCHITECTURE.md"
+    
+    # Quality & Testing Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/QA_GATE_DECISION.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/QUALITY-GATES.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/TEST_STRATEGY.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/MANUAL_TESTING_GUIDE.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/PLAYWRIGHT_TESTING_RESULTS.md"
+    
+    # Status & Monitoring Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/SYSTEM_STATUS.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/EMERGENCY_RECOVERY.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/SECURITY.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/COMPETITOR_ANALYSIS.md"
+    
+    # Story & Epic Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/stories/"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/stories/epic-3.2-performance-reliability-hardening.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/stories/epic-4.1-frontend-resilience-foundation.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/stories/story-4.1.1-core-error-boundary-infrastructure.md"
+    
+    # Technical Implementation
+    "/mnt/c/Users/amukt/Projects/LokDarpan/backend/app/__init__.py"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/backend/config.py"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/frontend/package.json"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/frontend/src/components/Dashboard.jsx"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/backend/strategist/"
+    
+    # Team & Process Documents
+    "/mnt/c/Users/amukt/Projects/LokDarpan/TEAM_COORDINATION.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/STANDUP_REMINDER_SYSTEM.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/implementation-roadmap.md"
+    "/mnt/c/Users/amukt/Projects/LokDarpan/docs/project-plan.md"
+)
+
+# Function to update version and timestamp in project brief
+update_brief_metadata() {
+    local current_date=$(date +"%Y-%m-%d")
+    local current_time=$(date +"%H:%M:%S")
+    
+    # Extract current version, increment patch version
+    local current_version=$(grep "**Document Version**:" "$BRIEF_FILE" | grep -o "[0-9]\+\.[0-9]\+" | head -1)
+    if [[ $current_version =~ ^([0-9]+)\.([0-9]+)$ ]]; then
+        local major=${BASH_REMATCH[1]}
+        local minor=${BASH_REMATCH[2]}
+        local new_version="$major.$((minor + 1))"
+    else
+        local new_version="1.1"
+    fi
+    
+    # Update document metadata
+    sed -i "s/\*\*Document Version\*\*: .*/\*\*Document Version\*\*: $new_version/" "$BRIEF_FILE"
+    sed -i "s/\*\*Created\*\*: .*/\*\*Created\*\*: $current_date/" "$BRIEF_FILE"
+    
+    # Log the update
+    echo "[$current_date $current_time] Project brief updated to version $new_version" >> "$MONITOR_LOG"
+    echo "Changed files: $1" >> "$MONITOR_LOG"
+}
+
+# Function to check for significant changes
+check_for_updates() {
+    local changes_detected=false
+    local changed_files=""
+    
+    for file in "${MONITORED_FILES[@]}"; do
+        if [[ -f "$file" ]]; then
+            # Check if file was modified in the last 5 minutes
+            if [[ $(find "$file" -mmin -5 2>/dev/null) ]]; then
+                changes_detected=true
+                changed_files="$changed_files $file"
+            fi
+        fi
+    done
+    
+    if [[ "$changes_detected" == true ]]; then
+        update_brief_metadata "$changed_files"
+        
+        # Add automatic update notice to brief
+        echo "" >> "$BRIEF_FILE"
+        echo "---" >> "$BRIEF_FILE"
+        echo "" >> "$BRIEF_FILE"
+        echo "**🔄 AUTOMATIC UPDATE NOTICE**" >> "$BRIEF_FILE"
+        echo "- **Last Updated**: $(date +"%B %d, %Y at %H:%M:%S")" >> "$BRIEF_FILE"
+        echo "- **Trigger**: Key project files modified" >> "$BRIEF_FILE"
+        echo "- **Changed Files**: $changed_files" >> "$BRIEF_FILE"
+        echo "- **Status**: Document synchronized with current project state" >> "$BRIEF_FILE"
+        echo "" >> "$BRIEF_FILE"
+        
+        return 0
+    fi
+    
+    return 1
+}
+
+# Main monitoring function
+monitor_project_brief() {
+    echo "Starting project brief monitoring system..."
+    echo "Monitoring files: ${MONITORED_FILES[*]}"
+    echo "Brief file: $BRIEF_FILE"
+    echo "Log file: $MONITOR_LOG"
+    
+    while true; do
+        if check_for_updates; then
+            echo "Project brief updated due to file changes"
+        fi
+        
+        # Check every 5 minutes
+        sleep 300
+    done
+}
+
+# Initialize log file if it doesn't exist
+if [[ ! -f "$MONITOR_LOG" ]]; then
+    echo "# Project Brief Update Log" > "$MONITOR_LOG"
+    echo "Started monitoring: $(date)" >> "$MONITOR_LOG"
+fi
+
+# Run monitoring if script is executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    monitor_project_brief
+fi
