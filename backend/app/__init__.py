@@ -46,15 +46,11 @@ from .heatmap_api import heatmap_bp
 # Political Strategist module - Check if exists
 strategist_bp = None
 try:
-    import sys
-    import os
-    # Add src to path temporarily
-    src_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src')
-    if src_path not in sys.path:
-        sys.path.insert(0, src_path)
+    # Try direct import first
     from strategist import strategist_bp
 except ImportError:
     try:
+        # Fallback to router import
         from strategist.router import strategist_bp
     except ImportError:
         print("Warning: Political Strategist module not available")
@@ -178,8 +174,13 @@ def create_app(config_class: str = "config.Config") -> Flask:
         app.register_blueprint(summary_bp)   # NEW
         app.register_blueprint(multimodel_bp)  # Multi-model AI API
         
-        # Register compatibility strategist API (always available)
-        app.register_blueprint(compat_strategist_bp)
+        # Register Political Strategist API - use advanced if available, else compatibility
+        if strategist_bp:
+            print("Advanced Political Strategist module available")
+            app.register_blueprint(strategist_bp)  # Register the actual strategist blueprint
+        else:
+            print("Using compatibility Political Strategist API")
+            app.register_blueprint(compat_strategist_bp)  # Only register compat if real one not available
         
         # Register enhanced error tracking and analytics
         app.register_blueprint(error_bp)
@@ -190,12 +191,6 @@ def create_app(config_class: str = "config.Config") -> Flask:
         
         # Initialize error tracking system
         init_error_tracking(app)
-        
-        if strategist_bp:
-            print("Advanced Political Strategist module available")
-            # Could register advanced features here
-        else:
-            print("Using compatibility Political Strategist API")
         
         print("Enhanced error tracking and analytics system initialized")
         
