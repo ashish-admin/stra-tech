@@ -14,7 +14,8 @@
     "test:interactive": "vitest --run src/test/interactive",
     "test:interactive:watch": "vitest --watch src/test/interactive",
     "test:performance": "vitest --run src/test/interactive/Performance.test.jsx",
-    "test:ux": "vitest --run src/test/interactive/UserExperience.test.jsx"
+    "test:ux": "vitest --run src/test/interactive/UserExperience.test.jsx",
+    "lint": "echo 'No linter configured yet' && exit 0"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.3",
@@ -30,6 +31,7 @@
     "react-calendar-heatmap": "^1.9.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.2.0",
+    "react-error-boundary": "^6.0.0",
     "react-grid-layout": "^1.4.4",
     "react-i18next": "^15.1.0",
     "react-leaflet": "^4.2.1",
@@ -38,6 +40,7 @@
     "recharts": "^2.10.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@tanstack/react-query-devtools": "^5.85.3",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.3.0",
