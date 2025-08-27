@@ -1,0 +1,410 @@
+name: Frontend Enhancement CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+      - 'feature/phase*'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Phase to deploy (1-5)'
+        required: false
+        default: '1'
+
+env:
+  NODE_VERSION: '18.x'
+  PYTHON_VERSION: '3.11'
+  
+jobs:
+  # Job 1: Code Quality Checks
+  code-quality:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint -- --max-warnings 0
+      
+      - name: Run Prettier check
+        working-directory: frontend
+        run: npm run format:check
+      
+      - name: Check for security vulnerabilities
+        working-directory: frontend
+        run: npm audit --audit-level=moderate
+
+  # Job 2: Frontend Tests
+  frontend-tests:
+    name: Frontend Unit & Component Tests
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    strategy:
+      matrix:
+        shard: [1, 2, 3]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Run component tests (Shard ${{ matrix.shard }}/3)
+        working-directory: frontend
+        run: |
+          npm test -- \
+            --shard=${{ matrix.shard }}/3 \
+            --coverage \
+            --coverageReporters=json \
+            --coverageReporters=lcov
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: frontend/coverage
+          flags: frontend-shard-${{ matrix.shard }}
+          fail_ci_if_error: false
+
+  # Job 3: E2E Tests
+  e2e-tests:
+    name: E2E Tests with Playwright
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test123
+          POSTGRES_DB: lokdarpan_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+      
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Setup backend database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:test123@localhost/lokdarpan_test
+          FLASK_APP: app:create_app
+        run: |
+          flask db upgrade
+          python scripts/seed_test_data.py
+      
+      - name: Start backend server
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:test123@localhost/lokdarpan_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          FLASK_APP: app:create_app
+        run: |
+          flask run &
+          sleep 5
+      
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium firefox
+      
+      - name: Run E2E tests
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: http://localhost:5000
+        run: npm run test:e2e
+      
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+
+  # Job 4: Performance Tests
+  performance-tests:
+    name: Performance & Bundle Analysis
+    runs-on: ubuntu-latest
+    needs: [frontend-tests]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Build production bundle
+        working-directory: frontend
+        run: npm run build
+      
+      - name: Analyze bundle size
+        working-directory: frontend
+        run: |
+          npm run build:analyze > bundle-report.txt
+          cat bundle-report.txt
+          
+          # Check if bundle size exceeds limits
+          MAIN_BUNDLE_SIZE=$(grep -oP 'dist/assets/index-\w+\.js\s+\K\d+' bundle-report.txt || echo 0)
+          if [ "$MAIN_BUNDLE_SIZE" -gt 512000 ]; then
+            echo "❌ Main bundle exceeds 500KB limit: ${MAIN_BUNDLE_SIZE} bytes"
+            exit 1
+          fi
+      
+      - name: Lighthouse CI
+        working-directory: frontend
+        run: |
+          npm install -g @lhci/cli
+          npm run preview &
+          sleep 5
+          lhci autorun --config=lighthouserc.json
+      
+      - name: Upload performance artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-reports
+          path: |
+            frontend/bundle-report.txt
+            frontend/.lighthouseci/
+
+  # Job 5: Security Scanning
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: javascript, python
+      
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=frontend/package.json
+      
+      - name: Run TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+  # Job 6: Feature Flag Validation
+  feature-flag-validation:
+    name: Validate Feature Flags Configuration
+    runs-on: ubuntu-latest
+    needs: code-quality
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Validate feature flags
+        working-directory: frontend
+        run: |
+          node -e "
+          const fs = require('fs');
+          const features = require('./src/config/features.js');
+          
+          // Check all flags start as false
+          const flags = features.enhancementFlags;
+          let hasEnabledFlag = false;
+          
+          for (const [key, value] of Object.entries(flags)) {
+            if (value === true) {
+              console.error('❌ Feature flag ${key} is enabled by default!');
+              hasEnabledFlag = true;
+            }
+          }
+          
+          if (hasEnabledFlag) {
+            console.error('Feature flags must start as false for safety');
+            process.exit(1);
+          }
+          
+          console.log('✅ All feature flags are safely disabled by default');
+          "
+
+  # Job 7: Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging Environment
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, e2e-tests, performance-tests, security-scan, feature-flag-validation]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: Build for staging
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.STAGING_API_URL }}
+          VITE_ENV: staging
+          VITE_FEATURE_FLAGS_ENDPOINT: ${{ secrets.STAGING_FEATURE_FLAGS_URL }}
+        run: npm run build
+      
+      - name: Deploy to staging
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          destination_dir: staging
+          cname: staging.lokdarpan.app
+
+  # Job 8: Production Readiness Check
+  production-check:
+    name: Production Readiness Validation
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Validate production readiness
+        run: |
+          echo "🔍 Checking production readiness criteria..."
+          
+          # Check test coverage
+          COVERAGE=$(cat frontend/coverage/coverage-summary.json | jq '.total.lines.pct')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "❌ Test coverage below 80%: $COVERAGE%"
+            exit 1
+          fi
+          
+          # Check bundle size
+          if [ -f frontend/dist/assets/*.js ]; then
+            TOTAL_SIZE=$(du -sb frontend/dist/assets/*.js | awk '{sum+=$1} END {print sum}')
+            if [ "$TOTAL_SIZE" -gt 2097152 ]; then
+              echo "❌ Total bundle size exceeds 2MB: $TOTAL_SIZE bytes"
+              exit 1
+            fi
+          fi
+          
+          # Check for console.log statements
+          if grep -r "console\.log" frontend/src --exclude-dir=node_modules; then
+            echo "⚠️ Warning: console.log statements found"
+          fi
+          
+          echo "✅ Production readiness checks passed!"
+
+  # Job 9: Notify Status
+  notify:
+    name: Send Status Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: always()
+    
+    steps:
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "Frontend Enhancement CI/CD Pipeline Status",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Pipeline:* ${{ github.workflow }}\n*Status:* ${{ job.status }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
