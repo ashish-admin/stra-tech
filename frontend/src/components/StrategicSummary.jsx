@@ -10,6 +10,10 @@ import { useFeatureFlag } from "../features/strategist/hooks/useStrategist";
 import { useEnhancedSSE, useConfidenceScore } from "../features/strategist/hooks/useEnhancedSSE";
 import { ConfidenceScoreIndicator, ConnectionStatusIndicator } from "../features/strategist/components/ProgressIndicators";
 
+// Error boundary integration
+import { ProductionErrorBoundary } from "../shared/error/ProductionErrorBoundary.jsx";
+import { featureFlagManager } from "../config/features.js";
+
 const apiBase = import.meta.env.VITE_API_BASE_URL || "";
 
 function normalizeWard(label) {
@@ -217,8 +221,8 @@ function LegacyStrategicSummary({ selectedWard = "All" }) {
   );
 }
 
-// Enhanced Strategic Summary Component with Stream A Integration
-export default function StrategicSummary({ selectedWard = "All" }) {
+// Strategic Summary Component with Error Boundary Protection
+function StrategicSummaryCore({ selectedWard = "All" }) {
   const useAIMode = useFeatureFlag('ai-strategist') && selectedWard !== 'All';
   
   // Stream A's enhanced SSE integration
@@ -286,4 +290,136 @@ export default function StrategicSummary({ selectedWard = "All" }) {
   }
   
   return <LegacyStrategicSummary selectedWard={selectedWard} />;
+}
+
+// Enhanced Strategic Summary with Error Boundary Integration
+export default function StrategicSummary({ selectedWard = "All", onError, onDataRefetch }) {
+  const errorBoundariesEnabled = featureFlagManager.isEnabled('enableComponentErrorBoundaries');
+  const sseErrorBoundariesEnabled = featureFlagManager.isEnabled('enableSSEErrorBoundaries');
+  
+  // Political context for error reporting
+  const politicalContext = {
+    ward: selectedWard,
+    component: 'StrategicSummary',
+    operationType: selectedWard === 'All' ? 'legacy_analysis' : 'ai_strategic_analysis',
+    campaignCritical: true,
+    hasSSE: selectedWard !== 'All',
+    hasAI: selectedWard !== 'All'
+  };
+  
+  // Strategic Summary error context
+  const strategicErrorContext = {
+    ...politicalContext,
+    dataTypes: ['briefing', 'political_intelligence', 'strategic_recommendations'],
+    fallbackOptions: ['local_briefing', 'basic_analysis', 'cached_data'],
+    recoveryStrategies: ['api_retry', 'sse_reconnect', 'fallback_mode']
+  };
+  
+  // Fallback component for strategic analysis failures
+  const StrategicSummaryFallback = ({ error, errorId, retryCount, onRetry }) => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-gray-900">Strategic Analysis</h3>
+        <span className="text-xs text-red-500">Analysis Service Unavailable</span>
+      </div>
+      
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-yellow-800">
+              Strategic Intelligence Temporarily Unavailable
+            </h4>
+            <p className="mt-1 text-sm text-yellow-700">
+              The AI strategic analysis system is currently experiencing issues for ward "{selectedWard}". 
+              Campaign teams can continue with basic analysis or retry the connection.
+            </p>
+            <div className="mt-3 flex space-x-3">
+              <button
+                onClick={onRetry}
+                disabled={retryCount >= 3}
+                className="text-sm font-medium text-yellow-800 hover:text-yellow-900 disabled:opacity-50"
+              >
+                {retryCount >= 3 ? 'Max Retries Reached' : `Retry Analysis (${retryCount}/3)`}
+              </button>
+              {onDataRefetch && (
+                <button
+                  onClick={() => onDataRefetch('strategic_analysis')}
+                  className="text-sm font-medium text-yellow-800 hover:text-yellow-900"
+                >
+                  Switch to Basic Mode
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Emergency basic strategic information */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="font-semibold text-blue-800 mb-2">Basic Strategic Context</div>
+        <div className="text-sm text-blue-700 space-y-1">
+          <p>• Ward: {selectedWard}</p>
+          <p>• Status: AI analysis unavailable, using basic mode</p>
+          <p>• Campaign Impact: Strategic recommendations temporarily limited</p>
+          <p>• Suggested Action: Monitor for service restoration or contact technical team</p>
+        </div>
+      </div>
+    </div>
+  );
+  
+  // Recovery strategies for strategic analysis
+  const recoveryStrategies = {
+    ai_service_error: async (context) => {
+      // Try to reconnect SSE or fallback to legacy mode
+      if (context.hasSSE) {
+        // Force SSE reconnection
+        window.dispatchEvent(new CustomEvent('sse_reconnect', { detail: { ward: selectedWard } }));
+      }
+      return { success: true, action: 'sse_reconnect' };
+    },
+    api_timeout: async (context) => {
+      // Retry with shorter timeout
+      try {
+        const response = await axios.get(`${apiBase}/api/v1/pulse/${encodeURIComponent(selectedWard)}?days=7`, {
+          withCredentials: true,
+          timeout: 5000
+        });
+        return { success: true, data: response.data, action: 'quick_retry' };
+      } catch (error) {
+        return { success: false, action: 'fallback_mode' };
+      }
+    },
+    data_validation_error: async (context) => {
+      // Switch to legacy mode
+      return { success: true, action: 'fallback_legacy' };
+    }
+  };
+  
+  if (!errorBoundariesEnabled && !sseErrorBoundariesEnabled) {
+    return <StrategicSummaryCore selectedWard={selectedWard} />;
+  }
+  
+  return (
+    <ProductionErrorBoundary
+      context={strategicErrorContext}
+      fallbackComponent={StrategicSummaryFallback}
+      recoveryStrategies={recoveryStrategies}
+      onError={(error, errorId, context) => {
+        if (onError) onError(error, errorId, context);
+        console.warn(`StrategicSummary Error [${errorId}]:`, error, context);
+      }}
+      enableTelemetry={featureFlagManager.isEnabled('enableErrorTelemetry')}
+    >
+      <StrategicSummaryCore 
+        selectedWard={selectedWard}
+        onError={onError}
+        onDataRefetch={onDataRefetch}
+      />
+    </ProductionErrorBoundary>
+  );
 }
