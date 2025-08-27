@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { AlertTriangle, RefreshCw, Home, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, ChevronDown, ChevronUp, Activity } from 'lucide-react';
 import { getErrorQueue } from '../services/ErrorQueue';
 import { circuitBreakerRetry } from '../services/RetryStrategy';
 import { enhancementFlags } from '../../config/features';
+import { getTelemetryIntegration } from '../../services/telemetryIntegration';
 
 /**
  * Production-Ready Error Boundary with Telemetry
@@ -33,6 +34,9 @@ export class ProductionErrorBoundary extends Component {
       telemetryEndpoint: props.telemetryEndpoint || '/api/v1/telemetry/errors',
       maxQueueSize: 50
     });
+
+    // Initialize telemetry integration
+    this.telemetry = getTelemetryIntegration();
 
     // Initialize retry strategy
     this.retryStrategy = props.retryStrategy || circuitBreakerRetry;
@@ -110,12 +114,27 @@ export class ProductionErrorBoundary extends Component {
     // Send to error queue
     const errorId = this.errorQueue.push(errorData);
     
+    // Send to telemetry integration if available
+    if (this.telemetry && enhancementFlags.enableErrorTelemetry) {
+      this.telemetry.recordEvent('production_error_boundary', {
+        ...errorData,
+        errorId,
+        component: 'ProductionErrorBoundary',
+        political_context: {
+          ward: this.props.ward || this.getWardFromContext(),
+          user_role: this.props.userRole || 'unknown',
+          campaign_context: this.props.campaignContext || 'dashboard'
+        }
+      });
+    }
+    
     // Store metadata in WeakMap to prevent memory leaks
     this.errorMetadata.set(error, {
       reported: true,
       errorId,
       timestamp: Date.now(),
-      retryCount: 0
+      retryCount: 0,
+      telemetryReported: !!this.telemetry
     });
 
     // Update state with error ID
@@ -454,6 +473,14 @@ export class ProductionErrorBoundary extends Component {
                     <p className="mt-2 text-xs text-gray-500">
                       Error ID: <code className="bg-gray-100 px-1 rounded">{errorId}</code>
                     </p>
+                  )}
+                  {this.telemetry && enhancementFlags.enableErrorTelemetry && (
+                    <div className="mt-2 flex items-center space-x-1">
+                      <Activity className="h-3 w-3 text-green-500" />
+                      <span className="text-xs text-green-600">
+                        Telemetry active - Error reported automatically
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

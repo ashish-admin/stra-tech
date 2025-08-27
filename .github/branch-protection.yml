@@ -1,0 +1,47 @@
+# Branch Protection Rules for LokDarpan Frontend Enhancement
+# This file documents the protection rules - apply via GitHub Settings
+
+main:
+  protection_rules:
+    - required_status_checks:
+        strict: true
+        contexts:
+          - continuous-integration/github-actions
+          - quality-gates
+          - bundle-size-check
+          - test-coverage (minimum 80%)
+    - required_pull_request_reviews:
+        required_approving_review_count: 2
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+    - enforce_admins: false
+    - restrictions:
+        users: []
+        teams: ["frontend-team", "tech-leads"]
+    - allow_force_pushes: false
+    - allow_deletions: false
+
+develop:
+  protection_rules:
+    - required_status_checks:
+        strict: true
+        contexts:
+          - continuous-integration/github-actions
+          - lint-check
+          - test-suite
+          - bundle-analyzer
+    - required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+    - enforce_admins: false
+    - allow_force_pushes: false
+    - allow_deletions: false
+
+feature_branches:
+  naming_pattern: "feature/*"
+  policies:
+    - daily_rebase_from_develop: true
+    - feature_flag_required: true
+    - component_isolation_tests: mandatory
+    - max_lifetime_days: 30
+    - stale_branch_warning: 14

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Read(//mnt/c/Users/amukt/Projects/LokDarpan/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -815,6 +815,9 @@ export const initAdvancedCache = (options = {}) => {
 
 export const getCache = () => cacheInstance;
 
+// Alias for compatibility with telemetryIntegration
+export const getAdvancedCache = getCache;
+
 // React Hook for Advanced Caching
 export const useAdvancedCache = () => {
   const cache = getCache();

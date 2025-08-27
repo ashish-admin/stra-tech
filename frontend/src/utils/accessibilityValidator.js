@@ -717,6 +717,12 @@ export const initAccessibilityValidator = (options = {}) => {
 
 export const getAccessibilityValidator = () => validatorInstance;
 
+// Alias for compatibility with telemetryIntegration
+export const validateAccessibility = (options = {}) => {
+  const validator = getAccessibilityValidator() || initAccessibilityValidator(options);
+  return validator.validatePage();
+};
+
 // React Hook for Accessibility
 export const useAccessibility = () => {
   const validator = getAccessibilityValidator();
