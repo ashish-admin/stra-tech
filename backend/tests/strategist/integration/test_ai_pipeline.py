@@ -62,18 +62,16 @@ class TestCompletePipeline:
             Exception("Gemini API Error")  # Second call fails (briefing generation)
         ]
         
-        # Perplexity succeeds
-        mock_session = AsyncMock()
+        # Perplexity succeeds (using requests)
         mock_response = Mock()
-        mock_response.status = 200
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "choices": [{"message": {"content": json.dumps({
                 "key_developments": [{"headline": "Test development"}],
                 "sentiment_analysis": {"positive": 0.6, "neutral": 0.3, "negative": 0.1}
             })}}]
         }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-        mock_ai_services["aiohttp"].ClientSession.return_value.__aenter__.return_value = mock_session
+        mock_ai_services["requests"].post.return_value = mock_response
         
         with patch('strategist.cache.r', mock_redis_cache):
             strategist = PoliticalStrategist("Jubilee Hills")
@@ -147,9 +145,8 @@ class TestCompletePipeline:
         ]
         
         # Mock Perplexity with traceable data
-        mock_session = AsyncMock()
         mock_response = Mock()
-        mock_response.status = 200
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "choices": [{"message": {"content": json.dumps({
                 "key_developments": [{
@@ -159,8 +156,7 @@ class TestCompletePipeline:
                 "context_validation": ward_name
             })}}]
         }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-        mock_ai_services["aiohttp"].ClientSession.return_value.__aenter__.return_value = mock_session
+        mock_ai_services["requests"].post.return_value = mock_response
         
         with patch('strategist.cache.r', mock_redis_cache):
             strategist = PoliticalStrategist(ward_name)
@@ -281,9 +277,7 @@ class TestServiceIntegration:
         # Mock component tracking
         mock_ai_services["genai"].GenerativeModel.return_value.generate_content_async.side_effect = track_planner_calls
         
-        mock_session = AsyncMock()
-        mock_session.post.side_effect = track_retriever_calls
-        mock_ai_services["aiohttp"].ClientSession.return_value.__aenter__.return_value = mock_session
+        mock_ai_services["requests"].post.side_effect = track_retriever_calls
         
         with patch('strategist.cache.r', mock_redis_cache):
             strategist = PoliticalStrategist("Test Ward")
@@ -344,9 +338,7 @@ class TestServiceIntegration:
             if scenario == "planner_error":
                 mock_ai_services["genai"].GenerativeModel.return_value.generate_content_async.side_effect = Exception(error_msg)
             elif scenario == "retriever_error":
-                mock_session = AsyncMock()
-                mock_session.post.side_effect = Exception(error_msg)
-                mock_ai_services["aiohttp"].ClientSession.return_value.__aenter__.return_value = mock_session
+                mock_ai_services["requests"].post.side_effect = Exception(error_msg)
             
             strategist = PoliticalStrategist("Test Ward")
             result = await strategist.analyze_situation("standard")
@@ -396,9 +388,8 @@ class TestServiceIntegration:
         ]
         
         # Mock successful Perplexity response
-        mock_session = AsyncMock()
         mock_response = Mock()
-        mock_response.status = 200
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "choices": [{"message": {"content": json.dumps({
                 "key_developments": [{
@@ -418,8 +409,7 @@ class TestServiceIntegration:
                 }
             })}}]
         }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-        mock_ai_services["aiohttp"].ClientSession.return_value.__aenter__.return_value = mock_session
+        mock_ai_services["requests"].post.return_value = mock_response
 
 
 @pytest.mark.integration
@@ -609,11 +599,9 @@ class TestPerformanceIntegration:
             })
         )
         
-        mock_session = AsyncMock()
         mock_response = Mock()
-        mock_response.status = 200
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "choices": [{"message": {"content": json.dumps({"key_developments": []})}}]
         }
-        mock_session.post.return_value.__aenter__.return_value = mock_response
-        mock_ai_services["aiohttp"].ClientSession.return_value.__aenter__.return_value = mock_session
+        mock_ai_services["requests"].post.return_value = mock_response

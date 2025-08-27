@@ -40,9 +40,16 @@ class OpenAIClient(BaseAIClient):
         self.api_key = os.getenv('OPENAI_API_KEY')
         if not self.api_key:
             logger.warning("OPENAI_API_KEY not found, OpenAI client will fail")
-        
-        self.client = AsyncOpenAI(api_key=self.api_key)
-        self.sync_client = OpenAI(api_key=self.api_key)
+            self.client = None
+            self.sync_client = None
+        else:
+            try:
+                self.client = AsyncOpenAI(api_key=self.api_key)
+                self.sync_client = OpenAI(api_key=self.api_key)
+            except Exception as e:
+                logger.error(f"Failed to initialize OpenAI client: {e}")
+                self.client = None
+                self.sync_client = None
         
         # OpenAI-specific configuration
         self.config = {
@@ -113,6 +120,11 @@ class OpenAIClient(BaseAIClient):
     async def _generate_chat_response(self, query: str, context: Dict[str, Any], 
                                     start_time: float, request_id: str) -> AIResponse:
         """Generate chat response for moderate complexity analysis."""
+        
+        # Check if client is initialized
+        if not self.client:
+            logger.warning("OpenAI client not initialized, returning error response")
+            return self._build_error_response("OpenAI client not initialized", query, request_id)
         
         # Build system prompt for political analysis
         system_prompt = self._build_analysis_system_prompt(context)

@@ -397,7 +397,7 @@ def create_test_user_data():
 def mock_ai_services():
     """Mock AI service APIs for strategist testing."""
     with patch('strategist.reasoner.ultra_think.genai') as mock_genai:
-        with patch('strategist.retriever.perplexity_client.aiohttp') as mock_aiohttp:
+        with patch('strategist.retriever.perplexity_client.requests') as mock_requests:
             with patch('strategist.nlp.pipeline.openai') as mock_openai:
                 
                 # Mock Gemini
@@ -407,14 +407,13 @@ def mock_ai_services():
                 )
                 mock_genai.GenerativeModel.return_value = mock_model
                 
-                # Mock Perplexity
-                mock_session = Mock()
+                # Mock Perplexity (using requests, not aiohttp)
                 mock_response = Mock()
+                mock_response.status_code = 200
                 mock_response.json.return_value = {
                     "choices": [{"message": {"content": "Test Perplexity response"}}]
                 }
-                mock_session.post.return_value.__aenter__.return_value = mock_response
-                mock_aiohttp.ClientSession.return_value.__aenter__.return_value = mock_session
+                mock_requests.post.return_value = mock_response
                 
                 # Mock OpenAI
                 mock_openai.Embedding.create.return_value = {
@@ -423,7 +422,7 @@ def mock_ai_services():
                 
                 yield {
                     'genai': mock_genai,
-                    'aiohttp': mock_aiohttp,
+                    'requests': mock_requests,
                     'openai': mock_openai
                 }
 
@@ -563,3 +562,31 @@ def strategist_test_data():
             "internal_use_only": True
         }
     }
+
+
+@pytest.fixture
+def sample_posts(db_session, sample_author):
+    """Create sample posts for strategist testing."""
+    posts = []
+    post_data = [
+        {"text": "Infrastructure development in Jubilee Hills is progressing well", "emotion": "Hopeful", "party": "BJP"},
+        {"text": "Concerns about traffic congestion in the area", "emotion": "Frustration", "party": "TRS"}, 
+        {"text": "New park construction approved by municipal authorities", "emotion": "Hopeful", "party": "INC"},
+        {"text": "Water supply issues need immediate attention", "emotion": "Anger", "party": "AIMIM"},
+        {"text": "Local business community supports new policies", "emotion": "Positive", "party": "BJP"}
+    ]
+    
+    for i, data in enumerate(post_data):
+        post = Post(
+            text=data["text"],
+            author_id=sample_author.id,
+            city='Jubilee Hills',
+            emotion=data["emotion"],
+            party=data["party"],
+            created_at=datetime.now(timezone.utc)
+        )
+        posts.append(post)
+        db_session.session.add(post)
+    
+    db_session.session.commit()
+    return posts

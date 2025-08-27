@@ -74,7 +74,21 @@ class CredibilityScorer:
     and cross-source corroboration for strategic decision-making.
     """
     
-    def __init__(self):
+    def __init__(self, min_credibility_score=0.5, bias_threshold=0.3, 
+                 trusted_sources=None, flagged_sources=None):
+        """
+        Initialize CredibilityScorer with configurable parameters.
+        
+        Args:
+            min_credibility_score: Minimum score threshold for credible sources
+            bias_threshold: Threshold for detecting partisan bias
+            trusted_sources: List of pre-trusted source domains
+            flagged_sources: List of flagged/suspicious source domains
+        """
+        self.min_credibility_score = min_credibility_score
+        self.bias_threshold = bias_threshold
+        self.trusted_sources = trusted_sources or list(CREDIBLE_SOURCES.keys())
+        self.flagged_sources = flagged_sources or []
         self.source_scores = CREDIBLE_SOURCES.copy()
         
     async def score_sources(self, intelligence: Dict[str, Any]) -> Dict[str, Any]:
@@ -296,6 +310,180 @@ class CredibilityScorer:
         
         return flags
     
+    def score_source(self, source_name: str, content: str = "", url: str = "", 
+                    publication_date: Optional[datetime] = None, **kwargs) -> Dict[str, Any]:
+        """
+        Score an individual source for credibility.
+        
+        Args:
+            source_name: Name of the news source
+            content: Article content for quality analysis  
+            url: Source URL for domain analysis
+            publication_date: When the content was published
+            
+        Returns:
+            Dictionary with credibility score and analysis
+        """
+        domain = self._extract_domain(url or source_name)
+        
+        # Base score from known sources
+        base_score = self.source_scores.get(domain, 0.5)
+        
+        # Content quality assessment
+        content_score = self._assess_content_quality_sync(content) if content else 0.5
+        
+        # Recency assessment
+        recency_score = self._assess_recency_sync(publication_date) if publication_date else 0.5
+        
+        # Bias detection
+        bias_result = self._detect_bias(content) if content else {"bias_score": 0.0, "bias_indicators": []}
+        
+        # Calculate overall score
+        overall_score = (base_score * 0.5 + content_score * 0.3 + recency_score * 0.2)
+        overall_score = max(0.0, min(1.0, overall_score - bias_result["bias_score"]))
+        
+        return {
+            "overall_score": overall_score,
+            "factors": {
+                "source_reputation": base_score,
+                "content_quality": content_score,
+                "recency": recency_score,
+                "bias_score": bias_result["bias_score"]
+            },
+            "bias_indicators": bias_result["bias_indicators"],
+            "recommendation": "high_credibility" if overall_score >= 0.7 else 
+                           "medium_credibility" if overall_score >= 0.5 else "low_credibility"
+        }
+    
+    def check_misinformation(self, content: str) -> Dict[str, Any]:
+        """
+        Check content for misinformation indicators.
+        
+        Args:
+            content: Text content to analyze
+            
+        Returns:
+            Dictionary with misinformation analysis results
+        """
+        if not content:
+            return {"is_misinformation": False, "confidence": 0.0, "indicators": []}
+            
+        content_lower = content.lower()
+        indicators = []
+        
+        # Check for sensational language
+        sensational_matches = [phrase for phrase in SENSATIONAL_PHRASES if phrase in content_lower]
+        if sensational_matches:
+            indicators.extend([f"sensational_language: {phrase}" for phrase in sensational_matches[:3]])
+        
+        # Check for emotional manipulation
+        emotional_words = ['shocking', 'devastating', 'exclusive', 'breaking', 'urgent']
+        emotional_matches = [word for word in emotional_words if word in content_lower]
+        if len(emotional_matches) >= 3:
+            indicators.append("emotional_manipulation")
+        
+        # Calculate misinformation probability
+        misinformation_score = len(indicators) * 0.2
+        if len(sensational_matches) > 3:
+            misinformation_score += 0.3
+        if 'fake' in content_lower or 'hoax' in content_lower:
+            misinformation_score += 0.5
+            
+        misinformation_score = min(1.0, misinformation_score)
+        
+        return {
+            "is_misinformation": misinformation_score > 0.5,
+            "confidence": misinformation_score,
+            "indicators": indicators,
+            "risk_level": "high" if misinformation_score > 0.7 else 
+                         "medium" if misinformation_score > 0.4 else "low"
+        }
+    
+    def _detect_bias(self, content: str) -> Dict[str, Any]:
+        """
+        Detect partisan bias in content.
+        
+        Args:
+            content: Text content to analyze
+            
+        Returns:
+            Dictionary with bias analysis
+        """
+        if not content:
+            return {"bias_score": 0.0, "bias_indicators": []}
+            
+        content_lower = content.lower()
+        bias_indicators = []
+        bias_score = 0.0
+        
+        # Check for partisan phrases
+        for bias_type, phrases in PARTISAN_INDICATORS.items():
+            matches = [phrase for phrase in phrases if phrase in content_lower]
+            if matches:
+                bias_indicators.extend([f"{bias_type}: {phrase}" for phrase in matches[:2]])
+                bias_score += len(matches) * 0.1
+        
+        # Check for extreme language
+        extreme_words = ['destroy', 'annihilate', 'crush', 'defeat', 'enemy', 'war']
+        extreme_matches = [word for word in extreme_words if word in content_lower]
+        if extreme_matches:
+            bias_indicators.append("extreme_language")
+            bias_score += len(extreme_matches) * 0.05
+            
+        bias_score = min(1.0, bias_score)
+        
+        return {
+            "bias_score": bias_score,
+            "bias_indicators": bias_indicators
+        }
+    
+    def _assess_content_quality_sync(self, content: str) -> float:
+        """Synchronous version of content quality assessment."""
+        if not content:
+            return 0.5
+            
+        quality_score = 0.5
+        
+        # Length check
+        if len(content) > 100:
+            quality_score += 0.1
+        if len(content) > 500:
+            quality_score += 0.1
+            
+        # Grammar and structure indicators
+        if '.' in content and ',' in content:
+            quality_score += 0.1
+            
+        # Avoid sensational language
+        content_lower = content.lower()
+        sensational_count = sum(1 for phrase in SENSATIONAL_PHRASES if phrase in content_lower)
+        if sensational_count > 0:
+            quality_score -= sensational_count * 0.05
+            
+        return max(0.0, min(1.0, quality_score))
+    
+    def _assess_recency_sync(self, publication_date: Optional[datetime]) -> float:
+        """Synchronous version of recency assessment."""
+        if not publication_date:
+            return 0.5
+            
+        now = datetime.now(timezone.utc)
+        if publication_date.tzinfo is None:
+            publication_date = publication_date.replace(tzinfo=timezone.utc)
+            
+        age_days = (now - publication_date).days
+        
+        if age_days <= 1:
+            return 1.0
+        elif age_days <= 7:
+            return 0.8
+        elif age_days <= 30:
+            return 0.6
+        elif age_days <= 90:
+            return 0.4
+        else:
+            return 0.2
+
     def _extract_domain(self, url_or_source: str) -> str:
         """Extract domain from URL or source string."""
         if not url_or_source:

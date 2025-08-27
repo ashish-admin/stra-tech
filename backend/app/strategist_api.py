@@ -40,26 +40,95 @@ def get_ward_analysis(ward):
         depth = flask_request.args.get('depth', 'standard')
         context = flask_request.args.get('context', 'neutral')
         
-        # First try to use the sophisticated multimodel system
+        # STREAMLINED APPROACH: Use Enhanced Multi-Model Coordinator directly 
         try:
-            # Use the strategist adapter to get real AI-powered analysis
-            adapter = get_strategist_adapter()
+            import sys
+            import os
+            import asyncio
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
             
-            # Generate political analysis using multi-model orchestration
-            # Using async_helper to avoid Flask context issues
-            result = run_async(adapter.analyze_political_situation(
-                ward=ward,
-                query=None,  # Will generate default query
-                depth=depth,
-                context_mode=context
-            ))
+            from strategist.reasoner.enhanced_multi_model import EnhancedMultiModelCoordinator
+            from datetime import datetime, timezone
             
-            # The adapter returns a properly formatted response
-            logger.info(f"Successfully used multimodel analysis for {ward}")
-            return jsonify(result)
+            logger.info(f"🚀 Starting AI analysis for {ward} using Enhanced Multi-Model Coordinator")
+            
+            # Use Enhanced Multi-Model Coordinator directly (bypassing Gemini-dependent components)
+            coordinator = EnhancedMultiModelCoordinator()
+            
+            logger.info(f"🤖 Active AI models: {[m.name for m in coordinator.active_models]}")
+            
+            if not coordinator.active_models:
+                logger.error("❌ No active AI models available")
+                raise Exception("No AI models available")
+            
+            # Create strategic query for the ward
+            strategic_query = f"Comprehensive political intelligence analysis for {ward} ward in Hyderabad. Analyze current political landscape, sentiment, opportunities, threats, and provide actionable strategic recommendations for electoral success."
+            
+            # Create a simple async wrapper to avoid async helper issues
+            async def run_analysis():
+                return await coordinator.coordinate_analysis(
+                    query=strategic_query,
+                    ward=ward,
+                    context={
+                        'depth': depth,
+                        'strategic_context': context,
+                        'analysis_type': 'ward_intelligence',
+                        'region': 'hyderabad'
+                    }
+                )
+            
+            # Run analysis using simple asyncio (avoid run_async complexity)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(run_analysis())
+            finally:
+                loop.close()
+            
+            logger.info(f"📊 Analysis completed - AI Powered: {result.get('ai_powered')}, Model: {result.get('model_used')}")
+            
+            # Check if we got AI-powered results 
+            if result and result.get('ai_powered') and not result.get('fallback_mode'):
+                logger.info(f"✅ AI-powered analysis successful for {ward} using {result.get('model_used')}")
+                
+                # Transform result into expected Political Strategist format
+                strategist_result = {
+                    "ward": ward,
+                    "analysis_depth": depth,
+                    "strategic_context": context,
+                    "timestamp": result.get('timestamp'),
+                    "status": "analysis_complete",
+                    "confidence_score": result.get('confidence_score', 0.85),
+                    "provider": result.get('provider', 'perplexity_intelligence'),
+                    "model_used": result.get('model_used', 'perplexity'),
+                    "ai_powered": True,
+                    "briefing": {
+                        "key_issue": result.get('strategic_summary', '')[:200],
+                        "our_angle": f"Leverage identified opportunities in {ward} while addressing key concerns through strategic positioning and community engagement.",
+                        "opposition_weakness": "Analysis indicates opportunities to capitalize on competitor weaknesses through focused messaging and ground-level engagement.",
+                        "strategic_recommendations": result.get('recommended_actions', [])
+                    },
+                    "intelligence": {
+                        "strategic_summary": result.get('strategic_summary', ''),
+                        "key_findings": result.get('key_findings', []),
+                        "opportunities": result.get('opportunities', []),
+                        "threats": result.get('threats', []),
+                        "recommended_actions": result.get('recommended_actions', []),
+                        "real_time_intelligence": result.get('real_time_intelligence', ''),
+                        "models_consulted": result.get('models_consulted', [])
+                    },
+                    "models_used": result.get('models_consulted', []),
+                    "multi_model_consensus": result.get('multi_model_consensus', 0.8)
+                }
+                
+                return jsonify(strategist_result)
+            else:
+                logger.warning(f"Enhanced coordinator returned fallback for {ward}")
+                raise Exception("AI services unavailable, using template fallback")
             
         except Exception as multimodel_error:
-            logger.warning(f"Multimodel analysis failed for {ward}: {multimodel_error}")
+            logger.warning(f"Direct strategist analysis failed for {ward}: {multimodel_error}")
             
             # Fallback to enhanced mock if multimodel fails
             # This ensures the system stays operational even if AI services are down

@@ -13,23 +13,15 @@ from collections import defaultdict, deque
 from functools import wraps
 import json
 
-# Optional Redis import for cache health checks
+# Import Redis client from cache module for health checks
 try:
-    import redis
-    from flask import current_app
-    def get_redis_client():
-        """Get Redis client from app config if available."""
-        try:
-            if current_app:
-                redis_url = current_app.config.get('REDIS_URL') or current_app.config.get('CELERY_BROKER_URL')
-                if redis_url:
-                    return redis.from_url(redis_url)
-        except:
-            pass
-        return None
+    from ..cache import get_redis_client, is_redis_available
 except ImportError:
+    # Fallback if cache module is not available
     def get_redis_client():
         return None
+    def is_redis_available():
+        return False
 
 logger = logging.getLogger(__name__)
 

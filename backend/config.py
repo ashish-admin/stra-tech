@@ -79,6 +79,9 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file upload
     MAX_REQUEST_SIZE = 1024 * 1024  # 1MB max request size
 
+    # Redis Configuration
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    
     # Celery Configuration
     CELERY = dict(
         broker_url=os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0'),

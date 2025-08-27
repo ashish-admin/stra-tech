@@ -14,7 +14,12 @@
     "test:interactive": "vitest --run src/test/interactive",
     "test:interactive:watch": "vitest --watch src/test/interactive",
     "test:performance": "vitest --run src/test/interactive/Performance.test.jsx",
-    "test:ux": "vitest --run src/test/interactive/UserExperience.test.jsx"
+    "test:ux": "vitest --run src/test/interactive/UserExperience.test.jsx",
+    "test:error-boundaries": "vitest --run src/__tests__/error",
+    "test:error-boundaries:watch": "vitest --watch src/__tests__/error",
+    "test:integration": "vitest --run src/__tests__/integration",
+    "test:error-recovery": "vitest --run src/__tests__/integration/ErrorRecovery.test.jsx",
+    "test:validate": "node src/__tests__/validate-test-environment.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.85.3",
@@ -66,7 +71,8 @@
       "include": [
         "src/components/**/*.{js,jsx,ts,tsx}",
         "src/hooks/**/*.{js,jsx,ts,tsx}",
-        "src/context/**/*.{js,jsx,ts,tsx}"
+        "src/context/**/*.{js,jsx,ts,tsx}",
+        "src/shared/**/*.{js,jsx,ts,tsx}"
       ],
       "exclude": [
         "src/test/**",

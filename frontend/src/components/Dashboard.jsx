@@ -18,7 +18,7 @@ import {
 import { joinApi } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 
-// Enhanced error boundary system
+// Enhanced error boundary system - Legacy components (backward compatibility)
 import ComponentErrorBoundary from "./ComponentErrorBoundary.jsx";
 import DashboardHealthIndicator from "./DashboardHealthIndicator.jsx";
 import NotificationSystem from "./NotificationSystem.jsx";
@@ -30,11 +30,28 @@ import {
   GenericFallback 
 } from "./ErrorFallback.jsx";
 
+// New Error Boundary System
+import { ProductionErrorBoundary } from "../shared/error/ProductionErrorBoundary";
+import { 
+  OverviewTabErrorBoundary,
+  SentimentTabErrorBoundary,
+  CompetitiveTabErrorBoundary,
+  GeographicTabErrorBoundary,
+  StrategistTabErrorBoundary,
+  AlertsTabErrorBoundary
+} from "../shared/error/TabErrorBoundary";
+import { SSEErrorBoundary } from "../shared/error/SSEErrorBoundary";
+import { featureFlagManager } from "../config/features";
+
 // New Dashboard Layout Components
 import DashboardTabs from "./DashboardTabs.jsx";
 import ExecutiveSummary from "./ExecutiveSummary.jsx";
 import CollapsibleSection from "./CollapsibleSection.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
+
+// Development-only error testing utilities
+import DevToolbar from "./ui/DevToolbar.jsx";
+import { useErrorTesting } from "../hooks/useErrorTesting.js";
 
 // Stream A Integration
 import { useEnhancedSSE } from "../features/strategist/hooks/useEnhancedSSE";
@@ -97,6 +114,18 @@ export default function Dashboard() {
   } = useEnhancedSSE(selectedWard, { 
     priority: 'all',
     includeConfidence: true 
+  });
+
+  // Development-only error testing integration
+  const errorTesting = useErrorTesting({
+    maxHistorySize: 100,
+    onError: (errorRecord) => {
+      console.log('🧪 Dashboard Error Captured:', errorRecord);
+      // Could integrate with telemetry system here
+      if (import.meta.env.VITE_TELEMETRY_ENABLED === 'true') {
+        // Send to telemetry endpoint for analysis
+      }
+    }
   });
 
   // Intelligence feed summary for activity indicator
@@ -304,49 +333,126 @@ export default function Dashboard() {
     return () => window.removeEventListener('lokdarpan:refresh', handleRefresh);
   }, [selectedWard]);
 
-  // Performance optimized tab content rendering
-  const renderOverviewTab = () => (
-    <LazyOverviewTab
-      selectedWard={selectedWard}
-      filteredPosts={filteredPosts}
-      wardIdForMeta={wardIdForMeta}
-      connectionState={connectionState}
-      intelligenceSummary={intelligenceSummary}
-      tabBadges={tabBadges}
-      onNavigateToTab={handleTabChange}
-    />
-  );
+  // Enhanced tab content rendering with error boundaries
+  const renderOverviewTab = () => {
+    const content = (
+      <LazyOverviewTab
+        selectedWard={selectedWard}
+        filteredPosts={filteredPosts}
+        wardIdForMeta={wardIdForMeta}
+        connectionState={connectionState}
+        intelligenceSummary={intelligenceSummary}
+        tabBadges={tabBadges}
+        onNavigateToTab={handleTabChange}
+      />
+    );
 
-  const renderSentimentTab = () => (
-    <LazySentimentTab
-      selectedWard={selectedWard}
-      filteredPosts={filteredPosts}
-      keyword={keyword}
-      loading={loading}
-    />
-  );
+    // Use new error boundaries if feature is enabled
+    if (featureFlagManager.isEnabled('enableTabErrorBoundaries')) {
+      return <OverviewTabErrorBoundary>{content}</OverviewTabErrorBoundary>;
+    }
+    
+    // Fallback to legacy error boundary for backward compatibility
+    return (
+      <ComponentErrorBoundary
+        componentName="Overview Tab"
+        fallback={<div className="p-6 text-center text-gray-600">Overview tab is temporarily unavailable</div>}
+      >
+        {content}
+      </ComponentErrorBoundary>
+    );
+  };
 
-  const renderCompetitiveTab = () => (
-    <LazyCompetitiveTab
-      selectedWard={selectedWard}
-      filteredPosts={filteredPosts}
-      compAgg={compAgg}
-      loading={loading}
-    />
-  );
+  const renderSentimentTab = () => {
+    const content = (
+      <LazySentimentTab
+        selectedWard={selectedWard}
+        filteredPosts={filteredPosts}
+        keyword={keyword}
+        loading={loading}
+      />
+    );
 
-  const renderGeographicTab = () => (
-    <LazyGeographicTab
-      selectedWard={selectedWard}
-      geojson={geojson}
-      setSelectedWard={setSelectedWard}
-      summaryRef={summaryRef}
-    />
-  );
+    if (featureFlagManager.isEnabled('enableTabErrorBoundaries')) {
+      return <SentimentTabErrorBoundary>{content}</SentimentTabErrorBoundary>;
+    }
+    
+    return (
+      <ComponentErrorBoundary
+        componentName="Sentiment Tab"
+        fallback={<ChartFallback message="Sentiment analysis is temporarily unavailable" />}
+      >
+        {content}
+      </ComponentErrorBoundary>
+    );
+  };
 
-  const renderStrategistTab = () => (
-    <LazyStrategistTab selectedWard={selectedWard} />
-  );
+  const renderCompetitiveTab = () => {
+    const content = (
+      <LazyCompetitiveTab
+        selectedWard={selectedWard}
+        filteredPosts={filteredPosts}
+        compAgg={compAgg}
+        loading={loading}
+      />
+    );
+
+    if (featureFlagManager.isEnabled('enableTabErrorBoundaries')) {
+      return <CompetitiveTabErrorBoundary>{content}</CompetitiveTabErrorBoundary>;
+    }
+    
+    return (
+      <ComponentErrorBoundary
+        componentName="Competitive Tab"
+        fallback={<ChartFallback message="Competitive analysis is temporarily unavailable" />}
+      >
+        {content}
+      </ComponentErrorBoundary>
+    );
+  };
+
+  const renderGeographicTab = () => {
+    const content = (
+      <LazyGeographicTab
+        selectedWard={selectedWard}
+        geojson={geojson}
+        setSelectedWard={setSelectedWard}
+        summaryRef={summaryRef}
+      />
+    );
+
+    if (featureFlagManager.isEnabled('enableTabErrorBoundaries')) {
+      return <GeographicTabErrorBoundary>{content}</GeographicTabErrorBoundary>;
+    }
+    
+    return (
+      <ComponentErrorBoundary
+        componentName="Geographic Tab"
+        fallback={<MapFallback onWardSelect={setSelectedWard} wardOptions={wardOptions} />}
+      >
+        {content}
+      </ComponentErrorBoundary>
+    );
+  };
+
+  const renderStrategistTab = () => {
+    const content = (
+      <LazyStrategistTab selectedWard={selectedWard} />
+    );
+
+    if (featureFlagManager.isEnabled('enableTabErrorBoundaries')) {
+      return <StrategistTabErrorBoundary>{content}</StrategistTabErrorBoundary>;
+    }
+    
+    return (
+      <ComponentErrorBoundary
+        componentName="AI Strategist Tab"
+        fallback={<StrategistFallback selectedWard={selectedWard} />}
+      >
+        {content}
+      </ComponentErrorBoundary>
+    );
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -365,7 +471,8 @@ export default function Dashboard() {
     }
   };
 
-  return (
+  // Helper function to render dashboard content
+  const renderDashboardContent = () => (
     <div className="min-h-screen bg-gray-50">
       {/* Skip Navigation for Accessibility */}
       <SkipNavigation />
@@ -375,6 +482,7 @@ export default function Dashboard() {
       
       {/* Live Region for Screen Reader Announcements */}
       <LiveRegion message={liveMessage} />
+      
       {/* Tab Navigation */}
       <DashboardTabs
         activeTab={activeTab}
@@ -469,18 +577,45 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Real-time Notification System */}
-      <ComponentErrorBoundary
-        componentName="Notification System"
-        fallbackMessage=""
-      >
-        <NotificationSystem 
-          selectedWard={selectedWard}
-          isVisible={true}
-          enableSound={true}
-          enableBrowserNotifications={true}
-        />
-      </ComponentErrorBoundary>
+      {/* Real-time Notification System with SSE Error Boundaries */}
+      {(() => {
+        const notificationContent = (
+          <NotificationSystem 
+            selectedWard={selectedWard}
+            isVisible={true}
+            enableSound={true}
+            enableBrowserNotifications={true}
+          />
+        );
+
+        // Use SSE error boundary if enabled and SSE features are active
+        if (featureFlagManager.isEnabled('enableSSEErrorBoundaries') && sseConnected) {
+          return (
+            <SSEErrorBoundary
+              sseConnection={null} // Will be passed from useEnhancedSSE hook
+              showStatus={false}
+              onSSEError={(error, metadata) => {
+                console.warn('Notification SSE Error:', error);
+              }}
+              onReconnect={() => {
+                console.log('Reconnecting notification stream...');
+              }}
+            >
+              {notificationContent}
+            </SSEErrorBoundary>
+          );
+        }
+
+        // Fallback to legacy error boundary
+        return (
+          <ComponentErrorBoundary
+            componentName="Notification System"
+            fallbackMessage=""
+          >
+            {notificationContent}
+          </ComponentErrorBoundary>
+        );
+      })()}
 
       {/* Keyboard Shortcuts Indicator */}
       <KeyboardShortcutsIndicator 
@@ -488,6 +623,44 @@ export default function Dashboard() {
         compact={false}
         showOnHover={true}
       />
+
+      {/* Development-only Error Testing Toolbar */}
+      {import.meta.env.MODE === 'development' && (
+        <DevToolbar 
+          position="bottom-left" 
+          compact={false}
+        />
+      )}
     </div>
+  );
+
+  // Main dashboard render with production error boundary
+  return featureFlagManager.isEnabled('enableComponentErrorBoundaries') ? (
+    <ProductionErrorBoundary
+      name="LokDarpan-Dashboard"
+      level="application"
+      fallbackTitle="Dashboard Error"
+      fallbackMessage="The political intelligence dashboard encountered an error. Critical functions may be temporarily unavailable."
+      ward={selectedWard}
+      context={{
+        activeTab,
+        selectedWard,
+        postsCount: filteredPosts.length,
+        sseConnected,
+        intelligenceCount: intelligence.length + alerts.length
+      }}
+      onError={(error, errorInfo, errorId) => {
+        console.error('Dashboard Error Boundary:', { error, errorInfo, errorId });
+        // Additional error handling for dashboard-level failures
+        if (error.name === 'ChunkLoadError') {
+          // Handle code splitting failures
+          window.location.reload();
+        }
+      }}
+    >
+      {renderDashboardContent()}
+    </ProductionErrorBoundary>
+  ) : (
+    renderDashboardContent()
   );
 }

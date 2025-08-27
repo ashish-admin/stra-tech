@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 # Initialize Redis connection
 try:
     redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-    r = redis.from_url(redis_url)
+    r = redis.from_url(redis_url, decode_responses=True)
     # Test connection
     r.ping()
     logger.info("Redis cache connection established")
+    redis_client = r  # Export for compatibility
 except Exception as e:
     logger.error(f"Redis connection failed: {e}")
     r = None
+    redis_client = None
 
 
 def cget(key: str) -> Optional[Dict[str, Any]]:
@@ -128,3 +130,61 @@ def get_cache_stats() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error getting cache stats: {e}")
         return {"status": "error", "error": str(e)}
+
+
+def is_redis_available() -> bool:
+    """
+    Check if Redis is available and connected.
+    
+    Returns:
+        True if Redis is available, False otherwise
+    """
+    return r is not None
+
+
+def get_redis_client():
+    """
+    Get the Redis client instance.
+    
+    Returns:
+        Redis client or None if not available
+    """
+    return r
+
+
+class StrategistCache:
+    """
+    Strategist cache wrapper for compatibility with existing tests.
+    
+    This class provides a consistent interface for cache operations
+    used by the Political Strategist system.
+    """
+    
+    def __init__(self):
+        """Initialize cache with Redis client."""
+        self.client = r
+    
+    @property
+    def redis_client(self):
+        """Get the underlying Redis client."""
+        return self.client
+    
+    def get(self, key: str) -> Optional[Dict[str, Any]]:
+        """Get cached data by key."""
+        return cget(key)
+    
+    def set(self, key: str, data: Dict[str, Any], etag: str, ttl: int) -> bool:
+        """Set cached data with ETag and TTL."""
+        return cset(key, data, etag, ttl)
+    
+    def invalidate_pattern(self, pattern: str) -> int:
+        """Invalidate cache keys matching pattern."""
+        return invalidate_pattern(pattern)
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get cache statistics."""
+        return get_cache_stats()
+    
+    def is_available(self) -> bool:
+        """Check if Redis is available."""
+        return is_redis_available()

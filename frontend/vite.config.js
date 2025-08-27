@@ -1,8 +1,25 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => {
+  // Load environment variables
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  return {
   plugins: [react()],
+  
+  // Environment variable configuration
+  define: {
+    // Expose environment variables to the app
+    __APP_ENV__: JSON.stringify(env.VITE_APP_ENV || mode),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __TELEMETRY_ENABLED__: JSON.stringify(env.VITE_TELEMETRY_ENABLED === 'true'),
+    __VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
+  },
+  
+  // Enhanced environment variable handling
+  envPrefix: ['VITE_', 'TELEMETRY_'],
+  
   build: {
     // Enable code splitting for better performance
     rollupOptions: {
@@ -101,16 +118,18 @@ export default defineConfig({
     },
     // Optimized chunk size limits for political dashboard
     chunkSizeWarningLimit: 1000,
-    // Enable source maps for development, disable for production
-    sourcemap: process.env.NODE_ENV === 'development' ? 'inline' : false,
+    // Enable source maps based on environment and telemetry needs
+    sourcemap: env.VITE_APP_ENV === 'development' || env.VITE_TELEMETRY_DEBUG === 'true' ? 'inline' : false,
     // Enhanced minification for production
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: process.env.NODE_ENV === 'production',
-        drop_debugger: true,
+        drop_console: env.VITE_APP_ENV === 'production' && env.VITE_TELEMETRY_DEBUG !== 'true',
+        drop_debugger: env.VITE_APP_ENV === 'production',
         passes: 2, // Multiple passes for better compression
-        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+        pure_funcs: env.VITE_APP_ENV === 'production' && env.VITE_TELEMETRY_DEBUG !== 'true' 
+          ? ['console.log', 'console.info', 'console.debug'] 
+          : [], // Keep console methods for telemetry debugging
       },
       mangle: {
         safari10: true, // Handle Safari 10 bug
@@ -199,5 +218,6 @@ export default defineConfig({
         }
       }
     }
+  }
   }
 })

@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Any
 from .cache import cget, cset
 from .reasoner.ultra_think import StrategicPlanner
 from .reasoner.multi_model_coordinator import MultiModelCoordinator, AnalysisRequest
+from .reasoner.enhanced_multi_model import EnhancedMultiModelCoordinator
 from .retriever.perplexity_client import PerplexityRetriever
 from .nlp.pipeline import NLPProcessor
 from .credibility.checks import CredibilityScorer
@@ -45,6 +46,8 @@ class PoliticalStrategist:
         self.observer = get_observer()
         # Wave 2 enhancements
         self.multi_model_coordinator = MultiModelCoordinator()
+        # Enhanced multi-model coordinator with Claude support
+        self.enhanced_coordinator = EnhancedMultiModelCoordinator()
         self.conversation_context = None
         
     @monitor_strategist_operation("analyze_situation")
@@ -81,6 +84,27 @@ class PoliticalStrategist:
             logger.info(f"Gathering intelligence with {len(plan.get('queries', []))} queries")
             raw_intelligence = await self.retriever.gather_intelligence(plan.get('queries', []))
             
+            # Step 2.5: Enhanced multi-model analysis (Claude, OpenAI, Perplexity)
+            try:
+                query_text = ' '.join(plan.get('queries', []))[:200] if plan.get('queries') else f"Political analysis for {self.ward}"
+                enhanced_analysis = await self.enhanced_coordinator.coordinate_analysis(
+                    query=query_text,
+                    ward=self.ward,
+                    depth=depth,
+                    context={
+                        'mode': self.context_mode,
+                        'raw_intelligence': raw_intelligence.get('intelligence_items', [])[:2] if raw_intelligence else []
+                    }
+                )
+                
+                # Merge enhanced analysis with raw intelligence
+                if enhanced_analysis and not enhanced_analysis.get('fallback_mode'):
+                    logger.info(f"Enhanced analysis from {enhanced_analysis.get('model_used', 'multi-model')}")
+                    raw_intelligence['enhanced_analysis'] = enhanced_analysis
+                    raw_intelligence['ai_models_used'] = enhanced_analysis.get('models_consulted', [])
+            except Exception as e:
+                logger.warning(f"Enhanced multi-model analysis failed: {e}, continuing with standard flow")
+            
             # Step 3: Process and score sources
             scored_intelligence = await self.credibility.score_sources(raw_intelligence)
             
@@ -93,6 +117,10 @@ class PoliticalStrategist:
             )
             
             # Step 5: Generate strategic briefing
+            # Include enhanced multi-model analysis if available
+            if raw_intelligence.get('enhanced_analysis'):
+                processed_data['enhanced_insights'] = raw_intelligence['enhanced_analysis']
+                
             briefing = await self.planner.generate_briefing(
                 plan=plan,
                 intelligence=processed_data,
@@ -101,6 +129,13 @@ class PoliticalStrategist:
             
             # Step 6: Apply guardrails and sanitization
             final_result = sanitize_and_strategize(briefing)
+            
+            # Add AI model information if enhanced analysis was used
+            if raw_intelligence.get('ai_models_used'):
+                final_result['ai_powered'] = True
+                final_result['models_used'] = raw_intelligence['ai_models_used']
+                if raw_intelligence.get('enhanced_analysis', {}).get('real_time_intelligence'):
+                    final_result['real_time_intelligence'] = raw_intelligence['enhanced_analysis']['real_time_intelligence']
             
             # Log analysis completion
             duration = time.time() - start_time

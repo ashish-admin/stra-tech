@@ -71,7 +71,7 @@ class PerplexityRetriever:
                     logger.error(f"Query {i} failed: {result}")
                     continue
                     
-                if result and 'content' in result:
+                if result and isinstance(result, dict) and 'content' in result:
                     intelligence['intelligence_items'].append({
                         "query": queries[i],
                         "content": result['content'],
@@ -117,7 +117,7 @@ class PerplexityRetriever:
             """
             
             payload = {
-                "model": "llama-3.1-sonar-large-128k-online",
+                "model": "sonar",  # Correct model name for Perplexity
                 "messages": [
                     {
                         "role": "system",
@@ -129,10 +129,7 @@ class PerplexityRetriever:
                     }
                 ],
                 "temperature": 0.2,
-                "max_tokens": 1024,
-                "return_citations": True,
-                "search_domain_filter": ["news"],
-                "search_recency_filter": "week"
+                "max_tokens": 1024
             }
             
             response = self.session.post(
@@ -148,16 +145,27 @@ class PerplexityRetriever:
             # Extract citations if available
             citations = []
             if 'citations' in data:
-                citations = [
-                    {
-                        "title": cite.get('title', ''),
-                        "url": cite.get('url', ''),
-                        "source": cite.get('source', ''),
-                        "date": cite.get('date', ''),
-                        "relevance": cite.get('relevance', 0.7)
-                    }
-                    for cite in data['citations'][:5]  # Limit citations
-                ]
+                # Citations from Perplexity are URL strings, not dicts
+                for cite_url in data['citations'][:5]:  # Limit citations
+                    if isinstance(cite_url, str):
+                        # Extract domain from URL for source
+                        source = cite_url.split('/')[2] if '/' in cite_url else 'unknown'
+                        citations.append({
+                            "title": "",
+                            "url": cite_url,
+                            "source": source,
+                            "date": "",
+                            "relevance": 0.7
+                        })
+                    elif isinstance(cite_url, dict):
+                        # In case Perplexity changes format to dict
+                        citations.append({
+                            "title": cite_url.get('title', ''),
+                            "url": cite_url.get('url', ''),
+                            "source": cite_url.get('source', ''),
+                            "date": cite_url.get('date', ''),
+                            "relevance": cite_url.get('relevance', 0.7)
+                        })
             
             return {
                 "query": query,

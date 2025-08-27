@@ -5,13 +5,13 @@
  */
 
 export const enhancementFlags = {
-  // Phase 1 - Error Boundaries
-  enableComponentErrorBoundaries: false,
-  enableTabErrorBoundaries: false,
-  enableSSEErrorBoundaries: false,
-  enablePerformanceMonitor: false,
-  enableErrorTelemetry: false,
-  enableOfflineErrorQueue: false,
+  // Phase 1 - Error Boundaries - WAVE 1 ENABLED
+  enableComponentErrorBoundaries: true,
+  enableTabErrorBoundaries: true,
+  enableSSEErrorBoundaries: true,
+  enablePerformanceMonitor: true,
+  enableErrorTelemetry: true,
+  enableOfflineErrorQueue: true,
   
   // Phase 2 - Component Reorganization
   useNewComponentStructure: false,
@@ -38,8 +38,8 @@ export const enhancementFlags = {
   enablePredictiveAnalytics: false,
   enable3DMap: false,
   
-  // Global kill switch
-  enableFrontendEnhancements: false
+  // Global kill switch - WAVE 1 ENABLED
+  enableFrontendEnhancements: true
 };
 
 /**

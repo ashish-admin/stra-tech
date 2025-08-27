@@ -21,7 +21,7 @@ import redis
 from flask import current_app
 
 from .service import PoliticalStrategist
-from .cache import cget, cset, redis_client
+from .cache import cget, cset, get_redis_client
 from .observability import get_observer, monitor_strategist_operation
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,10 @@ class ConversationManager:
         
         # Store session in Redis with TTL
         session_key = f"conversation:session:{session_id}"
+        redis_client = get_redis_client()
+        if not redis_client:
+            logger.error("Redis not available for session storage")
+            raise RuntimeError("Cache service unavailable")
         try:
             redis_client.setex(
                 session_key, 
@@ -102,6 +106,10 @@ class ConversationManager:
             Session data dictionary or None
         """
         session_key = f"conversation:session:{session_id}"
+        redis_client = get_redis_client()
+        if not redis_client:
+            logger.error("Redis not available for session retrieval")
+            return None
         try:
             session_data = redis_client.get(session_key)
             if session_data:
@@ -132,6 +140,10 @@ class ConversationManager:
         
         # Save back to Redis
         session_key = f"conversation:session:{session_id}"
+        redis_client = get_redis_client()
+        if not redis_client:
+            logger.error("Redis not available for session update")
+            return False
         try:
             redis_client.setex(
                 session_key, 
@@ -458,6 +470,11 @@ class ConversationManager:
         Returns:
             List of conversation summaries
         """
+        redis_client = get_redis_client()
+        if not redis_client:
+            logger.error("Redis not available for conversation listing")
+            return []
+        
         try:
             # Search for conversation keys
             search_pattern = "conversation:session:*"
@@ -538,6 +555,10 @@ class ConversationManager:
             Success status
         """
         session_key = f"conversation:session:{session_id}"
+        redis_client = get_redis_client()
+        if not redis_client:
+            logger.error("Redis not available for session deletion")
+            return False
         try:
             result = redis_client.delete(session_key)
             logger.info(f"Deleted conversation session {session_id}")

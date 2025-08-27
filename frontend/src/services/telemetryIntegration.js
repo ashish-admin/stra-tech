@@ -21,26 +21,34 @@ import { initErrorTracker, getErrorTracker } from './errorTracker.js';
 import { getTelemetry } from '../utils/performanceTelemetry.js';
 import { getAdvancedCache } from '../utils/advancedCache.js';
 import { validateAccessibility } from '../utils/accessibilityValidator.js';
+import telemetryConfig, { politicalContext, telemetryServices } from '../config/telemetry.js';
 
-// Telemetry configuration
+// Enhanced telemetry configuration using centralized config
 const TELEMETRY_CONFIG = {
   errorReporting: {
-    enabled: process.env.NODE_ENV === 'production' || process.env.REACT_APP_ERROR_TRACKING === 'true',
+    enabled: telemetryConfig.errorReporting,
     batchSize: 10,
     flushInterval: 30000, // 30 seconds
-    retryAttempts: 3
+    retryAttempts: 3,
+    endpoints: {
+      internal: telemetryConfig.endpoints.errors,
+      analytics: telemetryConfig.endpoints.analytics
+    }
   },
   performance: {
-    enabled: true,
-    sampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0, // 10% sampling in production
+    enabled: telemetryConfig.performanceMonitoring,
+    sampleRate: telemetryConfig.sampleRate,
     vitalsThreshold: {
-      LCP: 2500, // Largest Contentful Paint
-      FID: 100,  // First Input Delay
-      CLS: 0.1   // Cumulative Layout Shift
+      LCP: parseInt(import.meta.env.VITE_CWV_LCP_THRESHOLD) || 2500,
+      FID: parseInt(import.meta.env.VITE_CWV_FID_THRESHOLD) || 100,
+      CLS: parseFloat(import.meta.env.VITE_CWV_CLS_THRESHOLD) || 0.1
+    },
+    endpoints: {
+      performance: telemetryConfig.endpoints.performance
     }
   },
   accessibility: {
-    enabled: true,
+    enabled: import.meta.env.VITE_TRACK_ERRORS !== 'false',
     checkInterval: 60000, // 1 minute
     reportViolations: true
   },
@@ -52,8 +60,14 @@ const TELEMETRY_CONFIG = {
   memory: {
     enabled: true,
     checkInterval: 120000, // 2 minutes
-    warningThreshold: 100 * 1024 * 1024, // 100MB
+    warningThreshold: parseInt(import.meta.env.VITE_PERFORMANCE_BUDGET_RENDER_TIME) * 1000 || 100 * 1024 * 1024,
     criticalThreshold: 250 * 1024 * 1024 // 250MB
+  },
+  privacy: {
+    anonymizeUserData: import.meta.env.VITE_ANONYMIZE_USER_DATA === 'true',
+    respectDoNotTrack: import.meta.env.VITE_RESPECT_DO_NOT_TRACK === 'true',
+    trackUserInteractions: import.meta.env.VITE_TRACK_USER_INTERACTIONS === 'true',
+    trackConsoleMessages: import.meta.env.VITE_TRACK_CONSOLE_MESSAGES === 'true'
   }
 };
 
@@ -159,13 +173,19 @@ class TelemetryIntegration {
   // Error Tracking Integration
   handleErrorReported(error) {
     try {
+      // Check privacy settings
+      if (this.config.privacy.respectDoNotTrack && navigator.doNotTrack === '1') {
+        console.log('[TelemetryIntegration] Respecting Do Not Track preference');
+        return;
+      }
+
       // Correlate error with performance metrics
       const performanceContext = this.getPerformanceContext();
       const cacheContext = this.getCacheContext();
       const memoryContext = this.getMemoryContext();
 
-      // Enhanced error context
-      const enhancedError = {
+      // Enhanced error context using political context enrichment
+      const enhancedError = politicalContext.enrichEvent({
         ...error,
         context: {
           ...error.context,
@@ -178,7 +198,12 @@ class TelemetryIntegration {
             totalErrors: this.sessionMetrics.errors
           }
         }
-      };
+      });
+
+      // Apply privacy anonymization if enabled
+      if (this.config.privacy.anonymizeUserData) {
+        this.anonymizeErrorData(enhancedError);
+      }
 
       // Update session metrics
       this.sessionMetrics.errors++;
@@ -189,6 +214,9 @@ class TelemetryIntegration {
         error: enhancedError,
         correlationId: this.generateCorrelationId()
       });
+
+      // Send to internal telemetry endpoint
+      this.sendToInternalTelemetry('error', enhancedError);
 
       // Trigger performance analysis if error is performance-related
       if (error.category === 'performance' || error.category === 'memory_leak') {
@@ -846,10 +874,100 @@ class TelemetryIntegration {
       timestamp: Date.now()
     };
 
-    // Could be expanded to send to external analytics service
+    // Send to internal telemetry if sampling allows
     if (this.config.performance.sampleRate === 1.0 || Math.random() < this.config.performance.sampleRate) {
       console.log(`[TelemetryIntegration] Event: ${eventType}`, data);
+      
+      // Send to internal analytics endpoint
+      this.sendToInternalTelemetry('analytics', eventData);
     }
+  }
+
+  // Internal Telemetry Methods
+  async sendToInternalTelemetry(type, data) {
+    if (!this.config.errorReporting.enabled) return;
+
+    const endpoint = this.config.errorReporting.endpoints?.[type] || 
+                    this.config.performance.endpoints?.[type];
+    
+    if (!endpoint) {
+      console.warn(`[TelemetryIntegration] No endpoint configured for type: ${type}`);
+      return;
+    }
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Telemetry-Type': type,
+          'X-Environment': telemetryConfig.environment
+        },
+        body: JSON.stringify({
+          ...data,
+          telemetryType: type,
+          timestamp: Date.now(),
+          environment: telemetryConfig.environment,
+          version: import.meta.env.VITE_APP_VERSION || '1.0.0'
+        })
+      });
+
+      if (!response.ok) {
+        console.warn(`[TelemetryIntegration] Failed to send ${type} telemetry:`, response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error(`[TelemetryIntegration] Error sending ${type} telemetry:`, error);
+    }
+  }
+
+  // Privacy and Data Anonymization
+  anonymizeErrorData(errorData) {
+    if (!errorData || !this.config.privacy.anonymizeUserData) return;
+
+    // Anonymize user-specific information
+    if (errorData.context) {
+      delete errorData.context.userId;
+      delete errorData.context.sessionId;
+      
+      // Anonymize URLs by removing query parameters and sensitive paths
+      if (errorData.context.url) {
+        try {
+          const url = new URL(errorData.context.url);
+          errorData.context.url = `${url.protocol}//${url.host}${url.pathname}`;
+        } catch (e) {
+          errorData.context.url = '[ANONYMIZED_URL]';
+        }
+      }
+
+      // Anonymize ward information if it contains personal data
+      if (errorData.context.ward && this.config.privacy.anonymizeUserData) {
+        errorData.context.ward = errorData.context.ward.replace(/\d+/g, '[NUMBER]');
+      }
+    }
+
+    // Anonymize error messages that might contain sensitive data
+    if (errorData.message) {
+      errorData.message = errorData.message.replace(/\b\d{4,}\b/g, '[NUMBER]');
+      errorData.message = errorData.message.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]');
+    }
+
+    return errorData;
+  }
+
+  // Check if telemetry should be sent
+  shouldSendTelemetry() {
+    // Check Do Not Track preference
+    if (this.config.privacy.respectDoNotTrack && navigator.doNotTrack === '1') {
+      return false;
+    }
+
+    // Check if telemetry is enabled
+    if (!telemetryConfig.enabled) {
+      return false;
+    }
+
+    // Check sampling rate
+    return this.config.performance.sampleRate === 1.0 || Math.random() < this.config.performance.sampleRate;
   }
 
   // Public API
