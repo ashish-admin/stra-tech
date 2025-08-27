@@ -296,10 +296,10 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/0
 CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5178,http://127.0.0.1:5178
 
 # AI/News APIs (Required for Phase 3) 
-GEMINI_API_KEY=AIzaSyB8gGrXaJdQHSJgMfxkxRhzEHG8a5FoJoM
-NEWS_API_KEY=your_key_here
-TWITTER_BEARER_TOKEN=your_key_here
-PERPLEXITY_API_KEY=pplx-your_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+NEWS_API_KEY=your_news_api_key_here
+TWITTER_BEARER_TOKEN=your_twitter_bearer_token_here
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
 ```
 
 ### Frontend (.env.development) - CURRENT PRODUCTION CONFIG
