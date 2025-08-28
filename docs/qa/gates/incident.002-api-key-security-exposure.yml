@@ -1,0 +1,32 @@
+schema: 1
+story: 'INC-002'
+gate: FAIL
+status_reason: 'Critical security breach with multiple API keys exposed in repository requiring immediate revocation.'
+reviewer: 'Quinn'
+updated: '2025-08-27T10:35:00Z'
+top_issues:
+  - id: 'SEC-001'
+    severity: high
+    finding: 'Google Gemini API key exposed in CLAUDE.md and git history'
+    suggested_action: 'Immediately revoke AIzaSyB8gGrXaJdQHSJgMfxkxRhzEHG8a5FoJoM and generate replacement'
+  - id: 'SEC-002'
+    severity: high
+    finding: 'Perplexity API key exposed in environment files'
+    suggested_action: 'Revoke pplx-8mD9OV67... key and implement secrets management'
+  - id: 'SEC-003'
+    severity: high
+    finding: 'OpenAI API key partially exposed in configuration'
+    suggested_action: 'Revoke sk-proj-GIfCdHMDi... key and rotate immediately'
+  - id: 'SEC-004'
+    severity: high
+    finding: 'Twitter Bearer Token and News API keys exposed'
+    suggested_action: 'Revoke all social media and news service API keys'
+  - id: 'SEC-005'
+    severity: medium
+    finding: 'Git history contains exposed secrets'
+    suggested_action: 'Consider git-filter-repo to clean commit history'
+  - id: 'ARCH-001'
+    severity: medium
+    finding: 'No centralized secrets management solution implemented'
+    suggested_action: 'Implement secure secrets management (AWS Secrets Manager, HashiCorp Vault)'
+waiver: { active: false }

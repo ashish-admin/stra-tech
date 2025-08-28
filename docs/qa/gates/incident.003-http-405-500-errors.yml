@@ -1,0 +1,24 @@
+schema: 1
+story: 'INC-003'
+gate: CONCERNS
+status_reason: 'Recurring HTTP errors indicate API reliability issues but system remains functional.'
+reviewer: 'Quinn'
+updated: '2025-08-27T10:40:00Z'
+top_issues:
+  - id: 'REL-002'
+    severity: medium
+    finding: 'Pattern of 405 Method Not Allowed errors in API routing'
+    suggested_action: 'Review and fix API route configurations for method mismatches'
+  - id: 'REL-003'
+    severity: medium
+    finding: 'Recurring 500 Internal Server Errors during context cleanup'
+    suggested_action: 'Investigate and fix context cleanup exceptions'
+  - id: 'MNT-001'
+    severity: medium
+    finding: 'Error logging lacks specific endpoint identification'
+    suggested_action: 'Add detailed error logging to identify problematic endpoints'
+  - id: 'ARCH-002'
+    severity: low
+    finding: 'No automated error pattern detection system'
+    suggested_action: 'Implement monitoring and alerting for error rate spikes'
+waiver: { active: false }

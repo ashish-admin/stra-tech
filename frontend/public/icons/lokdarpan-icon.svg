@@ -1,0 +1,38 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#3b82f6"/>
+  
+  <!-- Political compass/navigation icon -->
+  <g transform="translate(128, 128)">
+    <!-- Main compass circle -->
+    <circle cx="128" cy="128" r="120" fill="none" stroke="white" stroke-width="8"/>
+    
+    <!-- Compass directions -->
+    <g stroke="white" stroke-width="6" fill="white">
+      <!-- North arrow -->
+      <path d="M128 20 L140 50 L128 45 L116 50 Z"/>
+      <!-- South arrow -->
+      <path d="M128 236 L116 206 L128 211 L140 206 Z"/>
+      <!-- East arrow -->
+      <path d="M236 128 L206 116 L211 128 L206 140 Z"/>
+      <!-- West arrow -->
+      <path d="M20 128 L50 140 L45 128 L50 116 Z"/>
+    </g>
+    
+    <!-- Inner political symbol - stylized ballot/vote -->
+    <rect x="108" y="108" width="40" height="40" rx="4" fill="white"/>
+    <circle cx="128" cy="118" r="4" fill="#3b82f6"/>
+    <rect x="114" y="130" width="28" height="3" rx="1.5" fill="#3b82f6"/>
+    <rect x="114" y="138" width="22" height="3" rx="1.5" fill="#3b82f6"/>
+    
+    <!-- Intelligence/data points -->
+    <circle cx="80" cy="80" r="6" fill="white" fill-opacity="0.8"/>
+    <circle cx="176" cy="80" r="6" fill="white" fill-opacity="0.8"/>
+    <circle cx="80" cy="176" r="6" fill="white" fill-opacity="0.8"/>
+    <circle cx="176" cy="176" r="6" fill="white" fill-opacity="0.8"/>
+  </g>
+  
+  <!-- App name -->
+  <text x="256" y="420" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="42" font-weight="bold">LokDarpan</text>
+  <text x="256" y="460" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="300">Political Intelligence</text>
+</svg>

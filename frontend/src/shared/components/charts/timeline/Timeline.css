@@ -1,0 +1,200 @@
+/**
+ * Strategic Timeline Styles
+ * LokDarpan Phase 4.3: Advanced Data Visualization
+ * 
+ * Custom CSS for timeline component with mobile optimizations
+ * and accessibility enhancements.
+ */
+
+/* Timeline Container */
+.strategic-timeline {
+  position: relative;
+  overflow: hidden;
+}
+
+/* D3 Timeline Styles */
+.timeline-main {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.timeline-event {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeline-event:hover circle {
+  stroke-width: 3;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.timeline-event:focus circle {
+  stroke-width: 3;
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Real-time event animations */
+.timeline-event.realtime {
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Importance indicators */
+.timeline-event.importance-5 circle {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Timeline axis styling */
+.x-axis line,
+.x-axis path {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+}
+
+.x-axis text {
+  fill: #6b7280;
+  font-size: 12px;
+}
+
+/* Track lines */
+.track-line {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+  stroke-dasharray: 2,2;
+}
+
+/* Zoom controls */
+.zoom-reset {
+  cursor: pointer;
+}
+
+.zoom-reset:hover rect {
+  fill: #e5e7eb;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .strategic-timeline {
+    touch-action: pan-x pinch-zoom;
+  }
+  
+  .timeline-event circle {
+    stroke-width: 3; /* Larger touch targets */
+  }
+  
+  .timeline-event:hover circle {
+    stroke-width: 4;
+  }
+  
+  .x-axis text {
+    font-size: 10px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .timeline-event circle {
+    stroke-width: 3;
+  }
+  
+  .x-axis line,
+  .x-axis path {
+    stroke: #000000;
+    stroke-width: 2;
+  }
+  
+  .track-line {
+    stroke: #000000;
+    stroke-width: 2;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .timeline-event,
+  .timeline-event circle {
+    transition: none;
+  }
+  
+  .timeline-event.realtime {
+    animation: none;
+  }
+  
+  .timeline-event.importance-5 circle {
+    animation: none;
+  }
+}
+
+/* Focus styles for accessibility */
+.timeline-event:focus {
+  outline: none;
+}
+
+.timeline-event:focus circle {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+  .x-axis text {
+    fill: #d1d5db;
+  }
+  
+  .x-axis line,
+  .x-axis path {
+    stroke: #4b5563;
+  }
+  
+  .track-line {
+    stroke: #4b5563;
+  }
+  
+  .zoom-reset rect {
+    fill: #374151;
+    stroke: #6b7280;
+  }
+  
+  .zoom-reset:hover rect {
+    fill: #4b5563;
+  }
+}
+
+/* Touch interaction improvements */
+@media (hover: none) and (pointer: coarse) {
+  .timeline-event {
+    padding: 4px;
+  }
+  
+  .timeline-event circle {
+    r: 8px; /* Larger touch targets */
+  }
+}
+
+/* Print styles */
+@media print {
+  .strategic-timeline {
+    page-break-inside: avoid;
+  }
+  
+  .timeline-event circle {
+    fill: #000000 !important;
+    stroke: #ffffff !important;
+  }
+}

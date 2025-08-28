@@ -1,0 +1,28 @@
+schema: 1
+story: 'INC-001'
+gate: FAIL
+status_reason: 'Political Strategist API completely non-functional, blocking core AI intelligence features.'
+reviewer: 'Quinn'
+updated: '2025-08-27T10:30:00Z'
+top_issues:
+  - id: 'API-001'
+    severity: high
+    finding: 'API endpoint /api/v1/strategist/Jubilee%20Hills returning errors instead of analysis'
+    suggested_action: 'Fix async execution issues in strategist_api.py'
+  - id: 'API-002'
+    severity: high
+    finding: 'Gemini API key quota exhausted (0 requests/minute available)'
+    suggested_action: 'Generate new API key with proper quota allocation'
+  - id: 'API-003'
+    severity: high
+    finding: 'Perplexity API returning 400 Bad Request errors'
+    suggested_action: 'Verify and update Perplexity API key configuration'
+  - id: 'REL-001'
+    severity: high
+    finding: 'Multi-model AI orchestration falling back to static templates'
+    suggested_action: 'Implement proper error handling and retry mechanisms for AI services'
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'No comprehensive integration tests for AI service failures'
+    suggested_action: 'Add test coverage for AI service degradation scenarios'
+waiver: { active: false }

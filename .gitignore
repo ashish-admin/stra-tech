@@ -99,3 +99,15 @@ coverage*.xml
 # Virtual environment (root level)  
 /venv/
 backend/celerybeat-schedule*
+
+# Development artifacts
+cookies.txt
+new_cookies.txt
+test_cookies.txt
+test_cookies2.txt
+nul
+frontend/nul
+frontend/dev-dist/
+frontend/playwright-report/
+backend/validation_results*.json
+
