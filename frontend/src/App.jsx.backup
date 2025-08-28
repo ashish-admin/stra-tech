@@ -1,0 +1,78 @@
+import React, { useEffect, useState } from "react";
+import "./index.css";
+
+// Phase 2: Use new component structure with compatibility layer
+import { 
+  Dashboard, 
+  LoginPage 
+} from "./compatibility";
+import { 
+  DashboardErrorBoundary, 
+  AuthErrorBoundary 
+} from "./shared/components/ui/EnhancedErrorBoundaries";
+
+import { WardProvider } from "@shared/context/WardContext";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@shared/services/cache";
+import { fetchJson } from "./lib/api";
+
+// Enhanced error reporting system
+import { useErrorReporting, useErrorMetrics } from "./hooks/useErrorReporting.js";
+
+export default function App() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // Initialize error reporting and metrics
+  useErrorReporting();
+  useErrorMetrics();
+
+  async function checkSession() {
+    try {
+      const data = await fetchJson("api/v1/status");
+      setIsAuthed(!!data?.authenticated);
+      setUser(data?.user || null);
+    } catch {
+      setIsAuthed(false);
+      setUser(null);
+    } finally {
+      setAuthChecked(true);
+    }
+  }
+
+  useEffect(() => {
+    checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleLogin({ username, password }) {
+    await fetchJson("api/v1/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    await checkSession();
+  }
+
+  if (!authChecked) {
+    return <div className="p-6">Checking session…</div>;
+  }
+
+  if (!isAuthed) {
+    return (
+      <AuthErrorBoundary componentName="Login System">
+        <LoginPage onLogin={handleLogin} />
+      </AuthErrorBoundary>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WardProvider>
+        <DashboardErrorBoundary componentName="LokDarpan Main Application">
+          <Dashboard currentUser={user} />
+        </DashboardErrorBoundary>
+      </WardProvider>
+    </QueryClientProvider>
+  );
+}
