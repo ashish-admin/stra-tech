@@ -40,26 +40,45 @@ def get_ward_analysis(ward):
         depth = flask_request.args.get('depth', 'standard')
         context = flask_request.args.get('context', 'neutral')
         
-        # First try to use the sophisticated multimodel system
+        # Try direct strategist system first for immediate Sprint 3 functionality
         try:
-            # Use the strategist adapter to get real AI-powered analysis
-            adapter = get_strategist_adapter()
+            from strategist.service import PoliticalStrategist
+            from .async_helper import run_async
             
-            # Generate political analysis using multi-model orchestration
-            # Using async_helper to avoid Flask context issues
-            result = run_async(adapter.analyze_political_situation(
-                ward=ward,
-                query=None,  # Will generate default query
-                depth=depth,
-                context_mode=context
-            ))
+            # Create strategist instance and run analysis
+            strategist = PoliticalStrategist(ward=ward)
+            result = run_async(strategist.analyze_situation(depth=depth))
             
-            # The adapter returns a properly formatted response
-            logger.info(f"Successfully used multimodel analysis for {ward}")
+            # Add API compatibility fields
+            result.update({
+                "ward": ward,
+                "analysis_depth": depth,
+                "strategic_context": context,
+                "timestamp": result.get("generated_at"),
+                "status": "analysis_complete",
+                "provider": "lokdarpan_phase3_strategist"
+            })
+            
+            logger.info(f"Successfully used Phase 3 strategist for {ward}")
             return jsonify(result)
             
-        except Exception as multimodel_error:
-            logger.warning(f"Multimodel analysis failed for {ward}: {multimodel_error}")
+        except Exception as strategist_error:
+            logger.warning(f"Phase 3 strategist analysis failed for {ward}: {strategist_error}")
+            
+            # Fallback to multimodel system
+            try:
+                adapter = get_strategist_adapter()
+                result = run_async(adapter.analyze_political_situation(
+                    ward=ward,
+                    query=None,
+                    depth=depth,
+                    context_mode=context
+                ))
+                logger.info(f"Successfully used multimodel analysis for {ward}")
+                return jsonify(result)
+                
+            except Exception as multimodel_error:
+                logger.warning(f"Multimodel analysis also failed for {ward}: {multimodel_error}")
             
             # Fallback to enhanced mock if multimodel fails
             # This ensures the system stays operational even if AI services are down

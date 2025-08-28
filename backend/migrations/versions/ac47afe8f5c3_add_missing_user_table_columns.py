@@ -1,7 +1,7 @@
 """Add missing user table columns
 
 Revision ID: ac47afe8f5c3
-Revises: <REV_ID>
+Revises: 014_comprehensive_ward_performance_optimization
 Create Date: 2025-08-20 19:54:03.576287
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = 'ac47afe8f5c3'
-down_revision = '<REV_ID>'
+down_revision = '013_comprehensive_political_data_seeding'
 branch_labels = None
 depends_on = None
 

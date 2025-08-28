@@ -2,14 +2,16 @@
  * Political Strategist - Main AI-powered strategic analysis component
  */
 
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, TrendingUp, Target, Clock, RefreshCw, Settings, Radio } from 'lucide-react';
-import { useStrategistAnalysis, useIntelligenceFeed, useTriggerAnalysis, useStrategistPreferences } from '../hooks/useStrategist';
+import React, { useState, useEffect, useMemo } from 'react';
+import { AlertTriangle, TrendingUp, Target, Clock, RefreshCw, Settings, Radio, Wifi, WifiOff, Activity } from 'lucide-react';
+import { useStrategistAnalysis, useTriggerAnalysis, useStrategistPreferences } from '../hooks/useStrategist';
+import { useStrategistSSE, useIntelligenceFeedSSE, useSSEHealthMonitor } from '../../../shared/hooks/api/useEnhancedSSE';
 import StrategistBriefing from './StrategistBriefing';
 import IntelligenceFeed from './IntelligenceFeed';
 import ActionCenter from './ActionCenter';
 import AnalysisControls from './AnalysisControls';
 import StrategistStream from './StrategistStream';
+import StrategistErrorBoundary from './StrategistErrorBoundary';
 
 export default function PoliticalStrategist({ selectedWard }) {
   const { preferences, updatePreference } = useStrategistPreferences();
@@ -21,20 +23,40 @@ export default function PoliticalStrategist({ selectedWard }) {
   const [streamingMode, setStreamingMode] = useState(preferences.enableStreaming || false);
   const [streamingResult, setStreamingResult] = useState(null);
 
-  // Main strategic analysis
+  // Enhanced SSE connections
+  const strategistSSE = useStrategistSSE(selectedWard, {
+    depth: analysisDepth,
+    context: contextMode,
+    autoConnect: streamingMode,
+    onAnalysis: (data) => {
+      console.log('[PoliticalStrategist] Streaming analysis received:', data);
+      setStreamingResult(data);
+    },
+    onProgress: (data) => {
+      console.log('[PoliticalStrategist] Analysis progress:', data);
+    },
+    onError: (error) => {
+      console.warn('[PoliticalStrategist] SSE error:', error);
+    }
+  });
+
+  const intelligenceSSE = useIntelligenceFeedSSE(selectedWard, {
+    priority: preferences.priorityFilter,
+    autoConnect: true
+  });
+
+  // Overall SSE health monitoring
+  const sseHealth = useSSEHealthMonitor([strategistSSE, intelligenceSSE]);
+
+  // Fallback to traditional API when streaming is disabled
   const { 
     data: briefing, 
     isLoading: isBriefingLoading, 
     error: briefingError,
     refetch: refetchBriefing 
-  } = useStrategistAnalysis(selectedWard, analysisDepth, contextMode);
-
-  // Real-time intelligence feed
-  const { 
-    intelligence, 
-    isConnected: isFeedConnected, 
-    error: feedError 
-  } = useIntelligenceFeed(selectedWard, preferences.priorityFilter);
+  } = useStrategistAnalysis(selectedWard, analysisDepth, contextMode, {
+    enabled: !streamingMode || !strategistSSE.isConnected
+  });
 
   // Manual analysis trigger
   const triggerAnalysis = useTriggerAnalysis();
@@ -74,10 +96,23 @@ export default function PoliticalStrategist({ selectedWard }) {
     }
   };
 
-  // Toggle streaming mode
+  // Toggle streaming mode with enhanced connection management
   const toggleStreamingMode = () => {
-    setStreamingMode(prev => !prev);
-    setStreamingResult(null); // Clear previous streaming result
+    const newStreamingMode = !streamingMode;
+    setStreamingMode(newStreamingMode);
+    setStreamingResult(null);
+    
+    if (newStreamingMode) {
+      // Connect to streaming
+      strategistSSE.connect({
+        depth: analysisDepth,
+        context: contextMode
+      });
+    } else {
+      // Disconnect streaming and fallback to traditional API
+      strategistSSE.disconnect();
+      refetchBriefing();
+    }
   };
 
   const handleManualRefresh = async () => {
@@ -118,13 +153,54 @@ export default function PoliticalStrategist({ selectedWard }) {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            {/* Intelligence feed status */}
-            <div className="flex items-center gap-1 text-xs">
-              <div className={`h-2 w-2 rounded-full ${isFeedConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-gray-500">
-                {isFeedConnected ? 'Live' : 'Disconnected'}
-              </span>
+          <div className="flex items-center gap-3">
+            {/* Enhanced connection status indicators */}
+            <div className="flex items-center gap-2 text-xs">
+              {/* Strategist SSE status */}
+              <div className="flex items-center gap-1">
+                {strategistSSE.isConnected ? (
+                  <Wifi className="h-3 w-3 text-green-500" />
+                ) : strategistSSE.isRetrying ? (
+                  <Activity className="h-3 w-3 text-yellow-500 animate-pulse" />
+                ) : (
+                  <WifiOff className="h-3 w-3 text-red-500" />
+                )}
+                <span className="text-gray-500">
+                  Strategist: {
+                    strategistSSE.isConnected ? 'Live' :
+                    strategistSSE.isRetrying ? 'Reconnecting' :
+                    'Offline'
+                  }
+                </span>
+              </div>
+              
+              {/* Intelligence feed status */}
+              <div className="flex items-center gap-1">
+                <div className={`h-2 w-2 rounded-full ${
+                  intelligenceSSE.isConnected ? 'bg-green-500' : 
+                  intelligenceSSE.isRetrying ? 'bg-yellow-500 animate-pulse' : 
+                  'bg-red-500'
+                }`}></div>
+                <span className="text-gray-500">
+                  Feed: {
+                    intelligenceSSE.isConnected ? 'Live' :
+                    intelligenceSSE.isRetrying ? 'Reconnecting' :
+                    'Offline'
+                  }
+                </span>
+              </div>
+              
+              {/* Overall health indicator */}
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800">
+                <div className={`h-2 w-2 rounded-full ${
+                  sseHealth.status === 'excellent' ? 'bg-green-500' :
+                  sseHealth.status === 'good' || sseHealth.status === 'fair' ? 'bg-yellow-500' :
+                  'bg-red-500'
+                }`}></div>
+                <span className="text-gray-600 dark:text-gray-400 capitalize text-xs">
+                  {sseHealth.status}
+                </span>
+              </div>
             </div>
             
             {/* Streaming mode toggle */}
@@ -202,20 +278,32 @@ export default function PoliticalStrategist({ selectedWard }) {
         {/* Primary Analysis Panel */}
         <div className="lg:col-span-2">
           {streamingMode ? (
-            <StrategistStream 
-              ward={selectedWard}
-              onAnalysisComplete={handleStreamingComplete}
-              initialDepth={analysisDepth}
-              initialContext={contextMode}
-              className="h-full"
-            />
+            <StrategistErrorBoundary 
+              componentName="Streaming Analysis"
+              fallbackMessage="Streaming analysis is temporarily unavailable. You can still use traditional analysis mode."
+              onRetry={() => setStreamingMode(false)}
+            >
+              <StrategistStream 
+                ward={selectedWard}
+                onAnalysisComplete={handleStreamingComplete}
+                initialDepth={analysisDepth}
+                initialContext={contextMode}
+                className="h-full"
+              />
+            </StrategistErrorBoundary>
           ) : (
-            <StrategistBriefing 
-              briefing={streamingResult?.analysis_result || briefing} 
-              isLoading={isBriefingLoading}
-              ward={selectedWard}
-              onRefresh={refetchBriefing}
-            />
+            <StrategistErrorBoundary 
+              componentName="Strategic Briefing"
+              fallbackMessage="Strategic briefing is temporarily unavailable. Please try refreshing."
+              onRetry={refetchBriefing}
+            >
+              <StrategistBriefing 
+                briefing={streamingResult?.analysis_result || briefing} 
+                isLoading={isBriefingLoading}
+                ward={selectedWard}
+                onRefresh={refetchBriefing}
+              />
+            </StrategistErrorBoundary>
           )}
         </div>
 
@@ -229,50 +317,123 @@ export default function PoliticalStrategist({ selectedWard }) {
           />
           
           {/* Intelligence Feed */}
-          <IntelligenceFeed 
-            intelligence={intelligence}
-            isConnected={isFeedConnected}
-            ward={selectedWard}
-            priority={preferences.priorityFilter}
-            onPriorityChange={(priority) => updatePreference('priorityFilter', priority)}
-          />
+          <StrategistErrorBoundary 
+            componentName="Intelligence Feed"
+            fallbackMessage="Intelligence feed is temporarily unavailable. SSE connection may be down."
+            onRetry={intelligenceSSE.reconnect}
+          >
+            <IntelligenceFeed 
+              intelligence={intelligenceSSE.intelligence}
+              alerts={intelligenceSSE.alerts}
+              isConnected={intelligenceSSE.isConnected}
+              connectionError={intelligenceSSE.connectionError}
+              metrics={intelligenceSSE.metrics}
+              ward={selectedWard}
+              priority={preferences.priorityFilter}
+              onPriorityChange={(priority) => updatePreference('priorityFilter', priority)}
+              onReconnect={intelligenceSSE.reconnect}
+            />
+          </StrategistErrorBoundary>
         </div>
       </div>
 
-      {/* Debug Panel (Development Only) */}
+      {/* Enhanced Debug Panel (Development Only) */}
       {process.env.NODE_ENV === 'development' && (
         <details className="bg-gray-50 border rounded-lg p-4">
           <summary className="cursor-pointer font-medium text-gray-700">
-            Debug Information
+            Debug Information & SSE Metrics
           </summary>
-          <div className="mt-3 space-y-2 text-sm">
-            <div>
-              <strong>Ward:</strong> {selectedWard}
+          <div className="mt-3 space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Basic Info */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-800">Configuration</h4>
+                <div><strong>Ward:</strong> {selectedWard}</div>
+                <div><strong>Analysis Depth:</strong> {analysisDepth}</div>
+                <div><strong>Context Mode:</strong> {contextMode}</div>
+                <div><strong>Streaming Mode:</strong> {streamingMode ? 'Enabled' : 'Disabled'}</div>
+              </div>
+              
+              {/* Connection Status */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-800">Connections</h4>
+                <div>
+                  <strong>Strategist SSE:</strong> {
+                    strategistSSE.isConnected ? 'Connected' :
+                    strategistSSE.isRetrying ? `Retrying (${strategistSSE.retryCount})` :
+                    'Disconnected'
+                  }
+                </div>
+                <div>
+                  <strong>Intelligence Feed:</strong> {
+                    intelligenceSSE.isConnected ? 'Connected' :
+                    intelligenceSSE.isRetrying ? `Retrying (${intelligenceSSE.retryCount})` :
+                    'Disconnected'
+                  }
+                </div>
+                <div><strong>Overall Health:</strong> {sseHealth.status}</div>
+                <div><strong>Connected/Total:</strong> {sseHealth.connectedCount}/{sseHealth.totalConnections}</div>
+              </div>
             </div>
-            <div>
-              <strong>Analysis Depth:</strong> {analysisDepth}
+            
+            {/* Data Status */}
+            <div className="space-y-2">
+              <h4 className="font-semibold text-gray-800">Data Status</h4>
+              <div><strong>Intelligence Items:</strong> {intelligenceSSE.intelligence?.length || 0}</div>
+              <div><strong>Alert Items:</strong> {intelligenceSSE.alerts?.length || 0}</div>
+              <div><strong>Traditional Briefing:</strong> {briefing ? 'Available' : 'None'}</div>
+              <div><strong>Streaming Result:</strong> {streamingResult ? 'Available' : 'None'}</div>
+              <div><strong>Analysis Progress:</strong> {strategistSSE.progress?.stage || 'None'}</div>
+              {(briefing || streamingResult?.analysis_result) && (
+                <div>
+                  <strong>Confidence Score:</strong> {
+                    streamingResult?.analysis_result?.confidence_score || 
+                    briefing?.confidence_score ||
+                    'N/A'
+                  }
+                </div>
+              )}
             </div>
-            <div>
-              <strong>Context Mode:</strong> {contextMode}
+            
+            {/* SSE Metrics */}
+            <div className="space-y-2">
+              <h4 className="font-semibold text-gray-800">Performance Metrics</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <strong>Strategist Messages:</strong> {strategistSSE.metrics?.messagesReceived || 0}
+                </div>
+                <div>
+                  <strong>Intelligence Messages:</strong> {intelligenceSSE.metrics?.messagesReceived || 0}
+                </div>
+                <div>
+                  <strong>Strategist Reconnections:</strong> {strategistSSE.metrics?.reconnections || 0}
+                </div>
+                <div>
+                  <strong>Intelligence Reconnections:</strong> {intelligenceSSE.metrics?.reconnections || 0}
+                </div>
+                <div>
+                  <strong>Avg Latency:</strong> {Math.round(sseHealth.avgLatency || 0)}ms
+                </div>
+                <div>
+                  <strong>Error Count:</strong> {sseHealth.errorCount}
+                </div>
+              </div>
             </div>
-            <div>
-              <strong>Streaming Mode:</strong> {streamingMode ? 'Enabled' : 'Disabled'}
-            </div>
-            <div>
-              <strong>Feed Connected:</strong> {isFeedConnected ? 'Yes' : 'No'}
-            </div>
-            <div>
-              <strong>Intelligence Items:</strong> {intelligence?.length || 0}
-            </div>
-            <div>
-              <strong>Briefing Available:</strong> {briefing ? 'Yes' : 'No'}
-            </div>
-            <div>
-              <strong>Streaming Result:</strong> {streamingResult ? 'Available' : 'None'}
-            </div>
-            {(briefing || streamingResult?.analysis_result) && (
-              <div>
-                <strong>Confidence Score:</strong> {streamingResult?.analysis_result?.confidence_score || briefing?.confidence_score}
+            
+            {/* Connection Errors */}
+            {(strategistSSE.connectionError || intelligenceSSE.connectionError) && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-red-800">Connection Errors</h4>
+                {strategistSSE.connectionError && (
+                  <div className="text-xs bg-red-50 p-2 rounded">
+                    <strong>Strategist:</strong> {strategistSSE.connectionError.error}
+                  </div>
+                )}
+                {intelligenceSSE.connectionError && (
+                  <div className="text-xs bg-red-50 p-2 rounded">
+                    <strong>Intelligence:</strong> {intelligenceSSE.connectionError.error}
+                  </div>
+                )}
               </div>
             )}
           </div>

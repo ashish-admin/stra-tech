@@ -6,14 +6,17 @@ Flask blueprint for strategist endpoints with SSE support and caching.
 
 import os
 import json
+import time
 import logging
 from datetime import datetime
 from flask import Blueprint, request, Response, jsonify, current_app, stream_template
 from flask_login import login_required
 
 from .service import get_ward_report, analyze_text
-from .sse import sse_stream
-from .observability import track_api_call, get_observer
+# Phase 3: Enhanced imports
+from .observability import track_api_call
+from .circuit_breaker import circuit_breaker_manager, CircuitBreakerConfig
+from .sse_enhanced import create_phase3_sse_response, get_phase3_sse_stats
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +32,32 @@ def check_strategist_enabled():
             "status": "service_unavailable"
         }), 503
 
+
+@strategist_bp.route('/simple/<ward>', methods=['GET'])
+def simple_test(ward):
+    """Ultra simple test endpoint with no decorators."""
+    return jsonify({"simple_test": "working", "ward": ward})
+
+@strategist_bp.route('/debug/<ward>', methods=['GET'])
+@login_required  
+def debug_ward_analysis(ward):
+    """Debug endpoint to test the ward analysis functionality."""
+    try:
+        from .service import get_ward_report
+        logger.info(f"Debug: Testing ward analysis for {ward}")
+        data, etag, ttl = get_ward_report(ward, 'quick')
+        logger.info(f"Debug: Successfully got data with keys: {list(data.keys())}")
+        return jsonify({
+            "status": "debug_success",
+            "ward": ward,
+            "data_keys": list(data.keys()),
+            "fallback_mode": data.get('fallback_mode', False),
+            "etag": etag,
+            "ttl": ttl
+        })
+    except Exception as e:
+        logger.error(f"Debug error for {ward}: {e}", exc_info=True)
+        return jsonify({"debug_error": str(e)}), 500
 
 @strategist_bp.route('/<ward>', methods=['GET'])
 @login_required
@@ -150,41 +179,33 @@ def analyze_content():
 @login_required
 def intelligence_feed():
     """
-    Server-Sent Events stream for real-time intelligence updates.
+    Phase 3: Enhanced Server-Sent Events stream with circuit breaker protection.
     
     Query Parameters:
     - ward: Ward to monitor
     - since: Timestamp for updates since
-    - priority: Filter by priority level
+    - priority: Filter by priority level (all|high|critical)
     
     Returns:
-        SSE stream of intelligence updates
+        SSE stream with adaptive heartbeat, progress tracking, and auto-reconnection
     """
     try:
-        ward = request.args.get('ward', 'All')
+        ward = request.args.get('ward', '').strip()
         since = request.args.get('since')
         priority = request.args.get('priority', 'all')
         
-        # Validate priority
-        if priority not in ['all', 'high', 'critical']:
-            priority = 'all'
+        logger.info(f"Starting Phase 3 enhanced SSE feed for {ward} (priority: {priority})")
         
-        logger.info(f"Starting intelligence feed for {ward} (priority: {priority})")
-        
-        return Response(
-            sse_stream(ward, since, priority),
-            mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'  # Nginx compatibility
-            }
-        )
+        # Phase 3: Create SSE response with enhanced features
+        return create_phase3_sse_response(ward, priority, since)
         
     except Exception as e:
-        logger.error(f"Error starting intelligence feed: {e}", exc_info=True)
+        logger.error(f"Error starting Phase 3 intelligence feed: {e}", exc_info=True)
         return jsonify({
-            "error": "Intelligence feed unavailable",
+            "error": "Intelligence feed unavailable - Phase 3 recovery active",
+            "error_type": type(e).__name__,
+            "phase": "3_enhanced",
+            "recovery_options": ["retry_after_30s", "check_system_status", "fallback_polling"],
             "timestamp": datetime.now().isoformat()
         }), 500
 
@@ -192,24 +213,64 @@ def intelligence_feed():
 @strategist_bp.route('/health', methods=['GET'])
 def health_check():
     """
-    Health check endpoint for strategist system.
+    Phase 3: Enhanced health check with circuit breaker status.
     
     Returns:
-        System health status and performance metrics
+        Comprehensive system health status, circuit breaker metrics, and SSE analytics
     """
     try:
-        observer = get_observer()
-        health_status = observer.get_health_status()
+        from .health_checks import get_quick_health
+        import asyncio
         
-        status_code = 200 if health_status['status'] == 'healthy' else 503
+        # Get comprehensive health status
+        health_status = asyncio.run(get_quick_health())
         
-        return jsonify(health_status), status_code
+        # Phase 3: Add circuit breaker health
+        circuit_breaker_health = circuit_breaker_manager.get_system_health()
+        
+        # Phase 3: Add SSE connection analytics
+        sse_stats = get_phase3_sse_stats()
+        
+        # Combined health assessment
+        combined_health = {
+            "system_status": health_status.get('status', 'unknown'),
+            "phase": "3_enhanced",
+            "components": {
+                "strategist_core": health_status,
+                "circuit_breakers": circuit_breaker_health,
+                "sse_connections": sse_stats
+            },
+            "overall_score": min(
+                health_status.get('health_score', 50),
+                circuit_breaker_health.get('health_score', 50)
+            ),
+            "enhanced_features": [
+                "circuit_breaker_protection",
+                "adaptive_sse_streaming",
+                "intelligent_model_routing",
+                "progressive_analysis_tracking"
+            ],
+            "recommendations": circuit_breaker_manager.get_service_recommendations(),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Determine status code based on combined health
+        if combined_health['overall_score'] >= 80:
+            status_code = 200
+        elif combined_health['overall_score'] >= 50:
+            status_code = 200  # Degraded but operational
+        else:
+            status_code = 503
+        
+        return jsonify(combined_health), status_code
         
     except Exception as e:
-        logger.error(f"Error in health check: {e}")
+        logger.error(f"Error in Phase 3 health check: {e}")
         return jsonify({
             "status": "error",
+            "phase": "3_enhanced",
             "error": str(e),
+            "error_type": type(e).__name__,
             "timestamp": datetime.now().isoformat()
         }), 500
 
@@ -254,13 +315,22 @@ def invalidate_cache():
 @login_required
 def system_status():
     """
-    Get strategist system status and configuration.
+    Phase 3: Enhanced system status with circuit breaker and routing statistics.
     
     Returns:
-        System configuration and operational status
+        Comprehensive system status including Phase 3 enhancements
     """
     try:
-        observer = get_observer()
+        from .ai_connection_pool import get_pool_manager
+        from .reasoner.multi_model_coordinator import MultiModelCoordinator
+        
+        # Get AI service pool statistics
+        try:
+            pool_manager = get_pool_manager()
+            pool_stats = pool_manager.get_all_stats()
+        except Exception as pool_error:
+            logger.warning(f"AI pool manager unavailable: {pool_error}")
+            pool_stats = {"error": "AI pool manager unavailable"}
         
         # Check AI service availability
         ai_services = {
@@ -269,24 +339,107 @@ def system_status():
             "openai": bool(os.getenv('OPENAI_API_KEY'))
         }
         
+        # Phase 3: Get circuit breaker statistics
+        circuit_breaker_status = circuit_breaker_manager.get_system_health()
+        
+        # Phase 3: Get multi-model coordinator statistics
+        try:
+            coordinator = MultiModelCoordinator()
+            routing_stats = coordinator.get_routing_statistics()
+        except Exception as routing_error:
+            logger.warning(f"Multi-model coordinator unavailable: {routing_error}")
+            routing_stats = {"error": "Multi-model coordinator unavailable"}
+        
+        # Phase 3: Enhanced status
         status = {
             "strategist_enabled": current_app.config.get('STRATEGIST_ENABLED', True),
             "strategist_mode": current_app.config.get('STRATEGIST_MODE', 'development'),
+            "phase": "3_enhanced",
             "ai_services": ai_services,
+            "ai_service_stats": pool_stats,
             "cache_enabled": bool(os.getenv('REDIS_URL')),
-            "system_uptime": (datetime.now() - observer.start_time).total_seconds(),
-            "performance_summary": observer.get_performance_report(),
+            "system_uptime": time.time(),
+            "phase3_components": {
+                "circuit_breakers": {
+                    "system_status": circuit_breaker_status['system_status'],
+                    "health_score": circuit_breaker_status['health_score'],
+                    "active_services": circuit_breaker_status['service_summary']
+                },
+                "multi_model_routing": routing_stats,
+                "sse_enhanced": get_phase3_sse_stats()
+            },
+            "enhanced_features": [
+                "intelligent_model_routing",
+                "circuit_breaker_protection", 
+                "adaptive_sse_streaming",
+                "progressive_analysis_tracking",
+                "evidence_weighted_synthesis",
+                "multi_factor_confidence_scoring"
+            ],
             "timestamp": datetime.now().isoformat()
         }
         
         return jsonify(status)
         
     except Exception as e:
-        logger.error(f"Error getting system status: {e}")
+        logger.error(f"Error getting Phase 3 system status: {e}")
         return jsonify({
-            "error": "System status unavailable",
+            "error": "Phase 3 system status unavailable",
+            "error_type": type(e).__name__,
+            "fallback_mode": True,
+            "phase": "3_enhanced",
             "timestamp": datetime.now().isoformat()
         }), 500
+
+
+@strategist_bp.route('/ready', methods=['GET'])
+def readiness_probe():
+    """
+    Kubernetes readiness probe endpoint.
+    
+    Returns:
+        Readiness status for load balancer routing
+    """
+    try:
+        from .health_checks import get_readiness_probe
+        
+        is_ready, details = get_readiness_probe()
+        status_code = 200 if is_ready else 503
+        
+        return jsonify(details), status_code
+        
+    except Exception as e:
+        logger.error(f"Readiness probe error: {e}")
+        return jsonify({
+            "ready": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 503
+
+
+@strategist_bp.route('/alive', methods=['GET'])
+def liveness_probe():
+    """
+    Kubernetes liveness probe endpoint.
+    
+    Returns:
+        Liveness status for container restart decisions
+    """
+    try:
+        from .health_checks import get_liveness_probe
+        
+        is_alive, details = get_liveness_probe()
+        status_code = 200 if is_alive else 503
+        
+        return jsonify(details), status_code
+        
+    except Exception as e:
+        logger.error(f"Liveness probe error: {e}")
+        return jsonify({
+            "alive": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 503
 
 
 @strategist_bp.route('/conversation', methods=['POST'])
@@ -1099,6 +1252,83 @@ def calculate_alert_priority():
         logger.error(f"Error calculating alert priority: {e}")
         return jsonify({
             "error": "Priority score calculation failed",
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+@strategist_bp.route('/health', methods=['GET'])
+def system_health():
+    """
+    Get comprehensive system health including AI service circuit breakers.
+    
+    Returns:
+        Detailed health status with circuit breaker metrics
+    """
+    try:
+        # Get circuit breaker health status
+        circuit_health = circuit_breaker_manager.get_system_health()
+        
+        # Get service recommendations
+        recommendations = circuit_breaker_manager.get_service_recommendations()
+        
+        # Calculate overall system status
+        system_status = {
+            "status": circuit_health["system_status"],
+            "health_score": circuit_health["health_score"],
+            "timestamp": datetime.now().isoformat(),
+            "services": {
+                "total": circuit_health["service_summary"]["total_services"],
+                "healthy": circuit_health["service_summary"]["healthy_services"],
+                "degraded": circuit_health["service_summary"]["degraded_services"],
+                "failed": circuit_health["service_summary"]["failed_services"]
+            },
+            "circuit_breakers": circuit_health["services"],
+            "recommendations": recommendations,
+            "global_fallback_enabled": circuit_health["global_fallback_enabled"]
+        }
+        
+        # Set HTTP status based on health
+        if circuit_health["system_status"] == "healthy":
+            http_status = 200
+        elif circuit_health["system_status"] == "degraded":
+            http_status = 202  # Accepted but with warnings
+        else:
+            http_status = 503  # Service unavailable
+        
+        return jsonify(system_status), http_status
+        
+    except Exception as e:
+        logger.error(f"Error getting system health: {e}")
+        return jsonify({
+            "status": "error",
+            "error": "Health check failed", 
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+
+@strategist_bp.route('/circuit-breaker/reset', methods=['POST'])
+@login_required
+def reset_circuit_breakers():
+    """
+    Manually reset all circuit breakers (admin endpoint).
+    
+    Returns:
+        Status of circuit breaker reset operation
+    """
+    try:
+        circuit_breaker_manager.reset_all_circuits()
+        
+        return jsonify({
+            "status": "success",
+            "message": "All circuit breakers have been reset",
+            "timestamp": datetime.now().isoformat(),
+            "action": "circuit_breaker_reset"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error resetting circuit breakers: {e}")
+        return jsonify({
+            "error": "Failed to reset circuit breakers",
             "timestamp": datetime.now().isoformat()
         }), 500
 

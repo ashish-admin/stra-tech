@@ -39,9 +39,9 @@ async def verify_strategist():
     print(f"  Has Real-time Intel: {bool(result.get('real_time_intelligence'))}")
     
     if result.get('ai_powered') and not result.get('fallback_mode'):
-        print("\n✅ SUCCESS: AI is working with real intelligence!")
+        print("\nSUCCESS: AI is working with real intelligence!")
     else:
-        print("\n⚠️ WARNING: System in fallback mode")
+        print("\nWARNING: System in fallback mode")
     
     return result
 

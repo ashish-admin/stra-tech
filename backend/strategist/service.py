@@ -191,7 +191,7 @@ class PoliticalStrategist:
             }
 
 
-async def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str, Any], str, int]:
+def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str, Any], str, int]:
     """
     Get cached or generate new ward strategic report.
     
@@ -213,9 +213,23 @@ async def get_ward_report(ward: str, depth: str = "standard") -> tuple[Dict[str,
     record_cache_operation("get", False, "strategist")
     
     try:
-        # Generate new analysis - FIXED: Added await keyword
+        # Generate new analysis - Use async wrapper
+        import asyncio
         strategist = PoliticalStrategist(ward)
-        result = await strategist.analyze_situation(depth)
+        
+        # Handle async call in sync context
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(strategist.analyze_situation(depth))
+            loop.close()
+        except Exception as async_error:
+            logger.error(f"Async execution error: {async_error}")
+            # Fallback to direct call if async fails
+            import sys
+            sys.path.append('../app')
+            from app.async_helper import run_async
+            result = run_async(strategist.analyze_situation(depth))
         
         # Generate ETag and TTL
         etag = hashlib.md5(str(result).encode()).hexdigest()

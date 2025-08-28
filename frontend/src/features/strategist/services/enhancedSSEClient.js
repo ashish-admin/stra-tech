@@ -13,7 +13,7 @@
 class EnhancedSSEClient {
   constructor(options = {}) {
     this.options = {
-      baseUrl: options.baseUrl || '/api/v1/multimodel',
+      baseUrl: options.baseUrl || '/api/v1/strategist',
       maxRetries: options.maxRetries || 5,
       retryBaseDelay: options.retryBaseDelay || 1000,
       maxRetryDelay: options.maxRetryDelay || 30000,
@@ -73,31 +73,24 @@ class EnhancedSSEClient {
 
     switch (mode) {
       case 'stream':
-        // Enhanced streaming endpoint for analysis progress
-        endpoint = `strategist/stream/${encodeURIComponent(ward)}`;
-        params = new URLSearchParams({
-          depth: options.depth || 'standard',
-          context: options.context || 'neutral',
-          include_progress: options.includeProgress !== false ? 'true' : 'false',
-          include_confidence: options.includeConfidence !== false ? 'true' : 'false'
-        });
-        break;
-      case 'intelligence':
-        // Intelligence brief endpoint
-        endpoint = `strategist/intelligence/${encodeURIComponent(ward)}`;
-        params = new URLSearchParams({
-          focus: options.focus || '',
-          format: 'sse'
-        });
-        break;
-      case 'feed':
-        // Legacy feed endpoint
-        endpoint = 'strategist/feed';
+        // Use feed endpoint for streaming (backend doesn't have dedicated stream endpoint yet)
+        endpoint = `feed`;
         params = new URLSearchParams({
           ward: ward,
           priority: options.priority || 'all',
           since: options.since || '',
-          format: 'enhanced'
+          depth: options.depth || 'standard',
+          context: options.context || 'neutral'
+        });
+        break;
+      case 'intelligence':
+      case 'feed':
+        // Intelligence feed endpoint
+        endpoint = 'feed';
+        params = new URLSearchParams({
+          ward: ward,
+          priority: options.priority || 'all',
+          since: options.since || ''
         });
         break;
       default:

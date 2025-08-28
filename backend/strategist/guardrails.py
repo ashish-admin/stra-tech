@@ -4,6 +4,7 @@ Strategic Guardrails and Compliance
 Enforces strategic outputs, ensures internal use compliance, PII redaction, and audit trails.
 """
 
+import json
 import logging
 import re
 from datetime import datetime, timezone

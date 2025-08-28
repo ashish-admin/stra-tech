@@ -2,12 +2,13 @@
   "name": "LokDarpan Political Intelligence Dashboard",
   "short_name": "LokDarpan",
   "description": "Real-time political intelligence and campaign analytics platform for strategic decision making",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "background_color": "#1f2937",
   "theme_color": "#3b82f6",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "categories": ["politics", "analytics", "business", "productivity"],
   "lang": "en-US",
   "dir": "ltr",
@@ -17,6 +18,30 @@
       "src": "/favicon.ico",
       "sizes": "16x16 32x32 48x48",
       "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/lokdarpan-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
@@ -28,8 +53,44 @@
       "url": "/",
       "icons": [
         {
-          "src": "/favicon.ico",
-          "sizes": "48x48"
+          "src": "/icons/icon-144x144.png",
+          "sizes": "144x144"
+        }
+      ]
+    },
+    {
+      "name": "Ward Analysis",
+      "short_name": "Wards",
+      "description": "Ward-specific political analysis",
+      "url": "/?tab=geographic",
+      "icons": [
+        {
+          "src": "/icons/icon-144x144.png",
+          "sizes": "144x144"
+        }
+      ]
+    },
+    {
+      "name": "Strategic Intelligence",
+      "short_name": "Strategist",
+      "description": "AI-powered political strategist",
+      "url": "/?tab=strategist",
+      "icons": [
+        {
+          "src": "/icons/icon-144x144.png",
+          "sizes": "144x144"
+        }
+      ]
+    },
+    {
+      "name": "Political Trends",
+      "short_name": "Trends",
+      "description": "Sentiment and trend analysis",
+      "url": "/?tab=sentiment",
+      "icons": [
+        {
+          "src": "/icons/icon-144x144.png",
+          "sizes": "144x144"
         }
       ]
     }
@@ -57,6 +118,39 @@
     "offline-access",
     "real-time-updates", 
     "performance-monitoring",
-    "advanced-caching"
+    "advanced-caching",
+    "push-notifications",
+    "background-sync"
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+lokdarpan",
+      "url": "/?handler=%s"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "handle_links": "preferred",
+  "file_handlers": [
+    {
+      "action": "/data-import",
+      "accept": {
+        "application/json": [".json"],
+        "text/csv": [".csv"]
+      }
+    }
   ]
 }

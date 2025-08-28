@@ -359,14 +359,225 @@ async function getCacheStatus() {
   }
 }
 
-// Background Sync for offline actions (future enhancement)
+// Background Sync for offline actions
 self.addEventListener('sync', (event) => {
   if (event.tag === 'political-data-sync') {
     event.waitUntil(syncPoliticalData());
+  } else if (event.tag === 'offline-analytics') {
+    event.waitUntil(syncOfflineAnalytics());
   }
 });
 
+// Push notification handler
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
+  if (event.data) {
+    const data = event.data.json();
+    event.waitUntil(handlePushNotification(data));
+  }
+});
+
+// Notification click handler
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.notification.data);
+  
+  event.notification.close();
+  event.waitUntil(handleNotificationClick(event));
+});
+
 async function syncPoliticalData() {
-  // Future: Sync critical political data when connection restored
-  console.log('[SW] Background sync triggered for political data');
+  try {
+    console.log('[SW] Syncing political intelligence data');
+    
+    // Sync critical political data when connection restored
+    const criticalEndpoints = [
+      '/api/v1/geojson',
+      '/api/v1/trends?ward=All&days=7',
+      '/api/v1/alerts'
+    ];
+    
+    for (const endpoint of criticalEndpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const cache = await caches.open(API_CACHE);
+          await cache.put(endpoint, response.clone());
+          console.log('[SW] Synced political data:', endpoint);
+        }
+      } catch (error) {
+        console.error('[SW] Failed to sync endpoint:', endpoint, error);
+      }
+    }
+    
+    // Notify clients about sync completion
+    const clients = await self.clients.matchAll();
+    clients.forEach(client => {
+      client.postMessage({
+        type: 'POLITICAL_DATA_SYNCED',
+        timestamp: Date.now()
+      });
+    });
+    
+  } catch (error) {
+    console.error('[SW] Political data sync failed:', error);
+  }
+}
+
+async function syncOfflineAnalytics() {
+  try {
+    console.log('[SW] Syncing offline analytics data');
+    
+    // Get stored offline analytics
+    const cache = await caches.open('offline-analytics');
+    const requests = await cache.keys();
+    
+    for (const request of requests) {
+      try {
+        const response = await cache.match(request);
+        const data = await response.json();
+        
+        // Send to analytics endpoint
+        await fetch('/api/v1/analytics/offline', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(data)
+        });
+        
+        // Remove from offline cache after successful sync
+        await cache.delete(request);
+        
+      } catch (error) {
+        console.error('[SW] Failed to sync offline analytics:', error);
+      }
+    }
+    
+  } catch (error) {
+    console.error('[SW] Offline analytics sync failed:', error);
+  }
+}
+
+async function handlePushNotification(data) {
+  const { type, title, body, icon, badge, tag, url, ward, priority } = data;
+  
+  const options = {
+    body: body || 'New political intelligence update available',
+    icon: icon || '/icons/icon-192x192.png',
+    badge: badge || '/icons/icon-144x144.png',
+    tag: tag || 'lokdarpan-update',
+    data: { type, url, ward, timestamp: Date.now() },
+    requireInteraction: priority === 'high',
+    actions: [
+      {
+        action: 'view',
+        title: 'View Details',
+        icon: '/icons/icon-144x144.png'
+      },
+      {
+        action: 'dismiss',
+        title: 'Dismiss',
+        icon: '/icons/icon-144x144.png'
+      }
+    ],
+    silent: false,
+    vibrate: priority === 'high' ? [200, 100, 200] : [100]
+  };
+  
+  // Show notification
+  await self.registration.showNotification(
+    title || 'LokDarpan Political Intelligence',
+    options
+  );
+  
+  // Log notification for analytics
+  try {
+    const cache = await caches.open('notification-analytics');
+    const analyticsData = {
+      type: 'notification_received',
+      notificationType: type,
+      ward,
+      timestamp: Date.now(),
+      userAgent: self.navigator.userAgent
+    };
+    
+    await cache.put(
+      `/analytics/notification/${Date.now()}`,
+      new Response(JSON.stringify(analyticsData))
+    );
+  } catch (error) {
+    console.error('[SW] Failed to log notification analytics:', error);
+  }
+}
+
+async function handleNotificationClick(event) {
+  const { notification, action } = event;
+  const data = notification.data || {};
+  
+  try {
+    if (action === 'dismiss') {
+      return; // Just close the notification
+    }
+    
+    // Default action or 'view' action
+    let targetUrl = '/';
+    
+    if (data.url) {
+      targetUrl = data.url;
+    } else if (data.ward) {
+      targetUrl = `/?ward=${encodeURIComponent(data.ward)}`;
+    } else if (data.type) {
+      const typeToTabMap = {
+        'sentiment': 'sentiment',
+        'strategic': 'strategist',
+        'competitive': 'competitive',
+        'geographic': 'geographic'
+      };
+      const tab = typeToTabMap[data.type];
+      if (tab) {
+        targetUrl = `/?tab=${tab}`;
+      }
+    }
+    
+    // Focus existing window or open new one
+    const clients = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    });
+    
+    // Check if LokDarpan is already open
+    for (const client of clients) {
+      if (client.url.includes(self.location.origin)) {
+        await client.focus();
+        client.navigate(targetUrl);
+        return;
+      }
+    }
+    
+    // Open new window
+    await self.clients.openWindow(targetUrl);
+    
+    // Log click analytics
+    const cache = await caches.open('notification-analytics');
+    const analyticsData = {
+      type: 'notification_clicked',
+      action: action || 'default',
+      notificationType: data.type,
+      ward: data.ward,
+      timestamp: Date.now()
+    };
+    
+    await cache.put(
+      `/analytics/notification-click/${Date.now()}`,
+      new Response(JSON.stringify(analyticsData))
+    );
+    
+  } catch (error) {
+    console.error('[SW] Failed to handle notification click:', error);
+  }
 }

@@ -20,7 +20,7 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = '014_comprehensive_ward_performance_optimization'
-down_revision = '013_comprehensive_political_data_seeding'
+down_revision = 'ac47afe8f5c3'
 branch_labels = None
 depends_on = None
 

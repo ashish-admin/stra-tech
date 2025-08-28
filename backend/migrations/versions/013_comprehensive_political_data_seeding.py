@@ -17,7 +17,7 @@ import json
 
 # revision identifiers, used by Alembic.
 revision = '013_comprehensive_political_data_seeding'
-down_revision = 'ac47afe8f5c3'
+down_revision = '011_crisis_response_system'
 branch_labels = None
 depends_on = None
 

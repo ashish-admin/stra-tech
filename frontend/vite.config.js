@@ -1,8 +1,116 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'prompt',
+      injectRegister: 'auto',
+      
+      pwaAssets: {
+        disabled: false,
+        config: true,
+      },
+
+      workbox: {
+        globPatterns: [
+          '**/*.{js,css,html,ico,png,svg,json,txt}',
+        ],
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api/],
+        
+        // Political Intelligence specific caching
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'google-fonts-stylesheets',
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-webfonts',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              }
+            }
+          },
+          {
+            urlPattern: /^.*\/api\/v1\/geojson.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'political-geojson',
+              expiration: {
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              }
+            }
+          },
+          {
+            urlPattern: /^.*\/api\/v1\/ward\/meta.*/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'political-ward-data',
+              expiration: {
+                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+              }
+            }
+          },
+          {
+            urlPattern: /^.*\/api\/v1\/trends.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'political-trends',
+              expiration: {
+                maxAgeSeconds: 60 * 5, // 5 minutes
+              }
+            }
+          },
+          {
+            urlPattern: /^.*\/api\/v1\/strategist.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'political-strategist',
+              expiration: {
+                maxAgeSeconds: 60 * 10, // 10 minutes
+              }
+            }
+          }
+        ]
+      },
+
+      devOptions: {
+        enabled: process.env.NODE_ENV === 'development',
+        suppressWarnings: true,
+        navigateFallback: 'index.html',
+        navigateFallbackAllowlist: [/^\/$/],
+        type: 'module',
+      },
+
+      selfDestroying: false,
+    })
+  ],
+  
+  resolve: {
+    alias: {
+      // Enhanced path aliases for new structure
+      '@': path.resolve(__dirname, './src'),
+      '@features': path.resolve(__dirname, './src/features'),
+      '@shared': path.resolve(__dirname, './src/shared'),
+      '@components': path.resolve(__dirname, './src/shared/components'),
+      '@hooks': path.resolve(__dirname, './src/shared/hooks'),
+      '@services': path.resolve(__dirname, './src/shared/services'),
+      '@utils': path.resolve(__dirname, './src/shared/utils'),
+      '@assets': path.resolve(__dirname, './src/assets'),
+      '@styles': path.resolve(__dirname, './src/styles')
+    }
+  },
   build: {
     // Enable code splitting for better performance
     rollupOptions: {
@@ -44,11 +152,41 @@ export default defineConfig({
             return 'datetime';
           }
           
-          // Political intelligence features - route-based splitting
+          // Enhanced feature-based code splitting for Phase 2
           if (id.includes('/features/strategist/')) {
             return 'strategist-features';
           }
           
+          if (id.includes('/features/analytics/')) {
+            return 'analytics-features';
+          }
+          
+          if (id.includes('/features/dashboard/')) {
+            return 'dashboard-features';
+          }
+          
+          if (id.includes('/features/geographic/')) {
+            return 'geographic-features';
+          }
+          
+          if (id.includes('/features/auth/')) {
+            return 'auth-features';
+          }
+          
+          // Shared components splitting
+          if (id.includes('/shared/components/ui/')) {
+            return 'shared-ui';
+          }
+          
+          if (id.includes('/shared/components/charts/')) {
+            return 'shared-charts';
+          }
+          
+          if (id.includes('/shared/hooks/')) {
+            return 'shared-hooks';
+          }
+          
+          // Legacy tab components (to be migrated)
           if (id.includes('/tabs/StrategistTab') || id.includes('StrategistChat')) {
             return 'strategist-ui';
           }
@@ -139,6 +277,9 @@ export default defineConfig({
       'lucide-react',
       'chart.js',
       'react-chartjs-2',
+      
+      // Enhanced shared components optimization
+      'react-error-boundary',
       
       // Optional dependencies - conditionally include based on usage
       'leaflet',
