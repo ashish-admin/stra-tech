@@ -111,3 +111,10 @@ frontend/dev-dist/
 frontend/playwright-report/
 backend/validation_results*.json
 
+
+# Test and development files
+frontend/test-frontend.html
+frontend/src/TestErrorBoundary.jsx
+frontend/src/compatibility/
+frontend/scripts/test*
+
