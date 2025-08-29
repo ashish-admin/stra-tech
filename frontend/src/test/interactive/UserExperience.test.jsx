@@ -13,7 +13,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import Dashboard from '../../components/Dashboard.jsx';
+import Dashboard from '../../features/dashboard/components/Dashboard.jsx';
 import LocationMap from '../../components/LocationMap.jsx';
 import { WardProvider } from '../../context/WardContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

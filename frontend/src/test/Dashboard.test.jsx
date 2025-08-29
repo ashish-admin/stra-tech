@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import Dashboard from '../components/Dashboard'
+import Dashboard from '../features/dashboard/components/Dashboard'
 import { WardProvider } from '../context/WardContext'
 
 // Mock all the child components

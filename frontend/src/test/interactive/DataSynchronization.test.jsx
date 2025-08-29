@@ -14,7 +14,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import Dashboard from '../../components/Dashboard.jsx';
+import Dashboard from '../../features/dashboard/components/Dashboard.jsx';
 import LocationMap from '../../components/LocationMap.jsx';
 import { WardProvider, useWard } from '../../context/WardContext.jsx';
 import axios from 'axios';
