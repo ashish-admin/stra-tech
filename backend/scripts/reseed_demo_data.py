@@ -175,7 +175,7 @@ def run():
         db.session.execute(text("CREATE INDEX IF NOT EXISTS ix_post_created_at ON post (created_at)"))
         db.session.commit()
 
-        print("✅ Reseed complete: demo posts generated with valid author_id and created_at over the last 31 days.")
+        print("Reseed complete: demo posts generated with valid author_id and created_at over the last 31 days.")
 
 if __name__ == "__main__":
     run()

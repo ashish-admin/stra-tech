@@ -100,7 +100,14 @@
       "Bash(start-backend.bat)",
       "WebFetch(domain:localhost)",
       "Bash(sed:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(git push:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(cp:*)",
+      "Bash(call venv/Scripts/activate.bat)",
+      "Bash(\"C:\\Program Files\\PostgreSQL\\16\\bin\\psql.exe\" -U postgres -d lokdarpan_db -c \"SELECT count(*) FROM information_schema.tables WHERE table_schema = ''public'';\")",
+      "Bash(cmd:*)",
+      "Bash(. ./venv/Scripts/activate)"
     ],
     "deny": [],
     "ask": [],
