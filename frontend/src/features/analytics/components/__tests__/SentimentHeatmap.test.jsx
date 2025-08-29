@@ -52,9 +52,9 @@ vi.mock('../../strategist/hooks/useMobileOptimizedSSE.js', () => ({
   useMobileOptimizedSSE: () => mockSSE
 }));
 
-// Mock ComponentErrorBoundary
-vi.mock('../../../shared/components/ui/ComponentErrorBoundary.jsx', () => ({
-  ComponentErrorBoundary: ({ children, componentName }) => (
+// Mock DashboardErrorBoundary
+vi.mock('../../../shared/components/ui/DashboardErrorBoundary.jsx', () => ({
+  DashboardErrorBoundary: ({ children, componentName }) => (
     <div data-testid={`error-boundary-${componentName}`}>
       {children}
     </div>

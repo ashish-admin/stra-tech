@@ -1,5 +1,5 @@
 import React from 'react';
-import ComponentErrorBoundary from '../ComponentErrorBoundary';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import CollapsibleSection from '../CollapsibleSection';
 import { LazyLocationMap } from '../lazy/LazyTabComponents';
 import StrategicSummary from '../StrategicSummary';
@@ -18,7 +18,7 @@ const GeographicTab = ({
         <div className="lg:col-span-7 xl:col-span-8 bg-white border rounded-md">
           <div className="p-4 font-medium">Geospatial Intelligence</div>
           <div className="p-4">
-            <ComponentErrorBoundary
+            <DashboardErrorBoundary
               componentName="Interactive Map"
               fallbackMessage="The interactive ward map is temporarily unavailable. Use the ward dropdown above for area selection."
             >
@@ -28,19 +28,19 @@ const GeographicTab = ({
                 onWardSelect={setSelectedWard}
                 matchHeightRef={summaryRef}
               />
-            </ComponentErrorBoundary>
+            </DashboardErrorBoundary>
           </div>
         </div>
 
         <div className="lg:col-span-5 xl:col-span-4 bg-white border rounded-md" ref={summaryRef}>
           <div className="p-4 font-medium">Strategic Summary</div>
           <div className="p-4">
-            <ComponentErrorBoundary
+            <DashboardErrorBoundary
               componentName="Strategic Analysis"
               fallbackMessage={`AI-powered strategic analysis for ${selectedWard || 'the selected ward'} is temporarily unavailable.`}
             >
               <StrategicSummary selectedWard={selectedWard} />
-            </ComponentErrorBoundary>
+            </DashboardErrorBoundary>
           </div>
         </div>
       </div>
@@ -51,12 +51,12 @@ const GeographicTab = ({
         priority="normal"
         defaultExpanded={true}
       >
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Latest Headlines"
           fallbackMessage="Latest news headlines are temporarily unavailable."
         >
           <EpaperFeed ward={selectedWard} limit={10} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </CollapsibleSection>
     </div>
   );

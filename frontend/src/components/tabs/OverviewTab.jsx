@@ -1,6 +1,6 @@
 import React from 'react';
 import { useWard } from '../../context/WardContext';
-import ComponentErrorBoundary from '../ComponentErrorBoundary';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import DashboardHealthIndicator from '../DashboardHealthIndicator';
 import ExecutiveSummary from '../ExecutiveSummary';
 import CollapsibleSection from '../CollapsibleSection';
@@ -53,15 +53,15 @@ const OverviewTab = ({
       <CollapsibleSection
         title="Intelligence Alerts"
         priority="critical"
-        badge={tabBadges.overview}
+        badge={tabBadges?.overview}
         defaultExpanded={true}
       >
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Intelligence Alerts"
           fallbackMessage="Real-time intelligence alerts are temporarily unavailable."
         >
           <AlertsPanel posts={filteredPosts} ward={selectedWard} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </CollapsibleSection>
 
       {/* Ward Demographics */}
@@ -70,12 +70,12 @@ const OverviewTab = ({
         priority="normal"
         defaultExpanded={false}
       >
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Ward Meta Panel"
           fallbackMessage="Ward demographic information is temporarily unavailable."
         >
           <WardMetaPanel wardId={wardIdForMeta} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </CollapsibleSection>
     </div>
   );

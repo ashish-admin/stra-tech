@@ -16,7 +16,7 @@ import React, {
 } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import * as d3 from 'd3';
-import { debounce, throttle } from 'lodash-es';
+import { debounce, throttle } from 'lodash';
 
 // Shared components and hooks
 import { 
@@ -24,7 +24,7 @@ import {
   LoadingSkeleton 
 } from '../ui';
 import { useEnhancedQuery } from '../../hooks/api';
-import { lokDarpanApi } from '../../services/api';
+import { fetchJson } from '../../services/api';
 import { useTimelineSSE } from '../../hooks/useTimelineSSE';
 import { useTimelineKeyboard } from '../../hooks/useTimelineKeyboard';
 
@@ -114,14 +114,7 @@ const StrategicTimeline = ({
     }
   });
 
-  // Keyboard accessibility integration
-  const {
-    focusedEventIndex,
-    isNavigating,
-    timelineRef,
-    navigateToEvent,
-    AnnouncementElement
-  } = useTimelineKeyboard(mergedEventsData, handleEventSelect, handleTimeRangeChange);
+  // Keyboard accessibility integration - moved after mergedEventsData definition
 
   // Data fetching with multiple endpoints
   const { 
@@ -390,6 +383,15 @@ const StrategicTimeline = ({
     
     return merged;
   }, [eventsData, sseEvents]);
+
+  // Keyboard accessibility integration - now after mergedEventsData is defined
+  const {
+    focusedEventIndex,
+    isNavigating,
+    timelineRef,
+    navigateToEvent,
+    AnnouncementElement
+  } = useTimelineKeyboard(mergedEventsData, handleEventSelect, handleTimeRangeChange);
 
   // D3 Timeline Visualization
   const initializeTimeline = useCallback(() => {

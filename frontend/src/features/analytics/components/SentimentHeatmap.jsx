@@ -13,7 +13,7 @@ import {
   Activity,
   TrendingUp
 } from 'lucide-react';
-import { ComponentErrorBoundary } from '../../../shared/components/ui/ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import { ChartSkeleton, LoadingSpinner } from '../../../shared/components/ui/LoadingSkeleton.jsx';
 import { useMobileOptimizedSSE } from '../../strategist/hooks/useMobileOptimizedSSE.js';
 import { useWard } from '../../../context/WardContext.jsx'; // LokDarpan Ward Context integration
@@ -707,12 +707,12 @@ function createColorLegend(g, colorScale, width, height, selectedEmotion) {
  */
 const SentimentHeatmapWithErrorBoundary = (props) => {
   return (
-    <ComponentErrorBoundary 
+    <DashboardErrorBoundary 
       componentName="SentimentHeatmap"
       fallbackProps={{ height: props.height || 400 }}
     >
       <SentimentHeatmap {...props} />
-    </ComponentErrorBoundary>
+    </DashboardErrorBoundary>
   );
 };
 

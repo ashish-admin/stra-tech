@@ -106,7 +106,7 @@ const SummaryCard = ({
 };
 
 const ExecutiveSummary = ({ 
-  selectedWard = 'All',
+  selectedWard, // FIXED: Removed default 'All' - should come from props/context
   onNavigateToTab = null,
   refreshInterval = 30000, // 30 seconds
   className = ""

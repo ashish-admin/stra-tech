@@ -105,9 +105,23 @@ const StrategistChat = ({
       if (response.ok) {
         const data = await response.json();
         setConversations(data.conversations || []);
+      } else if (response.status === 404) {
+        // Conversations endpoint not available, use empty array
+        console.warn('Conversations endpoint not available, using empty conversation list');
+        setConversations([]);
+      } else if (response.status === 500) {
+        // Server error, graceful degradation
+        console.warn('Server error loading conversations, using empty conversation list');
+        setConversations([]);
+      } else {
+        // Other errors, log but don't crash
+        console.warn(`Failed to load conversations (${response.status}):`, await response.text());
+        setConversations([]);
       }
     } catch (error) {
       console.error('Failed to load conversations:', error);
+      // Graceful degradation - continue with empty conversations
+      setConversations([]);
     }
   };
   

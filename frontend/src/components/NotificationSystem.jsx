@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Bell, BellRing, AlertTriangle, Info, CheckCircle2, AlertCircle, Volume2, VolumeX, Settings, History, Filter, Trash2 } from 'lucide-react';
 import { useEnhancedSSE } from '../features/strategist/hooks/useEnhancedSSE';
-import SSEErrorBoundary from './SSEErrorBoundary';
+import { SSEErrorBoundary } from '../shared/components/ui/EnhancedErrorBoundaries';
 
 const NotificationSystem = ({ 
   selectedWard, 

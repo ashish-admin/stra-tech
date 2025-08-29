@@ -91,6 +91,55 @@ export const useEnhancedSSE = (options = {}) => {
   }, [maxRetries, retryDelay, heartbeatInterval, options.clientOptions]);
 
   /**
+   * Activate fallback polling when SSE fails
+   */
+  const activateFallback = useCallback(() => {
+    if (fallbackActive || !ward) return;
+    
+    console.log('[LokDarpan SSE] Activating fallback polling mode');
+    setFallbackActive(true);
+    
+    // Start polling fallback
+    fallbackIntervalRef.current = setInterval(async () => {
+      if (!mountedRef.current) return;
+      
+      try {
+        const response = await fetch(`/api/v1/strategist/${encodeURIComponent(ward)}?depth=${depth}&context=${context}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFallbackData(data);
+          
+          // Emit as analysis data for compatibility
+          if (onAnalysis) {
+            onAnalysis({
+              ...data,
+              fallback_mode: true,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+      } catch (error) {
+        console.warn('[LokDarpan SSE] Fallback polling failed:', error);
+      }
+    }, 30000); // Poll every 30 seconds
+  }, [fallbackActive, ward, depth, context, onAnalysis]);
+
+  /**
+   * Deactivate fallback polling
+   */
+  const deactivateFallback = useCallback(() => {
+    if (!fallbackActive) return;
+    
+    console.log('[LokDarpan SSE] Deactivating fallback polling mode');
+    setFallbackActive(false);
+    
+    if (fallbackIntervalRef.current) {
+      clearInterval(fallbackIntervalRef.current);
+      fallbackIntervalRef.current = null;
+    }
+  }, [fallbackActive]);
+
+  /**
    * Setup event listeners for SSE client
    */
   const setupEventListeners = useCallback((client) => {
@@ -291,56 +340,6 @@ export const useEnhancedSSE = (options = {}) => {
       }
     }, 5000); // Update metrics every 5 seconds
   }, []);
-
-  /**
-   * Activate fallback polling when SSE fails
-   */
-  const activateFallback = useCallback(() => {
-    if (fallbackActive || !ward) return;
-    
-    console.log('[LokDarpan SSE] Activating fallback polling mode');
-    setFallbackActive(true);
-    
-    // Start polling fallback
-    fallbackIntervalRef.current = setInterval(async () => {
-      if (!mountedRef.current) return;
-      
-      try {
-        const response = await fetch(`/api/v1/strategist/${encodeURIComponent(ward)}?depth=${depth}&context=${context}`);
-        if (response.ok) {
-          const data = await response.json();
-          setFallbackData(data);
-          
-          // Emit as analysis data for compatibility
-          if (onAnalysis) {
-            onAnalysis({
-              ...data,
-              fallback_mode: true,
-              timestamp: new Date().toISOString()
-            });
-          }
-        }
-      } catch (error) {
-        console.warn('[LokDarpan SSE] Fallback polling failed:', error);
-      }
-    }, 30000); // Poll every 30 seconds
-    
-  }, [fallbackActive, ward, depth, context, onAnalysis]);
-
-  /**
-   * Deactivate fallback polling
-   */
-  const deactivateFallback = useCallback(() => {
-    if (!fallbackActive) return;
-    
-    console.log('[LokDarpan SSE] Deactivating fallback polling mode');
-    setFallbackActive(false);
-    
-    if (fallbackIntervalRef.current) {
-      clearInterval(fallbackIntervalRef.current);
-      fallbackIntervalRef.current = null;
-    }
-  }, [fallbackActive]);
 
   /**
    * Clear all data

@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Grid, Layout as LayoutIcon, Maximize2, Settings as SettingsIcon } from 'lucide-react';
 
 import WidgetManager from './WidgetManager.jsx';
-import ComponentErrorBoundary from '../ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import { useWard } from '../../context/WardContext.jsx';
 
 // Import existing dashboard components for seamless integration
@@ -97,9 +97,9 @@ function ClassicTabDashboard() {
               key={tab.id}
               className={`h-full ${activeTab === tab.id ? 'block' : 'hidden'}`}
             >
-              <ComponentErrorBoundary>
+              <DashboardErrorBoundary>
                 <Component />
-              </ComponentErrorBoundary>
+              </DashboardErrorBoundary>
             </div>
           );
         })}
@@ -297,7 +297,7 @@ function WidgetDashboard() {
   }, []);
 
   return (
-    <ComponentErrorBoundary>
+    <DashboardErrorBoundary>
       <div className={`h-full flex flex-col bg-gray-50 ${isFullscreen ? 'p-0' : ''}`}>
         {/* Dashboard Header */}
         <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
@@ -370,7 +370,7 @@ function WidgetDashboard() {
           </div>
         </div>
       </div>
-    </ComponentErrorBoundary>
+    </DashboardErrorBoundary>
   );
 }
 

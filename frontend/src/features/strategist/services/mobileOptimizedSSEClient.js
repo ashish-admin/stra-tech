@@ -180,6 +180,18 @@ class MobileOptimizedSSEClient extends EnhancedSSEClient {
   }
 
   /**
+   * Update connection type detection
+   */
+  updateConnectionType() {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection) {
+      this.connectionType = connection.effectiveType || 'unknown';
+    } else {
+      this.connectionType = 'unknown';
+    }
+  }
+
+  /**
    * Check network quality using ping-like mechanism
    */
   async checkNetworkQuality() {

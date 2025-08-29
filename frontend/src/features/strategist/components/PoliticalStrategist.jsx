@@ -11,7 +11,7 @@ import IntelligenceFeed from './IntelligenceFeed';
 import ActionCenter from './ActionCenter';
 import AnalysisControls from './AnalysisControls';
 import StrategistStream from './StrategistStream';
-import StrategistErrorBoundary from './StrategistErrorBoundary';
+import { StrategistErrorBoundary } from "../../../shared/components/ui/EnhancedErrorBoundaries";
 
 export default function PoliticalStrategist({ selectedWard }) {
   const { preferences, updatePreference } = useStrategistPreferences();
@@ -262,12 +262,12 @@ export default function PoliticalStrategist({ selectedWard }) {
         </div>
       )}
 
-      {feedError && (
+      {intelligenceSSE.connectionError && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
             <p className="text-sm text-yellow-700">
-              Intelligence feed: {feedError}
+              Intelligence feed: {intelligenceSSE.connectionError.error || 'Connection issue'}
             </p>
           </div>
         </div>

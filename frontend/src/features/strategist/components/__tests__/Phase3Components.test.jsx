@@ -9,7 +9,7 @@ import IntelligenceFeed from '../IntelligenceFeed';
 import StrategistChat from '../StrategistChat';
 import StrategicWorkbench from '../StrategicWorkbench';
 import ScenarioSimulator from '../ScenarioSimulator';
-import StrategistErrorBoundary from '../StrategistErrorBoundary';
+import { StrategistErrorBoundary } from "../../../shared/components/ui/EnhancedErrorBoundaries";
 
 // Mock the ward context
 const mockWardContext = {

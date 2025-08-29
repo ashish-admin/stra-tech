@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, Activity, CheckCircle2, Clock, Wifi, WifiOff, Play, Pause, RotateCcw, Settings, TrendingUp, Shield, Zap } from 'lucide-react';
 import { useEnhancedSSE } from '../../../shared/hooks/api/useEnhancedSSE';
-import SSEErrorBoundary from '../../../components/SSEErrorBoundary';
+import { SSEErrorBoundary } from '../../../shared/components/ui/EnhancedErrorBoundaries';
 import SSEProgressIndicator from '../../../components/SSEProgressIndicator';
 
 const StrategistStream = ({ 

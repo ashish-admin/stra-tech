@@ -1,5 +1,5 @@
 import React from 'react';
-import ComponentErrorBoundary from '../ComponentErrorBoundary';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import CollapsibleSection from '../CollapsibleSection';
 import EmotionChart from '../EmotionChart';
 import TopicAnalysis from '../TopicAnalysis';
@@ -21,23 +21,23 @@ const SentimentTab = ({
           {loading ? (
             <div className="text-sm text-gray-500">Loading chart data…</div>
           ) : (
-            <ComponentErrorBoundary
+            <DashboardErrorBoundary
               componentName="Sentiment Chart"
               fallbackMessage="Sentiment visualization is temporarily unavailable."
             >
               <EmotionChart posts={filteredPosts} />
-            </ComponentErrorBoundary>
+            </DashboardErrorBoundary>
           )}
         </div>
 
         <div className="bg-white border rounded-md p-4">
           <h3 className="font-medium mb-4">Topic Analysis</h3>
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             componentName="Topic Analysis"
             fallbackMessage="Topic clustering analysis is temporarily unavailable."
           >
             <TopicAnalysis ward={selectedWard} keyword={keyword} posts={filteredPosts} />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </div>
 
@@ -49,12 +49,12 @@ const SentimentTab = ({
       >
         <div className="bg-white border rounded-md p-4">
           <h3 className="font-medium mb-4">Trend: Emotions & Share of Voice</h3>
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             componentName="Time Series Chart"
             fallbackMessage="Historical trend analysis is temporarily unavailable."
           >
             <TimeSeriesChart ward={selectedWard} days={30} />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </CollapsibleSection>
 
@@ -65,12 +65,12 @@ const SentimentTab = ({
         defaultExpanded={false}
       >
         <div className="bg-white border rounded-md p-4">
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             componentName="Predictive Analysis"
             fallbackMessage="Electoral prediction analysis is temporarily unavailable."
           >
             <PredictionSummary ward={selectedWard} />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </CollapsibleSection>
     </div>

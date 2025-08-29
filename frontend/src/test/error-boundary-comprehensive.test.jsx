@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
-import ComponentErrorBoundary from '../shared/components/ui/ComponentErrorBoundary';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations);
@@ -29,7 +29,7 @@ const WorkingComponent = () => (
   <div data-testid="working-component">Component is working!</div>
 );
 
-describe('ComponentErrorBoundary', () => {
+describe('DashboardErrorBoundary', () => {
   let consoleSpy;
   const mockOnError = vi.fn();
 
@@ -49,9 +49,9 @@ describe('ComponentErrorBoundary', () => {
   describe('Normal Operation', () => {
     it('renders children when no error occurs', () => {
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <WorkingComponent />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(screen.getByTestId('working-component')).toBeInTheDocument();
@@ -62,9 +62,9 @@ describe('ComponentErrorBoundary', () => {
       const TestChild = ({ testProp }) => <div>{testProp}</div>;
       
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <TestChild testProp="test-value" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(screen.getByText('test-value')).toBeInTheDocument();
@@ -74,12 +74,12 @@ describe('ComponentErrorBoundary', () => {
   describe('Error Handling', () => {
     it('catches errors and displays fallback UI', () => {
       render(
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="TestComponent"
           onError={mockOnError}
         >
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -89,12 +89,12 @@ describe('ComponentErrorBoundary', () => {
 
     it('calls onError callback when error occurs', () => {
       render(
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="TestComponent"
           onError={mockOnError}
         >
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(mockOnError).toHaveBeenCalledWith(
@@ -111,13 +111,13 @@ describe('ComponentErrorBoundary', () => {
 
     it('logs error details to console', () => {
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('ComponentErrorBoundary [TestComponent]:'),
+        expect.stringContaining('DashboardErrorBoundary [TestComponent]:'),
         expect.objectContaining({
           error: expect.any(Error),
           errorInfo: expect.any(Object)
@@ -129,12 +129,12 @@ describe('ComponentErrorBoundary', () => {
   describe('Retry Functionality', () => {
     it('displays retry button with correct attempt count', () => {
       render(
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="TestComponent"
           maxRetries={3}
         >
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const retryButton = screen.getByRole('button', { name: /Retry loading TestComponent/ });
@@ -155,12 +155,12 @@ describe('ComponentErrorBoundary', () => {
       };
 
       render(
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="TestComponent"
           retryDelay={100}
         >
           <RetryableComponent />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       // Should show error initially
@@ -188,9 +188,9 @@ describe('ComponentErrorBoundary', () => {
       const user = userEvent.setup();
       
       render(
-        <ComponentErrorBoundary componentName="TestComponent" retryDelay={100}>
+        <DashboardErrorBoundary componentName="TestComponent" retryDelay={100}>
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const retryButton = screen.getByRole('button', { name: /Retry loading TestComponent/ });
@@ -208,13 +208,13 @@ describe('ComponentErrorBoundary', () => {
       const user = userEvent.setup();
       
       render(
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="TestComponent"
           maxRetries={1}
           retryDelay={10}
         >
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       // First retry
@@ -237,9 +237,9 @@ describe('ComponentErrorBoundary', () => {
       const CustomFallback = () => <div data-testid="custom-fallback">Custom Error UI</div>;
       
       render(
-        <ComponentErrorBoundary fallback={<CustomFallback />}>
+        <DashboardErrorBoundary fallback={<CustomFallback />}>
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(screen.getByTestId('custom-fallback')).toBeInTheDocument();
@@ -250,9 +250,9 @@ describe('ComponentErrorBoundary', () => {
       const customFallbackFn = vi.fn(() => <div>Custom Function Fallback</div>);
       
       render(
-        <ComponentErrorBoundary fallback={customFallbackFn}>
+        <DashboardErrorBoundary fallback={customFallbackFn}>
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(customFallbackFn).toHaveBeenCalledWith(
@@ -274,9 +274,9 @@ describe('ComponentErrorBoundary', () => {
       process.env.NODE_ENV = 'development';
       
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const detailsElement = screen.getByText('Technical Details (Development Only)');
@@ -287,9 +287,9 @@ describe('ComponentErrorBoundary', () => {
       process.env.NODE_ENV = 'production';
       
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(screen.queryByText('Technical Details (Development Only)')).not.toBeInTheDocument();
@@ -299,9 +299,9 @@ describe('ComponentErrorBoundary', () => {
   describe('Accessibility', () => {
     it('meets WCAG accessibility standards', async () => {
       const { container } = render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const results = await axe(container);
@@ -310,9 +310,9 @@ describe('ComponentErrorBoundary', () => {
 
     it('has proper ARIA attributes', () => {
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const alertElement = screen.getByRole('alert');
@@ -321,9 +321,9 @@ describe('ComponentErrorBoundary', () => {
 
     it('has descriptive button labels', () => {
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const retryButton = screen.getByLabelText(/Retry loading TestComponent/);
@@ -347,9 +347,9 @@ describe('ComponentErrorBoundary', () => {
       });
 
       render(
-        <ComponentErrorBoundary componentName="TestComponent">
+        <DashboardErrorBoundary componentName="TestComponent">
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       const refreshButton = screen.getByRole('button', { name: 'Refresh entire page' });
@@ -367,12 +367,12 @@ describe('ComponentErrorBoundary', () => {
 
     it('shows contact information when enabled', () => {
       render(
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="TestComponent"
           showContactInfo={true}
         >
           <ThrowError shouldError={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       expect(screen.getByText(/If this problem persists, please contact support/)).toBeInTheDocument();
@@ -385,9 +385,9 @@ describe('ComponentErrorBoundary', () => {
       
       render(
         <div>
-          <ComponentErrorBoundary componentName="ErrorComponent">
+          <DashboardErrorBoundary componentName="ErrorComponent">
             <ThrowError shouldError={true} />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
           <SiblingComponent />
         </div>
       );
@@ -402,12 +402,12 @@ describe('ComponentErrorBoundary', () => {
     it('allows multiple error boundaries to work independently', () => {
       render(
         <div>
-          <ComponentErrorBoundary componentName="Component1">
+          <DashboardErrorBoundary componentName="Component1">
             <ThrowError shouldError={true} errorType="render" />
-          </ComponentErrorBoundary>
-          <ComponentErrorBoundary componentName="Component2">
+          </DashboardErrorBoundary>
+          <DashboardErrorBoundary componentName="Component2">
             <WorkingComponent />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       );
 

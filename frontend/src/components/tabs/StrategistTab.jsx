@@ -1,5 +1,5 @@
 import React from 'react';
-import StrategistErrorBoundary from '../../features/strategist/components/StrategistErrorBoundary';
+import { StrategistErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import IntelligenceFeed from '../../features/strategist/components/IntelligenceFeed';
 import StrategistChat from '../../features/strategist/components/StrategistChat';
 import { LazyStrategicWorkbench, LazyScenarioSimulator } from '../lazy/LazyTabComponents';

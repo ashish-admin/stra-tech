@@ -116,12 +116,12 @@ export const GenericFallback = ({ componentName, onRetry, description }) => (
 // Higher-order component factory for creating error boundaries with specific fallbacks
 export const withErrorBoundary = (Component, fallbackComponent, componentName) => {
   return React.forwardRef((props, ref) => (
-    <ComponentErrorBoundary
+    <DashboardErrorBoundary
       componentName={componentName}
       fallbackComponent={fallbackComponent}
     >
       <Component {...props} ref={ref} />
-    </ComponentErrorBoundary>
+    </DashboardErrorBoundary>
   ));
 };
 

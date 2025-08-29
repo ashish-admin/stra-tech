@@ -6,7 +6,7 @@
 import React, { Component, Suspense, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, RefreshCw, Settings, X, Maximize2, Minimize2 } from 'lucide-react';
 import { LoadingSpinner } from '../ui/LoadingSkeleton.jsx';
-import ComponentErrorBoundary from '../ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 
 /**
  * Widget Error Boundary - Specialized error boundary for widgets

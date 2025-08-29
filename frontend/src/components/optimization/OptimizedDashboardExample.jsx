@@ -25,7 +25,7 @@ import {
 import { LoadingSpinner } from "../ui/LoadingSkeleton.jsx";
 import { joinApi } from "../../lib/api";
 import { useWard } from "../../context/WardContext.jsx";
-import ComponentErrorBoundary from "../ComponentErrorBoundary.jsx";
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import DashboardHealthIndicator from "../DashboardHealthIndicator.jsx";
 import NotificationSystem from "../NotificationSystem.jsx";
 import DashboardTabs from "../DashboardTabs.jsx";
@@ -437,7 +437,7 @@ export default function OptimizedDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
         {/* Left Column - Political Intelligence Map */}
         <div className="lg:col-span-5">
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             fallback="Map temporarily unavailable - ward selection still functional"
             category="political-intelligence"
           >
@@ -446,13 +446,13 @@ export default function OptimizedDashboard() {
               onWardSelect={handleWardSelection}
               selectedWard={selectedWard}
             />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
 
         {/* Right Column - Strategic Intelligence */}
         <div className="lg:col-span-7 space-y-6">
           {/* Executive Summary */}
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             fallback="Executive summary temporarily unavailable"
             category="political-intelligence"
           >
@@ -460,10 +460,10 @@ export default function OptimizedDashboard() {
               ward={selectedWard}
               scenario={campaignScenario}
             />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
 
           {/* Strategic Summary */}
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             fallback="Strategic analysis temporarily unavailable"
             category="political-intelligence"
           >
@@ -471,10 +471,10 @@ export default function OptimizedDashboard() {
               ward={selectedWard}
               posts={filteredPosts.slice(0, 10)}
             />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
 
           {/* Alerts Panel */}
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             fallback="Alerts temporarily unavailable"
             category="communication"
           >
@@ -483,7 +483,7 @@ export default function OptimizedDashboard() {
               scenario={campaignScenario}
               urgent={campaignScenario === CAMPAIGN_SCENARIOS.CRISIS}
             />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </div>
 
@@ -497,7 +497,7 @@ export default function OptimizedDashboard() {
         />
         
         <div className="p-6">
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             fallback="Analysis tab temporarily unavailable"
             category="analytics"
           >
@@ -545,7 +545,7 @@ export default function OptimizedDashboard() {
                 loading={loading}
               />
             )}
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </div>
 

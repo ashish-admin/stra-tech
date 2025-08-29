@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import React from 'react'
-import ComponentErrorBoundary from '../components/ComponentErrorBoundary'
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 
 // Mock the health monitor
 vi.mock('../utils/componentHealth.js', () => ({
@@ -37,26 +37,26 @@ describe('Error Boundary Integration', () => {
   it('isolates component failures from affecting sibling components', () => {
     render(
       <div data-testid="dashboard">
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Interactive Map"
           fallbackMessage="The interactive ward map is temporarily unavailable."
         >
           <FailingComponent name="Map" shouldFail={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Strategic Analysis"
           fallbackMessage="AI-powered strategic analysis is temporarily unavailable."
         >
           <WorkingComponent name="Strategic Summary" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Sentiment Chart"
           fallbackMessage="Sentiment visualization is temporarily unavailable."
         >
           <WorkingComponent name="Emotion Chart" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
         <div data-testid="other-content">Other dashboard content</div>
       </div>
@@ -89,12 +89,12 @@ describe('Error Boundary Integration', () => {
     }
 
     render(
-      <ComponentErrorBoundary
+      <DashboardErrorBoundary
         componentName="Retryable Component"
         allowRetry={true}
       >
         <RetryableComponent />
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     )
 
     // Should show error state initially
@@ -115,7 +115,7 @@ describe('Error Boundary Integration', () => {
   })
 
   it('prevents max retry attempts from being exceeded', () => {
-    const errorBoundary = new ComponentErrorBoundary({
+    const errorBoundary = new DashboardErrorBoundary({
       componentName: 'Test',
       allowRetry: true
     })
@@ -134,19 +134,19 @@ describe('Error Boundary Integration', () => {
   it('provides different fallback UIs for different component types', () => {
     render(
       <div>
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Interactive Map"
           fallbackMessage="Custom map error message"
         >
           <FailingComponent name="Map" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
-        <ComponentErrorBoundary
+        <DashboardErrorBoundary
           componentName="Strategic Analysis"
           fallbackMessage="Custom analysis error message"
         >
           <FailingComponent name="Analysis" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </div>
     )
 
@@ -168,12 +168,12 @@ describe('Error Boundary Integration', () => {
     })
 
     render(
-      <ComponentErrorBoundary
+      <DashboardErrorBoundary
         componentName="Test Component"
         allowRetry={true}
       >
         <FailingComponent name="Test" />
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     )
 
     // Should show reload button
@@ -188,7 +188,7 @@ describe('Error Boundary Integration', () => {
   })
 
   it('maintains dashboard health metrics', () => {
-    const errorBoundary = new ComponentErrorBoundary({ componentName: 'Test' })
+    const errorBoundary = new DashboardErrorBoundary({ componentName: 'Test' })
     errorBoundary.setState = vi.fn()
 
     const error = new Error('Test error')
@@ -206,21 +206,21 @@ describe('Error Boundary Integration', () => {
 
   it('supports configuration for development vs production modes', () => {
     render(
-      <ComponentErrorBoundary
+      <DashboardErrorBoundary
         componentName="Test Component"
         showDetails={true}  // Development mode
         allowRetry={true}
         logProps={false}    // Don't log props in production
       >
         <FailingComponent name="Test" />
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     )
 
     // In development mode, should show technical details option
     expect(screen.getByText('Test Component Unavailable')).toBeInTheDocument()
     
     // The component supports showDetails prop for development
-    const errorBoundary = new ComponentErrorBoundary({
+    const errorBoundary = new DashboardErrorBoundary({
       componentName: 'Test',
       showDetails: true
     })
@@ -234,17 +234,17 @@ describe('Error Boundary Integration', () => {
       <div data-testid="full-dashboard">
         <div data-testid="header">Dashboard Header</div>
         
-        <ComponentErrorBoundary componentName="Map">
+        <DashboardErrorBoundary componentName="Map">
           <FailingComponent name="Map" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
-        <ComponentErrorBoundary componentName="Charts">
+        <DashboardErrorBoundary componentName="Charts">
           <FailingComponent name="Charts" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
-        <ComponentErrorBoundary componentName="Alerts">
+        <DashboardErrorBoundary componentName="Alerts">
           <FailingComponent name="Alerts" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
 
         <div data-testid="footer">Dashboard Footer</div>
       </div>

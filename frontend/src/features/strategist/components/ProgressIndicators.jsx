@@ -588,3 +588,61 @@ export const IntelligenceActivityIndicator = ({
     </div>
   );
 };
+
+/**
+ * Confidence Score Indicator
+ */
+export const ConfidenceScoreIndicator = ({ 
+  confidenceScore = 0,
+  trend = 'stable',
+  className = '',
+  showTrend = true
+}) => {
+  const getConfidenceColor = () => {
+    if (confidenceScore >= 80) return 'text-green-600 bg-green-100';
+    if (confidenceScore >= 60) return 'text-blue-600 bg-blue-100';
+    if (confidenceScore >= 40) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const getTrendIcon = () => {
+    switch (trend) {
+      case 'increasing': return TrendingUp;
+      case 'decreasing': return 'trending-down';
+      default: return Activity;
+    }
+  };
+
+  return (
+    <div className={`bg-white border border-gray-200 rounded-lg p-4 ${className}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${getConfidenceColor()}`}>
+            <BarChart3 className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">
+              {Math.round(confidenceScore)}% Confidence
+            </div>
+            <div className="text-sm text-gray-600">
+              Analysis reliability score
+            </div>
+          </div>
+        </div>
+        
+        {showTrend && trend !== 'stable' && (
+          <div className={`flex items-center ${
+            trend === 'increasing' ? 'text-green-600' : 'text-red-600'
+          }`}>
+            <TrendingUp className={`h-4 w-4 mr-1 ${
+              trend === 'decreasing' ? 'rotate-180' : ''
+            }`} />
+            <span className="text-xs font-medium">
+              {trend}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -15,10 +15,10 @@ from .routes import main_bp
 
 logger = logging.getLogger(__name__)
 
-strategist_bp = Blueprint('strategist', __name__, url_prefix='/api/v1/strategist')
+strategist_bp = Blueprint('strategist_compat', __name__, url_prefix='/api/v1/strategist-compat')
 
 
-@strategist_bp.route('/<ward>', methods=['GET'])
+@strategist_bp.route('/ward-analysis/<ward>', methods=['GET'])
 @login_required
 def get_ward_analysis(ward):
     """
@@ -310,10 +310,12 @@ def get_status():
             "endpoints_available": [
                 "GET /api/v1/strategist/<ward>",
                 "GET /api/v1/strategist/feed", 
+                "GET /api/v1/strategist/conversations",
                 "GET /api/v1/strategist/status",
                 "GET /api/v1/strategist/health",
                 "POST /api/v1/strategist/analyze",
-                "POST /api/v1/strategist/trigger"
+                "POST /api/v1/strategist/trigger",
+                "POST /api/v1/strategist/chat"
             ],
             "performance_metrics": {
                 "average_response_time": "1.2s",
@@ -630,6 +632,91 @@ def scenarios():
         return jsonify({"scenario": new_scenario})
 
 
+@strategist_bp.route('/conversations', methods=['GET'])
+@login_required
+def get_conversations():
+    """
+    Get conversation history for a ward.
+    
+    Query Parameters:
+    - ward: Ward name to filter conversations (optional)
+    - limit: Maximum number of conversations to return (default: 20)
+    - offset: Pagination offset (default: 0)
+    """
+    try:
+        from datetime import datetime, timezone
+        from flask_login import current_user
+        
+        ward = request.args.get('ward', '').strip()
+        limit = min(int(request.args.get('limit', 20)), 100)  # Max 100 conversations
+        offset = max(int(request.args.get('offset', 0)), 0)
+        
+        # For now, return mock conversation data
+        # In a real implementation, this would query a conversations database table
+        mock_conversations = []
+        
+        if ward and ward != 'All':
+            # Generate ward-specific conversation history
+            mock_conversations = [
+                {
+                    "id": f"conv_{ward}_1",
+                    "title": f"Strategic Analysis Discussion - {ward}",
+                    "ward": ward,
+                    "chatType": "strategy",
+                    "language": "en",
+                    "messageCount": 12,
+                    "lastMessage": f"Based on the latest analysis for {ward}, I recommend focusing on infrastructure improvements and community engagement.",
+                    "lastUpdated": datetime.now(timezone.utc).isoformat(),
+                    "created": datetime.now(timezone.utc).isoformat(),
+                    "status": "active",
+                    "userId": current_user.id if hasattr(current_user, 'id') else 1
+                },
+                {
+                    "id": f"conv_{ward}_2", 
+                    "title": f"Campaign Planning - {ward}",
+                    "ward": ward,
+                    "chatType": "planning",
+                    "language": "en",
+                    "messageCount": 8,
+                    "lastMessage": f"The sentiment analysis for {ward} shows positive trends in civic engagement.",
+                    "lastUpdated": datetime.now(timezone.utc).isoformat(),
+                    "created": datetime.now(timezone.utc).isoformat(),
+                    "status": "active",
+                    "userId": current_user.id if hasattr(current_user, 'id') else 1
+                }
+            ]
+        
+        # Apply pagination
+        total_conversations = len(mock_conversations)
+        paginated_conversations = mock_conversations[offset:offset + limit]
+        
+        return jsonify({
+            "conversations": paginated_conversations,
+            "pagination": {
+                "total": total_conversations,
+                "limit": limit,
+                "offset": offset,
+                "hasMore": offset + limit < total_conversations
+            },
+            "ward": ward,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching conversations: {e}")
+        return jsonify({
+            "conversations": [],
+            "pagination": {
+                "total": 0,
+                "limit": limit,
+                "offset": offset,
+                "hasMore": False
+            },
+            "error": "Failed to load conversations",
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }), 500
+
+
 @strategist_bp.route('/scenarios/<int:scenario_id>/simulate', methods=['POST'])
 @login_required
 def simulate_scenario(scenario_id):
@@ -687,10 +774,12 @@ def not_found(error):
         "available_endpoints": [
             "GET /api/v1/strategist/<ward>",
             "GET /api/v1/strategist/feed",
+            "GET /api/v1/strategist/conversations",
             "GET /api/v1/strategist/status",
             "GET /api/v1/strategist/health",
             "POST /api/v1/strategist/analyze",
-            "POST /api/v1/strategist/trigger"
+            "POST /api/v1/strategist/trigger",
+            "POST /api/v1/strategist/chat"
         ]
     }), 404
 

@@ -9,7 +9,7 @@ import { Plus, Layout, Save, Settings, Download, Upload, Grid, Eye, EyeOff } fro
 
 import BaseWidget from './BaseWidget.jsx';
 import { widgetRegistry } from './WidgetRegistry.js';
-import ComponentErrorBoundary from '../ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import { LoadingSpinner } from '../ui/LoadingSkeleton.jsx';
 
 // Import grid layout styles
@@ -466,7 +466,7 @@ function WidgetManager({
   }, [layouts, widgets, saveLayout]);
 
   return (
-    <ComponentErrorBoundary>
+    <DashboardErrorBoundary>
       <div className={`widget-manager relative ${className}`}>
         {/* Widget Palette */}
         <WidgetPalette
@@ -532,7 +532,7 @@ function WidgetManager({
           </div>
         )}
       </div>
-    </ComponentErrorBoundary>
+    </DashboardErrorBoundary>
   );
 }
 

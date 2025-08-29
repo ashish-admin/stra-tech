@@ -202,7 +202,7 @@ def _check_perplexity() -> Dict[str, Any]:
                 'Content-Type': 'application/json'
             },
             json={
-                "model": "llama-3.1-sonar-small-128k-online",
+                "model": "sonar",
                 "messages": [{"role": "user", "content": "test"}],
                 "max_tokens": 5
             },
@@ -214,7 +214,7 @@ def _check_perplexity() -> Dict[str, Any]:
             return {
                 "status": "healthy",
                 "latency_ms": round(latency, 2),
-                "model": "llama-3.1-sonar-small-128k-online"
+                "model": "sonar"
             }
         else:
             return {

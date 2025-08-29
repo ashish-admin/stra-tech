@@ -1,5 +1,5 @@
 import React from 'react';
-import ComponentErrorBoundary from '../ComponentErrorBoundary';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import CollapsibleSection from '../CollapsibleSection';
 import CompetitiveAnalysis from '../CompetitiveAnalysis';
 import CompetitorBenchmark from '../CompetitorBenchmark';
@@ -20,23 +20,23 @@ const CompetitiveTab = ({
           {loading ? (
             <div className="text-sm text-gray-500">Loading analysis…</div>
           ) : (
-            <ComponentErrorBoundary
+            <DashboardErrorBoundary
               componentName="Competitive Analysis"
               fallbackMessage="Party comparison analysis is temporarily unavailable."
             >
               <CompetitiveAnalysis data={compAgg} posts={filteredPosts} />
-            </ComponentErrorBoundary>
+            </DashboardErrorBoundary>
           )}
         </div>
 
         <div className="bg-white border rounded-md p-4">
           <h3 className="font-medium mb-4">Competitive Benchmark</h3>
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             componentName="Competitive Benchmark"
             fallbackMessage="Performance benchmarking is temporarily unavailable."
           >
             <CompetitorBenchmark ward={selectedWard} posts={filteredPosts} />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </div>
 
@@ -49,12 +49,12 @@ const CompetitiveTab = ({
       >
         <div className="p-4">
           <h3 className="font-medium mb-4">Party Competition Over Time</h3>
-          <ComponentErrorBoundary
+          <DashboardErrorBoundary
             componentName="Competitor Trend Chart"
             fallbackMessage="Competitor timeline analysis is temporarily unavailable."
           >
             <CompetitorTrendChart ward={selectedWard} days={30} />
-          </ComponentErrorBoundary>
+          </DashboardErrorBoundary>
         </div>
       </CollapsibleSection>
     </div>

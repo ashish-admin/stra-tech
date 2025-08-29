@@ -319,9 +319,9 @@ class HealthChecker:
     async def _check_sse_system(self) -> ComponentHealth:
         """Check SSE system status."""
         try:
-            from .sse_enhanced import get_sse_stats
+            from .sse_enhanced import get_phase3_sse_stats
             
-            sse_stats = get_sse_stats()
+            sse_stats = get_phase3_sse_stats()
             active_connections = sse_stats.get('active_connections', 0)
             max_connections = sse_stats.get('max_connections', 100)
             

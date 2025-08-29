@@ -21,6 +21,8 @@ export default defineConfig({
         ],
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/api/],
+        skipWaiting: true,
+        clientsClaim: true,
         
         // Political Intelligence specific caching
         runtimeCaching: [
@@ -86,7 +88,7 @@ export default defineConfig({
       },
 
       devOptions: {
-        enabled: process.env.NODE_ENV === 'development',
+        enabled: false,
         suppressWarnings: true,
         navigateFallback: 'index.html',
         navigateFallbackAllowlist: [/^\/$/],
@@ -277,9 +279,14 @@ export default defineConfig({
       'lucide-react',
       'chart.js',
       'react-chartjs-2',
+      'recharts',
       
       // Enhanced shared components optimization
       'react-error-boundary',
+      
+      // Fix lodash module resolution
+      'lodash',
+      'lodash-es',
       
       // Optional dependencies - conditionally include based on usage
       'leaflet',
@@ -289,7 +296,6 @@ export default defineConfig({
     ],
     exclude: [
       // Large dependencies that benefit from dynamic loading
-      'recharts',
       '@headlessui/react'
     ],
     // Force optimization of specific modules
@@ -300,6 +306,10 @@ export default defineConfig({
       supported: {
         'top-level-await': true,
         'import-meta': true
+      },
+      loader: {
+        '.js': 'jsx',
+        '.ts': 'tsx'
       }
     }
   },

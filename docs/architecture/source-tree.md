@@ -103,19 +103,59 @@ backend/
 frontend/
 ├── src/                   # Source code
 │   ├── components/        # React components
-│   │   ├── Dashboard.jsx      # Main dashboard
+│   │   ├── Dashboard.jsx      # Main dashboard (Epic 5.0.1 enhanced)
 │   │   ├── LocationMap.jsx    # Leaflet map component
 │   │   ├── StrategicSummary.jsx   # AI briefings
 │   │   ├── TimeSeriesChart.jsx    # Analytics charts
 │   │   ├── CompetitorTrendChart.jsx  # Competitor analysis
 │   │   ├── AlertsPanel.jsx        # Intelligence alerts
 │   │   ├── AuthWrapper.jsx        # Authentication
-│   │   ├── ErrorBoundary.jsx      # Error handling
+│   │   ├── ErrorBoundary.jsx      # Error handling (3-tier system)
+│   │   ├── PWAInstallPrompt.jsx   # PWA installation
+│   │   ├── OfflineIndicator.jsx   # Offline status
 │   │   └── ui/                    # Reusable UI components
 │   │       ├── Button.jsx
 │   │       ├── Card.jsx
 │   │       ├── LoadingSpinner.jsx
 │   │       └── Modal.jsx
+│   │
+│   ├── shared/            # Shared components (Epic 5.0.1)
+│   │   ├── components/
+│   │   │   ├── lazy/      # Lazy loading system
+│   │   │   │   └── LazyFeatureLoader.jsx  # Advanced lazy loading
+│   │   │   ├── ui/        # Enhanced UI components
+│   │   │   │   ├── EnhancedCard.jsx
+│   │   │   │   ├── LoadingSkeleton.jsx
+│   │   │   │   └── ErrorBoundary.jsx
+│   │   │   └── charts/    # Advanced chart components
+│   │   │       └── StrategicTimeline.jsx
+│   │   ├── hooks/         # Shared hooks
+│   │   │   ├── performance/
+│   │   │   │   └── useLazyLoading.js
+│   │   │   └── api/
+│   │   │       └── useEnhancedSSE.js
+│   │   └── services/      # Shared services
+│   │       ├── api/
+│   │       │   └── client.js
+│   │       └── sse_client.js
+│   │
+│   ├── features/          # Feature-based organization (Epic 5.0.1)
+│   │   ├── analytics/     # Analytics features
+│   │   │   └── components/
+│   │   │       ├── SentimentHeatmap.jsx  # D3 visualization
+│   │   │       ├── CompetitorTrendChart.jsx
+│   │   │       └── TimeSeriesChart.jsx
+│   │   ├── strategist/    # Political Strategist features
+│   │   │   ├── components/
+│   │   │   │   ├── PoliticalStrategist.jsx
+│   │   │   │   └── StrategistStream.jsx
+│   │   │   ├── hooks/
+│   │   │   │   └── useEnhancedSSE.js
+│   │   │   └── services/
+│   │   │       └── enhancedSSEClient.js
+│   │   └── geographic/    # Geographic features
+│   │       └── components/
+│   │           └── LocationMap.jsx
 │   │
 │   ├── contexts/          # React contexts
 │   │   ├── WardContext.jsx    # Ward selection state
@@ -177,7 +217,8 @@ docs/
 ├── stories/              # Development stories
 │   ├── README.md
 │   ├── epic-*.md            # Epic stories
-│   └── story-*.md           # Individual stories
+│   ├── story-*.md           # Individual stories
+│   └── 5.0.1-app-jsx-dashboard-integration-emergency.md  # Epic 5.0.1 (COMPLETE)
 │
 ├── api/                  # API documentation
 │   ├── README.md

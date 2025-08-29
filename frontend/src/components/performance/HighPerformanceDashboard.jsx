@@ -28,7 +28,7 @@ import {
 import OptimizedDashboardFilters from './OptimizedDashboardFilters';
 
 // Enhanced error boundary and notification systems
-import ComponentErrorBoundary from "../ComponentErrorBoundary.jsx";
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import NotificationSystem from "../NotificationSystem.jsx";
 import DashboardTabs from "../DashboardTabs.jsx";
 
@@ -457,7 +457,7 @@ const HighPerformanceDashboard = memo(() => {
       )}
 
       {/* Optimized Notification System */}
-      <ComponentErrorBoundary
+      <DashboardErrorBoundary
         componentName="Notification System"
         fallbackMessage=""
       >
@@ -468,7 +468,7 @@ const HighPerformanceDashboard = memo(() => {
           enableBrowserNotifications={true}
           optimized={true}
         />
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     </div>
   );
 });

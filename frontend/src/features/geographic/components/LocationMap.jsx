@@ -20,7 +20,7 @@ import {
   TrendingUp,
   Thermometer
 } from "lucide-react";
-import { ComponentErrorBoundary } from '../../../shared/components/ui/ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import { MapSkeleton, LoadingSpinner } from '../../../shared/components/ui/LoadingSkeleton.jsx';
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
@@ -152,7 +152,7 @@ function makeUrgencyScale() {
 }
 
 /* ---------- Enhanced LocationMap component for LokDarpan political intelligence ---------- */
-export default function EnhancedLocationMap({
+function EnhancedLocationMap({
   geojson,
   selectedWard: selectedWardProp,
   onWardSelect: onWardSelectProp,
@@ -218,9 +218,9 @@ export default function EnhancedLocationMap({
   const wardElementsRef = useRef(new Map());
 
   // Real-time political intelligence data fetching
-  const { data: realTimeData, isLoading: realTimeLoading } = useQuery(
-    ['realTimeWardData', selectedWard, selectedOverlayMode],
-    async () => {
+  const { data: realTimeData, isLoading: realTimeLoading } = useQuery({
+    queryKey: ['realTimeWardData', selectedWard, selectedOverlayMode],
+    queryFn: async () => {
       if (!enableRealTimeOverlays) return null;
       
       const response = await axios.get(
@@ -231,29 +231,25 @@ export default function EnhancedLocationMap({
       // Process data for overlay visualization
       return processWardDataForVisualization(response.data.series, performanceMode);
     },
-    {
-      staleTime: 30 * 1000, // 30 seconds for political data
-      cacheTime: 2 * 60 * 1000, // 2 minutes
-      enabled: enableRealTimeOverlays,
-      refetchInterval: performanceMode === 'high' ? 30000 : 60000 // Auto-refresh
-    }
-  );
+    staleTime: 30 * 1000, // 30 seconds for political data
+    gcTime: 2 * 60 * 1000, // 2 minutes (renamed from cacheTime)
+    enabled: enableRealTimeOverlays,
+    refetchInterval: performanceMode === 'high' ? 30000 : 60000 // Auto-refresh
+  });
 
   // Ward metadata with enhanced caching
-  const { data: wardMetadata } = useQuery(
-    ['wardMetadata'],
-    async () => {
+  const { data: wardMetadata } = useQuery({
+    queryKey: ['wardMetadata'],
+    queryFn: async () => {
       const response = await axios.get(`${apiBase}/api/v1/geojson`, {
         withCredentials: true
       });
       return response.data;
     },
-    {
-      staleTime: 60 * 60 * 1000, // 1 hour - geographic data is stable
-      cacheTime: 2 * 60 * 60 * 1000, // 2 hours
-      enabled: !geojson // Only fetch if geojson not provided
-    }
-  );
+    staleTime: 60 * 60 * 1000, // 1 hour - geographic data is stable
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours (renamed from cacheTime)
+    enabled: !geojson // Only fetch if geojson not provided
+  });
 
   // Real-time updates via Mobile-Optimized SSE
   const { 
@@ -1116,7 +1112,7 @@ const MapPerformanceMetrics = React.lazy(() =>
  */
 const EnhancedLocationMapWithErrorBoundary = (props) => {
   return (
-    <ComponentErrorBoundary 
+    <DashboardErrorBoundary 
       componentName="EnhancedLocationMap"
       fallbackProps={{ 
         height: props.height || (props.isExpanded ? '80vh' : '400px'),
@@ -1126,7 +1122,7 @@ const EnhancedLocationMapWithErrorBoundary = (props) => {
       }}
     >
       <EnhancedLocationMap {...props} />
-    </ComponentErrorBoundary>
+    </DashboardErrorBoundary>
   );
 };
 

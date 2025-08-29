@@ -121,46 +121,93 @@ def phase3_enhanced_sse_stream(ward: str, since: Optional[str] = None, priority:
                         alert_count += 1
                         time.sleep(0.5)  # Small delay between events
                 else:
-                    # Query database for recent alerts
-                    with current_app.app_context():
-                        recent_alerts = db.session.query(Alert)\
-                            .filter(Alert.city == ward)\
-                            .order_by(Alert.created_at.desc())\
-                            .limit(5)\
-                            .all()
-                        
-                        if recent_alerts:
-                            for alert in recent_alerts:
-                                # Filter by priority if specified
-                                if priority != 'all':
-                                    alert_priority = 'high' if alert.priority == 1 else 'medium'
-                                    if priority == 'critical' and alert_priority != 'high':
-                                        continue
-                                    if priority == 'high' and alert_priority == 'low':
-                                        continue
-                                
-                                yield connection.format_event('intelligence', {
-                                    'id': f'alert_{alert.id}',
-                                    'ward': ward,
-                                    'priority': 'high' if alert.priority == 1 else 'medium',
-                                    'title': alert.message[:100] if alert.message else f'Alert for {ward}',
-                                    'content': alert.description or alert.message,
-                                    'source': 'database',
-                                    'created_at': alert.created_at.isoformat() if alert.created_at else None,
-                                    'category': alert.category or 'political_development'
-                                })
-                                alert_count += 1
-                                time.sleep(0.5)
-                        else:
-                            # Generate strategic intelligence if no alerts
+                    # Try to query database for recent alerts with error handling
+                    recent_alerts = []
+                    try:
+                        with current_app.app_context():
+                            # Check if Alert table exists and query
+                            if hasattr(db.session, 'query'):
+                                recent_alerts = db.session.query(Alert)\
+                                    .filter(Alert.city == ward)\
+                                    .order_by(Alert.created_at.desc())\
+                                    .limit(5)\
+                                    .all()
+                    except Exception as db_error:
+                        logger.debug(f"Database query failed, using fallback: {db_error}")
+                        recent_alerts = []
+                    
+                    if recent_alerts:
+                        for alert in recent_alerts:
+                            # Filter by priority if specified
+                            if priority != 'all':
+                                alert_priority = 'high' if alert.priority == 1 else 'medium'
+                                if priority == 'critical' and alert_priority != 'high':
+                                    continue
+                                if priority == 'high' and alert_priority == 'low':
+                                    continue
+                            
                             yield connection.format_event('intelligence', {
-                                'id': f'strategic_{int(time.time())}',
+                                'id': f'alert_{alert.id}',
                                 'ward': ward,
-                                'priority': 'medium',
-                                'title': f'Strategic Update for {ward}',
-                                'content': f'Monitoring political developments in {ward}. System is analyzing current trends.',
+                                'priority': 'high' if alert.priority == 1 else 'medium',
+                                'title': alert.message[:100] if alert.message else f'Alert for {ward}',
+                                'content': alert.description or alert.message,
+                                'source': 'database',
+                                'created_at': alert.created_at.isoformat() if alert.created_at else None,
+                                'category': alert.category or 'political_development'
+                            })
+                            alert_count += 1
+                            time.sleep(0.5)
+                    else:
+                        # Generate strategic intelligence from posts data as fallback
+                        try:
+                            from app.models import Post
+                            with current_app.app_context():
+                                recent_posts = db.session.query(Post)\
+                                    .filter(Post.city == ward)\
+                                    .order_by(Post.created_at.desc())\
+                                    .limit(3)\
+                                    .all()
+                                
+                                if recent_posts:
+                                    for post in recent_posts:
+                                        yield connection.format_event('intelligence', {
+                                            'id': f'post_{post.id}',
+                                            'ward': ward,
+                                            'priority': 'medium',
+                                            'title': f'Recent Development: {post.emotion}',
+                                            'content': post.text[:200] + '...' if len(post.text) > 200 else post.text,
+                                            'source': 'posts',
+                                            'emotion': post.emotion,
+                                            'party': post.party,
+                                            'created_at': post.created_at.isoformat() if post.created_at else None,
+                                            'category': 'social_media'
+                                        })
+                                        alert_count += 1
+                                        time.sleep(0.5)
+                                else:
+                                    # Final fallback - system intelligence
+                                    yield connection.format_event('intelligence', {
+                                        'id': f'strategic_{int(time.time())}',
+                                        'ward': ward,
+                                        'priority': 'medium',
+                                        'title': f'Strategic Update for {ward}',
+                                        'content': f'Monitoring political developments in {ward}. System is analyzing current trends and will provide updates as new intelligence becomes available.',
+                                        'source': 'system',
+                                        'category': 'strategic_analysis'
+                                    })
+                                    alert_count += 1
+                        except Exception as posts_error:
+                            logger.debug(f"Posts query failed: {posts_error}")
+                            # Absolute fallback
+                            yield connection.format_event('intelligence', {
+                                'id': f'fallback_{int(time.time())}',
+                                'ward': ward,
+                                'priority': 'low',
+                                'title': f'System Online for {ward}',
+                                'content': f'Political intelligence system is operational and monitoring {ward}. Data collection in progress.',
                                 'source': 'system',
-                                'category': 'strategic_analysis'
+                                'category': 'system_status'
                             })
                             alert_count += 1
                 

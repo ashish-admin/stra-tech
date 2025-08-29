@@ -1,0 +1,1027 @@
+{
+  "timestamp": "2025-08-29T01:47:05.390Z",
+  "url": "http://localhost:5176",
+  "summary": {
+    "foundTabs": [
+      "Overview",
+      "Analytics",
+      "Geographic",
+      "Timeline"
+    ],
+    "missingTabs": [
+      "Strategist"
+    ],
+    "totalConsoleMessages": 60,
+    "totalErrors": 4,
+    "totalFailedRequests": 11,
+    "totalNetworkRequests": 119
+  },
+  "consoleMessages": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://localhost:5176/@vite/client",
+        "lineNumber": 732,
+        "columnNumber": 8
+      },
+      "timestamp": "2025-08-29T01:46:24.095Z"
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://localhost:5176/@vite/client",
+        "lineNumber": 826,
+        "columnNumber": 11
+      },
+      "timestamp": "2025-08-29T01:46:24.121Z"
+    },
+    {
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23",
+        "lineNumber": 21608,
+        "columnNumber": 24
+      },
+      "timestamp": "2025-08-29T01:46:24.158Z"
+    },
+    {
+      "type": "log",
+      "text": "[Push Notifications] Service initialized, supported: true",
+      "location": {
+        "url": "http://localhost:5176/src/services/pushNotifications.js",
+        "lineNumber": 19,
+        "columnNumber": 12
+      },
+      "timestamp": "2025-08-29T01:46:24.169Z"
+    },
+    {
+      "type": "log",
+      "text": "API Base Configuration: {RAW_BASE: , apiBase: , VITE_API_BASE_URL: , VITE_API_URL: undefined}",
+      "location": {
+        "url": "http://localhost:5176/src/lib/api.js",
+        "lineNumber": 31,
+        "columnNumber": 10
+      },
+      "timestamp": "2025-08-29T01:46:24.169Z"
+    },
+    {
+      "type": "log",
+      "text": "[App] Initializing PWA services for LokDarpan Campaign Intelligence",
+      "location": {
+        "url": "http://localhost:5176/src/App.jsx?t=1756431016511",
+        "lineNumber": 58,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:24.177Z"
+    },
+    {
+      "type": "log",
+      "text": "[App] Initializing PWA services for LokDarpan Campaign Intelligence",
+      "location": {
+        "url": "http://localhost:5176/src/App.jsx?t=1756431016511",
+        "lineNumber": 58,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:24.177Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Initializing PWA features for LokDarpan",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 34,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:24.193Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Offline capabilities: {hasServiceWorker: true, hasIndexedDB: true, hasCache: true, hasNotifications: true, hasPushManager: true}",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 36,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:24.193Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Initializing PWA features for LokDarpan",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 34,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:24.194Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Offline capabilities: {hasServiceWorker: true, hasIndexedDB: true, hasCache: true, hasNotifications: true, hasPushManager: true}",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 36,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:24.194Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Political intelligence data cached: null",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 38,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:24.194Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Political intelligence data cached: null",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 38,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:24.194Z"
+    },
+    {
+      "type": "verbose",
+      "text": "[DOM] Input elements should have autocomplete attributes (suggested: \"current-password\"): (More info: https://goo.gl/9p2vKq) %o",
+      "location": {
+        "url": "http://localhost:5176/",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:24.298Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Initializing PWA features for LokDarpan",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 34,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:28.224Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Offline capabilities: {hasServiceWorker: true, hasIndexedDB: true, hasCache: true, hasNotifications: true, hasPushManager: true}",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 36,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:28.224Z"
+    },
+    {
+      "type": "log",
+      "text": "[PWA Context] Political intelligence data cached: null",
+      "location": {
+        "url": "http://localhost:5176/src/context/PWAContext.jsx",
+        "lineNumber": 38,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:28.224Z"
+    },
+    {
+      "type": "log",
+      "text": "[WardContext] Loaded wards from API: 1 wards",
+      "location": {
+        "url": "http://localhost:5176/src/shared/context/WardContext.jsx",
+        "lineNumber": 63,
+        "columnNumber": 18
+      },
+      "timestamp": "2025-08-29T01:46:29.252Z"
+    },
+    {
+      "type": "log",
+      "text": "[WardContext] Loaded wards from API: 1 wards",
+      "location": {
+        "url": "http://localhost:5176/src/shared/context/WardContext.jsx",
+        "lineNumber": 63,
+        "columnNumber": 18
+      },
+      "timestamp": "2025-08-29T01:46:29.259Z"
+    },
+    {
+      "type": "log",
+      "text": "[Dashboard] Ward selected: {wardName: Marredpally, wardId: Marredpally, oldWard: null}",
+      "location": {
+        "url": "http://localhost:5176/src/features/dashboard/components/Dashboard.jsx?t=1756431016511",
+        "lineNumber": 83,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:38.008Z"
+    },
+    {
+      "type": "log",
+      "text": "[WardContext] Setting ward to: Marredpally",
+      "location": {
+        "url": "http://localhost:5176/src/shared/context/WardContext.jsx",
+        "lineNumber": 97,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:38.008Z"
+    },
+    {
+      "type": "log",
+      "text": "[API Request] GET /ward/meta/Marredpally {params: undefined, data: undefined}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/services/api/client.js",
+        "lineNumber": 36,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:38.015Z"
+    },
+    {
+      "type": "log",
+      "text": "[API Request] GET /trends {params: Object, data: undefined}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/services/api/client.js",
+        "lineNumber": 36,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:38.015Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.071Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/alerts/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.096Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/alerts/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.117Z"
+    },
+    {
+      "type": "error",
+      "text": "Access to XMLHttpRequest at 'http://localhost:5000/api/v1/ward/meta/Marredpally' from origin 'http://localhost:5176' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "location": {
+        "url": "http://localhost:5176/?ward=Marredpally",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.329Z"
+    },
+    {
+      "type": "error",
+      "text": "Query Error: {queryKey: Array(2), error: Network error - check your connection, status: undefined, timestamp: 2025-08-29T01:46:38.329Z}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/hooks/api/useEnhancedQuery.js",
+        "lineNumber": 57,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:38.329Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED",
+      "location": {
+        "url": "http://localhost:5000/api/v1/ward/meta/Marredpally",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.329Z"
+    },
+    {
+      "type": "error",
+      "text": "Access to XMLHttpRequest at 'http://localhost:5000/api/v1/trends?ward=Marredpally&days=30' from origin 'http://localhost:5176' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "location": {
+        "url": "http://localhost:5176/?ward=Marredpally",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.334Z"
+    },
+    {
+      "type": "error",
+      "text": "Query Error: {queryKey: Array(5), error: Network error - check your connection, status: undefined, timestamp: 2025-08-29T01:46:38.334Z}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/hooks/api/useEnhancedQuery.js",
+        "lineNumber": 57,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:38.334Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED",
+      "location": {
+        "url": "http://localhost:5000/api/v1/trends?ward=Marredpally&days=30",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:38.334Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:39.089Z"
+    },
+    {
+      "type": "log",
+      "text": "[API Request] GET /trends {params: Object, data: undefined}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/services/api/client.js",
+        "lineNumber": 36,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:39.339Z"
+    },
+    {
+      "type": "error",
+      "text": "Access to XMLHttpRequest at 'http://localhost:5000/api/v1/trends?ward=Marredpally&days=30' from origin 'http://localhost:5176' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "location": {
+        "url": "http://localhost:5176/?ward=Marredpally",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:39.346Z"
+    },
+    {
+      "type": "error",
+      "text": "Query Error: {queryKey: Array(5), error: Network error - check your connection, status: undefined, timestamp: 2025-08-29T01:46:39.346Z}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/hooks/api/useEnhancedQuery.js",
+        "lineNumber": 57,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:39.346Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED",
+      "location": {
+        "url": "http://localhost:5000/api/v1/trends?ward=Marredpally&days=30",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:39.347Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:41.106Z"
+    },
+    {
+      "type": "log",
+      "text": "[API Request] GET /trends {params: Object, data: undefined}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/services/api/client.js",
+        "lineNumber": 36,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:41.347Z"
+    },
+    {
+      "type": "error",
+      "text": "Access to XMLHttpRequest at 'http://localhost:5000/api/v1/trends?ward=Marredpally&days=30' from origin 'http://localhost:5176' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "location": {
+        "url": "http://localhost:5176/?ward=Marredpally",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:41.680Z"
+    },
+    {
+      "type": "error",
+      "text": "Query Error: {queryKey: Array(5), error: Network error - check your connection, status: undefined, timestamp: 2025-08-29T01:46:41.679Z}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/hooks/api/useEnhancedQuery.js",
+        "lineNumber": 57,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:41.680Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED",
+      "location": {
+        "url": "http://localhost:5000/api/v1/trends?ward=Marredpally&days=30",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:41.680Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:45.122Z"
+    },
+    {
+      "type": "log",
+      "text": "[API Request] GET /trends {params: Object, data: undefined}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/services/api/client.js",
+        "lineNumber": 36,
+        "columnNumber": 16
+      },
+      "timestamp": "2025-08-29T01:46:45.681Z"
+    },
+    {
+      "type": "error",
+      "text": "Access to XMLHttpRequest at 'http://localhost:5000/api/v1/trends?ward=Marredpally&days=30' from origin 'http://localhost:5176' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+      "location": {
+        "url": "http://localhost:5176/?ward=Marredpally",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:45.687Z"
+    },
+    {
+      "type": "error",
+      "text": "Query Error: {queryKey: Array(5), error: Network error - check your connection, status: undefined, timestamp: 2025-08-29T01:46:45.687Z}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/hooks/api/useEnhancedQuery.js",
+        "lineNumber": 57,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:45.687Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: net::ERR_FAILED",
+      "location": {
+        "url": "http://localhost:5000/api/v1/trends?ward=Marredpally&days=30",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:46:45.687Z"
+    },
+    {
+      "type": "error",
+      "text": "LokDarpan Component Error Report: {component: Global, error: this.updateConnectionType is not a function, stack: TypeError: this.updateConnectionType is not a func….vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:18159:11), type: uncaught_error, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb…KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36}",
+      "location": {
+        "url": "http://localhost:5176/src/hooks/useErrorReporting.js",
+        "lineNumber": 17,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:54.035Z"
+    },
+    {
+      "type": "error",
+      "text": "The above error occurred in the <EnhancedLocationMap> component:\n\n    at EnhancedLocationMap (http://localhost:5176/src/features/geographic/components/LocationMap.jsx:149:3)\n    at ComponentErrorBoundary (http://localhost:5176/src/shared/components/ui/ComponentErrorBoundary.jsx:8:5)\n    at EnhancedLocationMapWithErrorBoundary (http://localhost:5176/src/features/geographic/components/LocationMap.jsx:1014:23)\n    at Suspense\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at http://localhost:5176/src/shared/components/lazy/LazyFeatureLoader.jsx?t=1756431016511:23:3\n    at LocationMap\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at MapErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:43:36)\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at DashboardErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:20:42)\n    at div\n    at div\n    at main\n    at div\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at Dashboard (http://localhost:5176/src/features/dashboard/components/Dashboard.jsx?t=1756431016511:45:66)\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at DashboardErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:20:42)\n    at WardProvider (http://localhost:5176/src/shared/context/WardContext.jsx:30:32)\n    at QueryClientProvider (http://localhost:5176/node_modules/.vite/deps/@tanstack_react-query.js?v=3758b8da:2888:3)\n    at PWAProvider (http://localhost:5176/src/context/PWAContext.jsx:30:31)\n    at AppContent (http://localhost:5176/src/App.jsx?t=1756431016511:37:41)\n    at App\n\nReact will try to recreate this component tree from scratch using the error boundary you provided, ComponentErrorBoundary.",
+      "location": {
+        "url": "http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23",
+        "lineNumber": 14079,
+        "columnNumber": 30
+      },
+      "timestamp": "2025-08-29T01:46:54.038Z"
+    },
+    {
+      "type": "error",
+      "text": "ComponentErrorBoundary [EnhancedLocationMap]: {error: TypeError: this.updateConnectionType is not a function\n    at MobileOptimizedSSEClient.initializeCo…, errorInfo: Object, componentStack: \n    at EnhancedLocationMap (http://localhost:5176…176/src/App.jsx?t=1756431016511:37:41)\n    at App, props: Object}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/components/ui/ComponentErrorBoundary.jsx",
+        "lineNumber": 30,
+        "columnNumber": 12
+      },
+      "timestamp": "2025-08-29T01:46:54.038Z"
+    },
+    {
+      "type": "error",
+      "text": "The above error occurred in the <EnhancedLocationMap> component:\n\n    at EnhancedLocationMap (http://localhost:5176/src/features/geographic/components/LocationMap.jsx:149:3)\n    at ComponentErrorBoundary (http://localhost:5176/src/shared/components/ui/ComponentErrorBoundary.jsx:8:5)\n    at EnhancedLocationMapWithErrorBoundary (http://localhost:5176/src/features/geographic/components/LocationMap.jsx:1014:23)\n    at Suspense\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at http://localhost:5176/src/shared/components/lazy/LazyFeatureLoader.jsx?t=1756431016511:23:3\n    at LocationMap\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at MapErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:43:36)\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at DashboardErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:20:42)\n    at div\n    at div\n    at main\n    at div\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at Dashboard (http://localhost:5176/src/features/dashboard/components/Dashboard.jsx?t=1756431016511:45:66)\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at DashboardErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:20:42)\n    at WardProvider (http://localhost:5176/src/shared/context/WardContext.jsx:30:32)\n    at QueryClientProvider (http://localhost:5176/node_modules/.vite/deps/@tanstack_react-query.js?v=3758b8da:2888:3)\n    at PWAProvider (http://localhost:5176/src/context/PWAContext.jsx:30:31)\n    at AppContent (http://localhost:5176/src/App.jsx?t=1756431016511:37:41)\n    at App\n\nReact will try to recreate this component tree from scratch using the error boundary you provided, ComponentErrorBoundary.",
+      "location": {
+        "url": "http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23",
+        "lineNumber": 14079,
+        "columnNumber": 30
+      },
+      "timestamp": "2025-08-29T01:46:54.038Z"
+    },
+    {
+      "type": "error",
+      "text": "ComponentErrorBoundary [EnhancedLocationMap]: {error: TypeError: this.updateConnectionType is not a function\n    at MobileOptimizedSSEClient.initializeCo…, errorInfo: Object, componentStack: \n    at EnhancedLocationMap (http://localhost:5176…176/src/App.jsx?t=1756431016511:37:41)\n    at App, props: Object}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/components/ui/ComponentErrorBoundary.jsx",
+        "lineNumber": 30,
+        "columnNumber": 12
+      },
+      "timestamp": "2025-08-29T01:46:54.038Z"
+    },
+    {
+      "type": "error",
+      "text": "LokDarpan Component Error Report: {component: Global, error: Cannot access 'mergedEventsData' before initialization, stack: ReferenceError: Cannot access 'mergedEventsData' b….vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19242:13), type: uncaught_error, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb…KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36}",
+      "location": {
+        "url": "http://localhost:5176/src/hooks/useErrorReporting.js",
+        "lineNumber": 17,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:58.146Z"
+    },
+    {
+      "type": "error",
+      "text": "The above error occurred in the <StrategicTimeline> component:\n\n    at StrategicTimeline (http://localhost:5176/src/shared/components/charts/StrategicTimeline.jsx:69:3)\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at StrategicTimelineWithErrorBoundary (http://localhost:5176/src/shared/components/charts/StrategicTimeline.jsx:681:26)\n    at Suspense\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at http://localhost:5176/src/shared/components/lazy/LazyFeatureLoader.jsx?t=1756431016511:23:3\n    at div\n    at http://localhost:5176/src/shared/components/lazy/LazyFeatureLoader.jsx?t=1756431016511:188:3\n    at StrategicTimeline\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at ChartErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:66:38)\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at DashboardErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:20:42)\n    at div\n    at div\n    at main\n    at div\n    at ErrorBoundary (http://localhost:5176/node_modules/.vite/deps/react-error-boundary.js?v=3758b8da:18:5)\n    at Dashboard (http://localhost:5176/src/features/dashboard/components/Dashboard.jsx?t=1756431016511:45:66)\n    at ProductionErrorBoundary (http://localhost:5176/src/shared/error/ProductionErrorBoundary.jsx:11:5)\n    at DashboardErrorBoundary (http://localhost:5176/src/shared/components/ui/EnhancedErrorBoundaries.jsx:20:42)\n    at WardProvider (http://localhost:5176/src/shared/context/WardContext.jsx:30:32)\n    at QueryClientProvider (http://localhost:5176/node_modules/.vite/deps/@tanstack_react-query.js?v=3758b8da:2888:3)\n    at PWAProvider (http://localhost:5176/src/context/PWAContext.jsx:30:31)\n    at AppContent (http://localhost:5176/src/App.jsx?t=1756431016511:37:41)\n    at App\n\nReact will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.",
+      "location": {
+        "url": "http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23",
+        "lineNumber": 14079,
+        "columnNumber": 30
+      },
+      "timestamp": "2025-08-29T01:46:58.147Z"
+    },
+    {
+      "type": "error",
+      "text": "[StrategicTimeline Error] {error: ReferenceError: Cannot access 'mergedEventsData' before initialization\n    at StrategicTimeline (ht…, errorInfo: Object}",
+      "location": {
+        "url": "http://localhost:5176/src/shared/components/charts/StrategicTimeline.jsx",
+        "lineNumber": 719,
+        "columnNumber": 14
+      },
+      "timestamp": "2025-08-29T01:46:58.147Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/alerts/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:47:02.251Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:47:02.259Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/alerts/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:47:02.272Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:47:03.286Z"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 404 (NOT FOUND)",
+      "location": {
+        "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "timestamp": "2025-08-29T01:47:05.300Z"
+    }
+  ],
+  "errors": [
+    {
+      "message": "this.updateConnectionType is not a function",
+      "stack": "TypeError: this.updateConnectionType is not a function\n    at MobileOptimizedSSEClient.initializeConnectionTypeDetection (http://localhost:5176/src/features/strategist/services/mobileOptimizedSSEClient.js:179:10)\n    at new MobileOptimizedSSEClient (http://localhost:5176/src/features/strategist/services/mobileOptimizedSSEClient.js:92:10)\n    at http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js:58:20\n    at http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js:310:41\n    at http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js:382:7\n    at commitHookEffectListMount (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:16963:34)\n    at commitPassiveMountOnFiber (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:18206:19)\n    at commitPassiveMountEffects_complete (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:18179:17)\n    at commitPassiveMountEffects_begin (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:18169:15)\n    at commitPassiveMountEffects (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:18159:11)",
+      "timestamp": "2025-08-29T01:46:54.035Z"
+    },
+    {
+      "message": "this.updateConnectionType is not a function",
+      "stack": "TypeError: this.updateConnectionType is not a function\n    at MobileOptimizedSSEClient.initializeConnectionTypeDetection (http://localhost:5176/src/features/strategist/services/mobileOptimizedSSEClient.js:179:10)\n    at new MobileOptimizedSSEClient (http://localhost:5176/src/features/strategist/services/mobileOptimizedSSEClient.js:92:10)\n    at http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js:58:20\n    at http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js:310:41\n    at http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js:382:7\n    at commitHookEffectListMount (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:16963:34)\n    at invokePassiveEffectMountInDEV (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:18374:19)\n    at invokeEffectsInDev (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19754:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19739:15)\n    at flushPassiveEffectsImpl (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19556:13)",
+      "timestamp": "2025-08-29T01:46:54.037Z"
+    },
+    {
+      "message": "Cannot access 'mergedEventsData' before initialization",
+      "stack": "ReferenceError: Cannot access 'mergedEventsData' before initialization\n    at StrategicTimeline (http://localhost:5176/src/shared/components/charts/StrategicTimeline.jsx:115:27)\n    at renderWithHooks (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:11596:26)\n    at mountIndeterminateComponent (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:14974:21)\n    at beginWork (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:15962:22)\n    at HTMLUnknownElement.callCallback2 (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:3680:22)\n    at Object.invokeGuardedCallbackDev (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:3705:24)\n    at invokeGuardedCallback (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:3739:39)\n    at beginWork$1 (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19818:15)\n    at performUnitOfWork (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19251:20)\n    at workLoopConcurrent (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19242:13)",
+      "timestamp": "2025-08-29T01:46:58.146Z"
+    },
+    {
+      "message": "Cannot access 'mergedEventsData' before initialization",
+      "stack": "ReferenceError: Cannot access 'mergedEventsData' before initialization\n    at StrategicTimeline (http://localhost:5176/src/shared/components/charts/StrategicTimeline.jsx:115:27)\n    at renderWithHooks (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:11596:26)\n    at mountIndeterminateComponent (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:14974:21)\n    at beginWork (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:15962:22)\n    at HTMLUnknownElement.callCallback2 (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:3680:22)\n    at Object.invokeGuardedCallbackDev (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:3705:24)\n    at invokeGuardedCallback (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:3739:39)\n    at beginWork$1 (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19818:15)\n    at performUnitOfWork (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19251:20)\n    at workLoopSync (http://localhost:5176/node_modules/.vite/deps/chunk-SXRIVT2P.js?v=c0f20a23:19190:13)",
+      "timestamp": "2025-08-29T01:46:58.147Z"
+    }
+  ],
+  "failedRequests": [
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "statusText": "NOT FOUND",
+      "method": "GET"
+    }
+  ],
+  "networkRequests": [
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:38.096Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/competitive-analysis?city=undefined",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:38.102Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:38.117Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/competitive-analysis?city=undefined",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:38.119Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:39.089Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:41.105Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:45.122Z"
+    },
+    {
+      "url": "http://localhost:5176/src/features/analytics/components/CompetitorTrendChart.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:49.910Z"
+    },
+    {
+      "url": "http://localhost:5176/src/features/analytics/components/TimeSeriesChart.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:49.910Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/recharts.js?v=3758b8da",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:49.928Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/chunk-XQ32AHN5.js?v=c0f20a23",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:49.934Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=%5Bobject%20Object%5D&days=30",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:49.998Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=%5Bobject%20Object%5D&days=30",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:50.007Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=%5Bobject%20Object%5D&days=30",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:50.072Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=%5Bobject%20Object%5D&days=30",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:50.080Z"
+    },
+    {
+      "url": "http://localhost:5176/src/features/geographic/components/LocationMap.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.004Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/leaflet.js?v=3758b8da",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.008Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/leaflet/dist/leaflet.css",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.010Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/hooks/useViewport.js",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.011Z"
+    },
+    {
+      "url": "http://localhost:5176/src/features/strategist/hooks/useMobileOptimizedSSE.js",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.012Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/components/ui/ComponentErrorBoundary.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.012Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/chunk-A73536KP.js?v=c0f20a23",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.017Z"
+    },
+    {
+      "url": "http://localhost:5176/src/features/strategist/services/mobileOptimizedSSEClient.js",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.017Z"
+    },
+    {
+      "url": "http://localhost:5176/src/features/strategist/services/enhancedSSEClient.js",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.021Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/d3.js?v=3d61691c",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.021Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=[object%20Object]&days=7",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.051Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/geojson",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:54.092Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/components/charts/StrategicTimeline.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.104Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/hooks/useTimelineSSE.js",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.109Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/components/charts/timeline/Timeline.css",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.110Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/components/charts/timeline/EventDetailModal.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.110Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/components/charts/timeline/TimelineTooltip.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.110Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/hooks/useTimelineKeyboard.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.111Z"
+    },
+    {
+      "url": "http://localhost:5176/src/shared/components/charts/timeline/TimelineControls.jsx",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.111Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/lodash.js?v=3758b8da",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.111Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/@heroicons_react_24_solid.js?v=27fee21f",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.117Z"
+    },
+    {
+      "url": "http://localhost:5176/node_modules/.vite/deps/@heroicons_react_24_outline.js?v=a35712c0",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:46:58.128Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=undefined&days=7",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.225Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/posts?city=undefined",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.235Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/competitive-analysis?city=undefined",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.249Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.251Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.259Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/trends?ward=undefined&days=7",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.271Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/posts?city=undefined",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.271Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/alerts/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.271Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/competitive-analysis?city=undefined",
+      "status": 200,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:02.276Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:03.286Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/status",
+      "status": 200,
+      "method": "HEAD",
+      "timestamp": "2025-08-29T01:47:04.066Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/status",
+      "status": 200,
+      "method": "HEAD",
+      "timestamp": "2025-08-29T01:47:04.081Z"
+    },
+    {
+      "url": "http://localhost:5176/api/v1/ward/meta/undefined",
+      "status": 404,
+      "method": "GET",
+      "timestamp": "2025-08-29T01:47:05.300Z"
+    }
+  ],
+  "analysis": {
+    "authenticationStatus": "Success",
+    "dashboardStatus": "Partially Loaded",
+    "criticalIssues": [
+      "Missing tabs: Strategist",
+      "11 API requests failed",
+      "4 JavaScript errors detected"
+    ],
+    "recommendations": [
+      "Check tab configuration and component imports",
+      "Check backend connectivity and API endpoints",
+      "Check browser console for component loading issues"
+    ]
+  }
+}

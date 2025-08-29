@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, Play, Pause, RotateCcw, Activity, CheckCircle, XCircle, Clock } from 'lucide-react';
-import ComponentErrorBoundary from '../../components/ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import { healthMonitor } from '../../utils/componentHealth.js';
 
 // Test component that can simulate various failure modes
@@ -486,7 +486,7 @@ export default function ErrorBoundaryTestHarness() {
           <div key={componentType.id} className="bg-white border rounded-lg p-4">
             <h3 className="font-medium text-gray-900 mb-3">{componentType.name}</h3>
             
-            <ComponentErrorBoundary
+            <DashboardErrorBoundary
               componentName={componentType.name}
               fallbackMessage={componentType.fallbackMessage}
               maxRetries={componentType.maxRetries}
@@ -500,7 +500,7 @@ export default function ErrorBoundaryTestHarness() {
                 failureMode={activeTest && activeTest.componentType.id === componentType.id ? activeTest.scenario.mode : null}
                 failureDelay={500}
               />
-            </ComponentErrorBoundary>
+            </DashboardErrorBoundary>
             
             <div className="mt-3 space-y-1">
               <div className="text-xs text-gray-500">

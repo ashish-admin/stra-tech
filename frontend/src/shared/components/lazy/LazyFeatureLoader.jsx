@@ -157,11 +157,11 @@ LazyFeatureLoaderWithIntersection.displayName = 'LazyFeatureLoaderWithIntersecti
  * Predefined lazy loaders for LokDarpan features
  */
 export const LazyFeatures = {
-  // Dashboard components
+  // Dashboard components (Fixed: Use overview tab components instead of legacy dashboard)
   Dashboard: (props) => (
     <LazyFeatureLoader
-      importFn={() => import('../../../components/Dashboard')}
-      featureName="Dashboard"
+      importFn={() => import('../../../components/tabs/OverviewTab')}
+      featureName="Dashboard Overview"
       fallbackType="card"
       {...props}
     />
@@ -221,7 +221,7 @@ export const LazyFeatures = {
   // Advanced visualization components
   StrategicTimeline: (props) => (
     <LazyFeatureLoaderWithIntersection
-      importFn={() => import('../../charts/StrategicTimeline')}
+      importFn={() => import('../charts/StrategicTimeline')}
       featureName="Strategic Timeline"
       fallbackType="chart"
       fallbackProps={{ rows: 4, height: '500px' }}

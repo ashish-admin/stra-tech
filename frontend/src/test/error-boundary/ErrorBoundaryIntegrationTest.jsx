@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Play, CheckCircle, XCircle, Clock, Activity } from 'lucide-react';
 
 // Import all error boundary components
-import ComponentErrorBoundary from '../../components/ComponentErrorBoundary.jsx';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import PredictiveErrorBoundary from '../../components/PredictiveErrorBoundary.jsx';
 import {
   GeospatialErrorBoundary,

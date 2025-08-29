@@ -1,0 +1,10 @@
+@echo off
+call venv\Scripts\activate.bat
+set FLASK_APP=app:create_app
+set DATABASE_URL=postgresql://postgres:amuktha@localhost/lokdarpan_db
+set FLASK_ENV=development
+set SECRET_KEY=ayra
+set REDIS_URL=redis://localhost:6379/0
+set CELERY_BROKER_URL=redis://localhost:6379/0
+set CORS_ORIGINS=http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177,http://localhost:5178,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176,http://127.0.0.1:5177,http://127.0.0.1:5178
+flask run

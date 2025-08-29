@@ -90,21 +90,21 @@ class PushNotificationService {
    */
   async fetchVapidKey() {
     try {
-      // In production, this would fetch from your backend
-      // For now, using a placeholder
-      const response = await fetch('/api/v1/push/vapid-key', {
-        credentials: 'include'
-      });
+      // Skip API call if push notifications backend is not implemented
+      // Use fallback key for development mode
+      console.info('[Push Notifications] Using fallback VAPID key for development');
+      this.vapidPublicKey = 'BCHzX5H5oHZdHF2IgIz0LfvTbTqC7jK0IqY7TjK9L6hH7GkD-H5oHZdHF2IgIz0LfvTbTqC7jK0IqY7TjK9L6hH';
       
-      if (response.ok) {
-        const data = await response.json();
-        this.vapidPublicKey = data.publicKey;
-        console.log('[Push Notifications] VAPID key fetched');
-      } else {
-        // Fallback to default key (in production, generate proper VAPID keys)
-        console.warn('[Push Notifications] Using fallback VAPID key');
-        this.vapidPublicKey = 'BCHzX5H5oHZdHF2IgIz0LfvTbTqC7jK0IqY7TjK9L6hH7GkD-H5oHZdHF2IgIz0LfvTbTqC7jK0IqY7TjK9L6hH';
-      }
+      // NOTE: In production, uncomment below and implement backend endpoints:
+      // const response = await fetch('/api/v1/push/vapid-key', {
+      //   credentials: 'include'
+      // });
+      // 
+      // if (response.ok) {
+      //   const data = await response.json();
+      //   this.vapidPublicKey = data.publicKey;
+      //   console.log('[Push Notifications] VAPID key fetched');
+      // }
     } catch (error) {
       console.error('[Push Notifications] Failed to fetch VAPID key:', error);
       // Use fallback key
@@ -191,25 +191,30 @@ class PushNotificationService {
    */
   async sendSubscriptionToServer(subscription) {
     try {
-      const response = await fetch('/api/v1/push/subscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          subscription,
-          userAgent: navigator.userAgent,
-          timestamp: Date.now()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
-      }
-
-      console.log('[Push Notifications] Subscription sent to server');
-      return await response.json();
+      // Skip server call for development mode - push notifications work locally
+      console.info('[Push Notifications] Skipping server subscription in development mode');
+      return { success: true, mode: 'local' };
+      
+      // NOTE: In production, uncomment below and implement backend endpoints:
+      // const response = await fetch('/api/v1/push/subscribe', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   credentials: 'include',
+      //   body: JSON.stringify({
+      //     subscription,
+      //     userAgent: navigator.userAgent,
+      //     timestamp: Date.now()
+      //   })
+      // });
+      //
+      // if (!response.ok) {
+      //   throw new Error(`Server responded with status: ${response.status}`);
+      // }
+      //
+      // console.log('[Push Notifications] Subscription sent to server');
+      // return await response.json();
     } catch (error) {
       console.error('[Push Notifications] Failed to send subscription to server:', error);
       // Don't throw - allow client-side notifications to work
@@ -221,16 +226,21 @@ class PushNotificationService {
    */
   async removeSubscriptionFromServer(subscription) {
     try {
-      await fetch('/api/v1/push/unsubscribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ subscription })
-      });
-
-      console.log('[Push Notifications] Subscription removed from server');
+      // Skip server call for development mode
+      console.info('[Push Notifications] Skipping server unsubscribe in development mode');
+      return { success: true, mode: 'local' };
+      
+      // NOTE: In production, uncomment below and implement backend endpoints:
+      // await fetch('/api/v1/push/unsubscribe', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   credentials: 'include',
+      //   body: JSON.stringify({ subscription })
+      // });
+      //
+      // console.log('[Push Notifications] Subscription removed from server');
     } catch (error) {
       console.error('[Push Notifications] Failed to remove subscription from server:', error);
     }

@@ -168,4 +168,79 @@ const LoadingSkeleton = ({
   }
 };
 
+/**
+ * Map Skeleton - Specialized loading state for map components
+ */
+export const MapSkeleton = ({ className = '' }) => {
+  const baseSkeletonClass = 'animate-pulse bg-gray-200 dark:bg-gray-700 rounded';
+  
+  return (
+    <div className={`relative w-full h-96 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden ${className}`}>
+      {/* Map container skeleton */}
+      <div className={`${baseSkeletonClass} w-full h-full`}>
+        {/* Simulated map features */}
+        <div className="absolute inset-4 space-y-2">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className={`${baseSkeletonClass} h-8 rounded-lg`}
+              style={{ 
+                width: `${Math.random() * 40 + 30}%`,
+                marginLeft: `${Math.random() * 50}%`,
+                animationDelay: `${i * 0.1}s`
+              }}
+            ></div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Map controls skeleton */}
+      <div className="absolute top-4 right-4 space-y-2">
+        <div className={`${baseSkeletonClass} w-10 h-10 rounded`}></div>
+        <div className={`${baseSkeletonClass} w-10 h-10 rounded`}></div>
+      </div>
+      
+      {/* Map legend skeleton */}
+      <div className="absolute bottom-4 left-4 bg-white dark:bg-gray-800 p-3 rounded-lg shadow">
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center space-x-2">
+              <div className={`${baseSkeletonClass} w-4 h-4 rounded-full`}></div>
+              <div className={`${baseSkeletonClass} h-3 w-16`}></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Loading Spinner - Animated spinner for general loading states
+ */
+export const LoadingSpinner = ({ 
+  size = 'md', 
+  className = '', 
+  text = 'Loading...',
+  showText = true 
+}) => {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16'
+  };
+
+  return (
+    <div className={`flex flex-col items-center justify-center space-y-2 ${className}`}>
+      <div className={`${sizeClasses[size]} animate-spin rounded-full border-2 border-gray-300 border-t-blue-600`}></div>
+      {showText && text && (
+        <p className="text-sm text-gray-600 dark:text-gray-400 animate-pulse">
+          {text}
+        </p>
+      )}
+    </div>
+  );
+};
+
 export default LoadingSkeleton;

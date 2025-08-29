@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import ComponentErrorBoundary from '../components/ComponentErrorBoundary'
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 
 // Mock the health monitor
 vi.mock('../utils/componentHealth.js', () => ({
@@ -13,7 +13,7 @@ vi.mock('../utils/componentHealth.js', () => ({
 // Mock console.error to prevent test pollution
 const originalError = console.error
 
-describe('ComponentErrorBoundary', () => {
+describe('DashboardErrorBoundary', () => {
   beforeEach(() => {
     // Mock console.error for clean test output
     console.error = vi.fn()
@@ -27,20 +27,20 @@ describe('ComponentErrorBoundary', () => {
 
   it('renders children when there are no errors', () => {
     render(
-      <ComponentErrorBoundary componentName="Test Component">
+      <DashboardErrorBoundary componentName="Test Component">
         <div>Working component</div>
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     )
 
     expect(screen.getByText('Working component')).toBeInTheDocument()
   })
 
   it('has correct error boundary structure', () => {
-    // Test that ComponentErrorBoundary is a class component with required methods
-    const errorBoundary = new ComponentErrorBoundary({ componentName: 'Test' })
+    // Test that DashboardErrorBoundary is a class component with required methods
+    const errorBoundary = new DashboardErrorBoundary({ componentName: 'Test' })
     
-    expect(typeof ComponentErrorBoundary).toBe('function')
-    expect(typeof ComponentErrorBoundary.getDerivedStateFromError).toBe('function')
+    expect(typeof DashboardErrorBoundary).toBe('function')
+    expect(typeof DashboardErrorBoundary.getDerivedStateFromError).toBe('function')
     expect(typeof errorBoundary.componentDidCatch).toBe('function')
     expect(typeof errorBoundary.handleRetry).toBe('function')
     expect(typeof errorBoundary.handleReload).toBe('function')
@@ -48,13 +48,13 @@ describe('ComponentErrorBoundary', () => {
 
   it('getDerivedStateFromError returns correct state', () => {
     const error = new Error('Test error')
-    const newState = ComponentErrorBoundary.getDerivedStateFromError(error)
+    const newState = DashboardErrorBoundary.getDerivedStateFromError(error)
     
     expect(newState).toEqual({ hasError: true })
   })
 
   it('renders enhanced fallback UI with component name', () => {
-    const errorBoundary = new ComponentErrorBoundary({ 
+    const errorBoundary = new DashboardErrorBoundary({ 
       componentName: 'Test Component',
       fallbackMessage: 'Custom fallback message'
     })
@@ -74,13 +74,13 @@ describe('ComponentErrorBoundary', () => {
 
   it('displays correct component name and message', () => {
     const { rerender } = render(
-      <ComponentErrorBoundary componentName="Test Component">
+      <DashboardErrorBoundary componentName="Test Component">
         <div>Working</div>
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     )
 
     // Simulate error state by creating a new instance with error
-    const errorBoundary = new ComponentErrorBoundary({ 
+    const errorBoundary = new DashboardErrorBoundary({ 
       componentName: 'Test Component',
       fallbackMessage: 'Custom message'
     })
@@ -96,7 +96,7 @@ describe('ComponentErrorBoundary', () => {
   })
 
   it('handles retry functionality correctly', () => {
-    const errorBoundary = new ComponentErrorBoundary({ componentName: 'Test' })
+    const errorBoundary = new DashboardErrorBoundary({ componentName: 'Test' })
     errorBoundary.state = { 
       hasError: true, 
       retryCount: 0,
@@ -115,7 +115,7 @@ describe('ComponentErrorBoundary', () => {
   })
 
   it('prevents retry after max attempts', () => {
-    const errorBoundary = new ComponentErrorBoundary({ componentName: 'Test' })
+    const errorBoundary = new DashboardErrorBoundary({ componentName: 'Test' })
     errorBoundary.state = { 
       hasError: true, 
       retryCount: 3,  // Max retries reached
@@ -131,7 +131,7 @@ describe('ComponentErrorBoundary', () => {
   })
 
   it('provides retry and reload buttons', () => {
-    const errorBoundary = new ComponentErrorBoundary({ 
+    const errorBoundary = new DashboardErrorBoundary({ 
       componentName: 'Test Component',
       allowRetry: true
     })
@@ -154,7 +154,7 @@ describe('ComponentErrorBoundary', () => {
   })
 
   it('componentDidCatch logs errors correctly', () => {
-    const errorBoundary = new ComponentErrorBoundary({ componentName: 'Test Component' })
+    const errorBoundary = new DashboardErrorBoundary({ componentName: 'Test Component' })
     errorBoundary.setState = vi.fn() // Mock setState
     
     const error = new Error('Test error')
@@ -186,9 +186,9 @@ describe('ComponentErrorBoundary', () => {
     render(
       <div>
         <div>Main app content</div>
-        <ComponentErrorBoundary componentName="Test Component">
+        <DashboardErrorBoundary componentName="Test Component">
           <div>Protected content</div>
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
         <div>Other app content</div>
       </div>
     )
@@ -207,7 +207,7 @@ describe('ComponentErrorBoundary', () => {
       allowRetry: false
     }
     
-    const errorBoundary = new ComponentErrorBoundary(props)
+    const errorBoundary = new DashboardErrorBoundary(props)
     expect(errorBoundary.props.showDetails).toBe(true)
     expect(errorBoundary.props.allowRetry).toBe(false)
     expect(errorBoundary.props.fallbackMessage).toBe('Custom fallback message')

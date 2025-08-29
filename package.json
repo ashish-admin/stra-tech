@@ -27,11 +27,12 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",
-    "playwright": "^1.54.2",
-    "concurrently": "^9.0.1"
+    "concurrently": "^9.0.1",
+    "playwright": "^1.55.0"
   },
   "dependencies": {
     "i18next": "^25.4.1",
+    "puppeteer": "^24.17.1",
     "react-i18next": "^15.7.2"
   }
 }

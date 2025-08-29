@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 
-import ComponentErrorBoundary from '../components/ComponentErrorBoundary';
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations);
@@ -42,32 +42,32 @@ const MockDashboard = ({
     <main className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Component 1: LocationMap simulation */}
       <div data-testid="map-container">
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="Interactive Map"
           fallbackMessage="The interactive ward map is temporarily unavailable."
         >
           <FailingComponent shouldFail={component1Fails} id="map" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </div>
 
       {/* Component 2: StrategicSummary simulation */}
       <div data-testid="summary-container">
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="Strategic Summary"
           fallbackMessage="Strategic analysis is temporarily unavailable."
         >
           <FailingComponent shouldFail={component2Fails} id="summary" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </div>
 
       {/* Component 3: TimeSeriesChart simulation */}
       <div data-testid="chart-container">
-        <ComponentErrorBoundary 
+        <DashboardErrorBoundary 
           componentName="Time Series Chart"
           fallbackMessage="Historical trend analysis is temporarily unavailable."
         >
           <FailingComponent shouldFail={component3Fails} id="chart" />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       </div>
     </main>
 
@@ -316,9 +316,9 @@ describe('Cascade Failure Prevention', () => {
       };
 
       render(
-        <ComponentErrorBoundary componentName="Test Component">
+        <DashboardErrorBoundary componentName="Test Component">
           <CountingFailingComponent shouldFail={true} />
-        </ComponentErrorBoundary>
+        </DashboardErrorBoundary>
       );
 
       // Initial render should trigger error boundary

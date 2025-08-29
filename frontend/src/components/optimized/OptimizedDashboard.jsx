@@ -13,7 +13,7 @@ import { joinApi } from "../../lib/api";
 import { useWard } from "../../context/WardContext.jsx";
 
 // Enhanced error boundary system
-import ComponentErrorBoundary from "../ComponentErrorBoundary.jsx";
+import { DashboardErrorBoundary } from "../../shared/components/ui/EnhancedErrorBoundaries";
 import DashboardHealthIndicator from "../DashboardHealthIndicator.jsx";
 import NotificationSystem from "../NotificationSystem.jsx";
 import { 
@@ -371,7 +371,7 @@ const OptimizedDashboard = React.memo(() => {
       )}
 
       {/* Real-time Notification System */}
-      <ComponentErrorBoundary
+      <DashboardErrorBoundary
         componentName="Notification System"
         fallbackMessage=""
       >
@@ -381,7 +381,7 @@ const OptimizedDashboard = React.memo(() => {
           enableSound={true}
           enableBrowserNotifications={true}
         />
-      </ComponentErrorBoundary>
+      </DashboardErrorBoundary>
     </div>
   );
 });
