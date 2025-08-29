@@ -249,32 +249,32 @@ export function useAnalysisProgress(ward, analysisId) {
 
   const clientRef = useRef(null);
 
+  const handleProgress = useCallback((data) => {
+    if (data.analysisId === analysisId) {
+      setProgress({
+        stage: data.stage,
+        percentage: data.progress || 0,
+        eta: data.eta,
+        description: data.stageDescription,
+        confidence: data.confidence,
+        isComplete: data.progress === 100,
+        error: null
+      });
+    }
+  }, [analysisId]);
+
+  const handleError = useCallback((data) => {
+    setProgress(prev => ({
+      ...prev,
+      error: data.error
+    }));
+  }, []);
+
   useEffect(() => {
     if (!ward || !analysisId) return;
 
     clientRef.current = new EnhancedSSEClient();
     
-    const handleProgress = (data) => {
-      if (data.analysisId === analysisId) {
-        setProgress({
-          stage: data.stage,
-          percentage: data.progress || 0,
-          eta: data.eta,
-          description: data.stageDescription,
-          confidence: data.confidence,
-          isComplete: data.progress === 100,
-          error: null
-        });
-      }
-    };
-
-    const handleError = (data) => {
-      setProgress(prev => ({
-        ...prev,
-        error: data.error
-      }));
-    };
-
     clientRef.current.on('progress', handleProgress);
     clientRef.current.on('error', handleError);
     
@@ -288,7 +288,7 @@ export function useAnalysisProgress(ward, analysisId) {
         clientRef.current.disconnect();
       }
     };
-  }, [ward, analysisId]);
+  }, [ward, analysisId, handleProgress, handleError]);
 
   return progress;
 }

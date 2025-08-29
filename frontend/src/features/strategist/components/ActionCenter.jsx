@@ -13,7 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-export default function ActionCenter({ actions = [], isLoading, ward }) {
+export default function ActionCenter({ actions = [], isLoading, ward, briefing = {} }) {
   const [completedActions, setCompletedActions] = useState(new Set());
 
   const toggleActionComplete = (actionIndex) => {

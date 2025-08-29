@@ -31,6 +31,7 @@ export default function WardMetaPanel({ wardId }) {
     queryKey: ["wardMeta", wardId],
     // NOTE: we pass the path without a leading slash — fetchJson joins it to the base
     queryFn: () => fetchJson(`api/v1/ward/meta/${wardId}`),
+    enabled: !!wardId, // Only run query when wardId is not null/undefined
   });
 
   if (q.isLoading) {

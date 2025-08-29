@@ -328,6 +328,28 @@ class EnhancedSSEClient {
   }
 
   /**
+   * Handle status update messages
+   */
+  handleStatusUpdate(data) {
+    this.emit('status', data);
+  }
+
+  /**
+   * Handle server error messages
+   */
+  handleServerError(data) {
+    // Use appropriate log level based on error recoverability
+    if (data.data?.recoverable) {
+      // Log recoverable errors concisely
+      console.warn(`SSE: ${data.data.message || 'Temporary issue'} (recoverable)`);
+    } else {
+      // Log non-recoverable errors with full details
+      console.error('SSE Server Error:', data);
+    }
+    this.emit('server_error', data);
+  }
+
+  /**
    * Enhanced heartbeat monitoring with connection health assessment
    */
   startHeartbeatMonitoring() {

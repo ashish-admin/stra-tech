@@ -61,10 +61,24 @@ export const useErrorReporting = () => {
 
     // Global error handler for uncaught errors
     const handleGlobalError = (event) => {
+      // Skip if this is a non-error event (like resource loading errors)
+      if (event.target !== window && !event.error) {
+        return; // This is likely a resource loading error, handled elsewhere
+      }
+      
+      // Only report if we have meaningful error information
+      const errorMessage = event.error?.message || event.message;
+      const errorStack = event.error?.stack;
+      
+      // Skip reporting if we don't have any meaningful error information
+      if (!errorMessage || errorMessage === 'Unknown error') {
+        return;
+      }
+      
       window.reportError({
         component: 'Global',
-        error: event.error?.message || 'Unknown error',
-        stack: event.error?.stack || 'No stack trace',
+        error: errorMessage,
+        stack: errorStack || 'No stack trace',
         type: 'uncaught_error'
       });
     };

@@ -117,19 +117,23 @@ class FrontendErrorTracker {
   setupGlobalErrorHandlers() {
     // Global JavaScript error handler
     window.addEventListener('error', (event) => {
+      const errorMessage = event.message || event.error?.message || 'Unknown error';
+      const errorStack = event.error?.stack || 'No stack trace';
+      
       this.trackError({
         severity: this.classifyErrorSeverity(event.error),
         category: this.classifyErrorCategory(event.error, event.filename),
-        component: this.extractComponent(event.filename),
-        message: event.message,
+        component: this.extractComponent(event.filename) || 'Global',
+        message: errorMessage,
         context: {
-          filename: event.filename,
-          lineno: event.lineno,
-          colno: event.colno,
-          stack: event.error?.stack,
-          type: 'javascript_error',
+          filename: event.filename || 'unknown',
+          lineno: event.lineno || 0,
+          colno: event.colno || 0,
+          stack: errorStack,
+          type: 'uncaught_error',
           url: window.location.href,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent
         }
       });
     });

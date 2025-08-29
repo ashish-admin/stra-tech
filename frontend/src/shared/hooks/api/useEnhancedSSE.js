@@ -360,9 +360,11 @@ export const useEnhancedSSE = (options = {}) => {
 
     return () => {
       mountedRef.current = false;
-      disconnect();
+      if (sseClientRef.current) {
+        sseClientRef.current.disconnect();
+      }
     };
-  }, [autoConnect, ward, connect, disconnect]);
+  }, [autoConnect, ward, mode, depth, context]);
 
   // Metrics collection effect
   useEffect(() => {
@@ -486,36 +488,36 @@ export const useSSEHealthMonitor = (sseHooks = []) => {
     avgLatency: 0
   });
 
+  const updateHealth = useCallback(() => {
+    const connectedCount = sseHooks.filter(hook => hook.isConnected).length;
+    const errorCount = sseHooks.filter(hook => hook.hasError).length;
+    const avgLatency = sseHooks
+      .filter(hook => hook.metrics?.averageLatency)
+      .reduce((sum, hook, _, arr) => sum + (hook.metrics.averageLatency / arr.length), 0);
+
+    let status = 'excellent';
+    if (errorCount > 0) {
+      status = errorCount === sseHooks.length ? 'critical' : 'degraded';
+    } else if (connectedCount < sseHooks.length) {
+      status = 'fair';
+    }
+
+    setOverallHealth({
+      status,
+      connectedCount,
+      totalConnections: sseHooks.length,
+      errorCount,
+      avgLatency
+    });
+  }, [sseHooks]);
+
   useEffect(() => {
-    const updateHealth = () => {
-      const connectedCount = sseHooks.filter(hook => hook.isConnected).length;
-      const errorCount = sseHooks.filter(hook => hook.hasError).length;
-      const avgLatency = sseHooks
-        .filter(hook => hook.metrics.averageLatency)
-        .reduce((sum, hook, _, arr) => sum + hook.metrics.averageLatency / arr.length, 0);
-
-      let status = 'excellent';
-      if (errorCount > 0) {
-        status = errorCount === sseHooks.length ? 'critical' : 'degraded';
-      } else if (connectedCount < sseHooks.length) {
-        status = 'fair';
-      }
-
-      setOverallHealth({
-        status,
-        connectedCount,
-        totalConnections: sseHooks.length,
-        errorCount,
-        avgLatency
-      });
-    };
-
     updateHealth();
     
     // Update health every 5 seconds
     const interval = setInterval(updateHealth, 5000);
     return () => clearInterval(interval);
-  }, [sseHooks]);
+  }, [updateHealth]);
 
   return overallHealth;
 };

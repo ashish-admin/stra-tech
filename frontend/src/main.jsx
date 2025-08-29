@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
+import './lib/i18n';
 
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
