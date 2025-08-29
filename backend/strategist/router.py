@@ -59,6 +59,7 @@ def debug_ward_analysis(ward):
         logger.error(f"Debug error for {ward}: {e}", exc_info=True)
         return jsonify({"debug_error": str(e)}), 500
 
+@strategist_bp.route('/<ward>', methods=['GET'])
 @strategist_bp.route('/ward/<ward>', methods=['GET'])
 @login_required
 @track_api_call

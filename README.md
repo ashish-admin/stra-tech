@@ -19,6 +19,7 @@
 - **Component Architecture**: Error boundaries implemented, LocationMap.jsx verified working
 - **Database Schema**: Enhanced with AI infrastructure tables, multi-model AI support
 - **Political Strategist**: Core AI orchestration engine with Gemini 2.5 Pro + Perplexity AI
+- **Project Organization**: Comprehensive cleanup completed - 39% documentation reduction, 514MB space recovered
 
 ### Phase 3 Development Status
 - [x] Multi-model AI architecture foundation
@@ -59,6 +60,26 @@
 - **Interactive Geospatial Visualization**: Ward boundary maps with click selection
 - **Resilient Component Architecture**: Error boundaries prevent cascade failures
 - **Background Task Processing**: Celery for AI analysis, news ingestion, embeddings
+
+------------------------------------------------------------------
+
+## Documentation & Resources
+
+### Key Documents
+- **📋 Project Status**: `PROJECT_STATUS_MASTER.md` (single source of truth)
+- **🛠️ Development Guide**: `CLAUDE.md` (comprehensive development instructions)
+- **🔧 Troubleshooting**: `docs/technical/troubleshooting.md` (complete issue resolution guide)
+- **🏗️ Architecture**: `docs/technical/` (technical specifications)
+- **📚 API Documentation**: `docs/api/README.md`
+
+### Historical Archives
+- **📁 Status Reports**: `archive/2025-08/status-reports/` (historical status documents)
+- **📁 Documentation**: `archive/2025-08/documentation/` (archived guides and references)
+
+### Quick References
+- **Environment Setup**: Use `backend/.env.example` as template
+- **Development Scripts**: `scripts/dev-start.sh` for automated startup
+- **Health Monitoring**: `scripts/health-check-dev.sh`
 
 ------------------------------------------------------------------
 

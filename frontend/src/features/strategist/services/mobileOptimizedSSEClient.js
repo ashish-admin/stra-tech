@@ -176,17 +176,27 @@ class MobileOptimizedSSEClient extends EnhancedSSEClient {
    * Initialize connection type detection
    */
   initializeConnectionTypeDetection() {
-    this.updateConnectionType();
+    try {
+      this.updateConnectionType();
+    } catch (error) {
+      console.warn('Connection type detection failed:', error.message);
+      this.connectionType = 'unknown';
+    }
   }
 
   /**
    * Update connection type detection
    */
   updateConnectionType() {
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (connection) {
-      this.connectionType = connection.effectiveType || 'unknown';
-    } else {
+    try {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (connection && connection.effectiveType) {
+        this.connectionType = connection.effectiveType;
+      } else {
+        this.connectionType = 'unknown';
+      }
+    } catch (error) {
+      console.warn('Connection type update failed:', error.message);
       this.connectionType = 'unknown';
     }
   }

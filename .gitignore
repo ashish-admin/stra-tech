@@ -1,4 +1,4 @@
-# Security - Credentials and secrets
+# Security - Credentials and secrets (NEVER COMMIT THESE)
 *.env
 *.env.*
 !*.env.example
@@ -13,6 +13,14 @@ secrets/
 *.pfx
 cookies.txt
 auth_tokens.txt
+*api_key*
+*API_KEY*
+*secret*
+*SECRET*
+*token*
+*TOKEN*
+backup/config-cleanup-*
+backup/*env*
 
 # Python backend
 /backend/venv/

@@ -5,6 +5,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}"
   ],
+  darkMode: 'media', // Enable system-based dark mode detection
   theme: {
     extend: {}
   },

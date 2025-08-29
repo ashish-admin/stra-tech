@@ -43,6 +43,9 @@ from .error_analytics import analytics_bp
 # Heat Map API system for widget dashboard
 from .heatmap_api import heatmap_bp
 
+# LokDarpan Agents API system
+from .agents_api import agents_bp
+
 # Political Strategist module - Check if exists
 strategist_bp = None
 try:
@@ -188,6 +191,9 @@ def create_app(config_class: str = "config.Config") -> Flask:
         
         # Register heat map API for widget system
         app.register_blueprint(heatmap_bp)
+        
+        # Register LokDarpan Agents API system
+        app.register_blueprint(agents_bp)
         
         # Initialize error tracking system
         init_error_tracking(app)

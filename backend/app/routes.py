@@ -324,8 +324,8 @@ def get_alerts(ward):
     ward = normalize_ward_name(ward)
     row = Alert.query.filter(func.lower(Alert.ward) == ward.lower()).order_by(Alert.created_at.desc()).first()
     if not row:
-        return jsonify({"message": "No alerts found for this ward."}), 404
-    return jsonify({"opportunities": row.opportunities})
+        return jsonify([])  # Return empty array instead of 404
+    return jsonify(row.opportunities if row.opportunities else [])
 
 
 @main_bp.route("/trigger_analysis", methods=["POST"])
