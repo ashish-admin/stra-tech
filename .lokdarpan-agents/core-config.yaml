@@ -1,0 +1,116 @@
+# LokDarpan Political Intelligence Agent Framework
+# Core Configuration for Campaign Strategy and Electoral Intelligence
+
+project:
+  name: LokDarpan
+  version: "5.0.1"
+  type: "political-intelligence-dashboard"
+  mission: "Provide decisive competitive advantages for political campaigns through AI-driven intelligence"
+  domain: "hyderabad-electoral-politics"
+
+# Integration with existing LokDarpan architecture
+integration:
+  backend_service: "flask-app"
+  database: "postgresql"
+  cache: "redis"
+  ai_models:
+    - "gemini-2.5-pro"
+    - "perplexity-ai"
+  real_time: "sse-streaming"
+  endpoints:
+    base_url: "http://localhost:5000"
+    strategist_api: "/api/v1/strategist"
+    ward_analysis: "/api/v1/pulse"
+    trends: "/api/v1/trends"
+
+# Political Context - Hyderabad Focus
+context:
+  region: "Greater Hyderabad Municipal Corporation (GHMC)"
+  total_wards: 150
+  primary_parties:
+    - "BJP"
+    - "TRS/BRS" 
+    - "Congress"
+    - "AIMIM"
+  languages:
+    - "Telugu"
+    - "Urdu" 
+    - "Hindi"
+    - "English"
+  key_demographics:
+    - "urban-professional"
+    - "traditional-business"
+    - "minority-communities"
+    - "tech-sector-employees"
+
+# Agent Capabilities Framework
+capabilities:
+  strategic_analysis:
+    - "sentiment-monitoring"
+    - "competitor-intelligence"
+    - "crisis-detection"
+    - "opportunity-identification"
+    - "narrative-analysis"
+  
+  data_sources:
+    - "news-apis"
+    - "social-media-monitoring" 
+    - "electoral-databases"
+    - "demographic-data"
+    - "historical-voting-patterns"
+  
+  output_formats:
+    - "strategic-briefings"
+    - "actionable-recommendations" 
+    - "crisis-response-plans"
+    - "competitive-intelligence-reports"
+    - "electoral-forecasts"
+
+# Security and Ethics Framework
+governance:
+  ethical_guidelines:
+    - "support-democratic-processes"
+    - "maintain-factual-accuracy"
+    - "respect-privacy-rights"
+    - "avoid-disinformation"
+  
+  security_measures:
+    - "api-key-protection"
+    - "data-encryption"
+    - "audit-logging"
+    - "access-controls"
+
+# Performance Parameters
+performance:
+  cache_ttl: 300  # 5 minutes for strategic analysis
+  analysis_timeout: 30  # 30 seconds max
+  concurrent_requests: 5
+  rate_limits:
+    standard_analysis: "10/minute"
+    deep_analysis: "3/minute"
+  
+# Operational Modes
+modes:
+  development:
+    debug_logging: true
+    mock_external_apis: false
+    cache_enabled: true
+  
+  production:
+    debug_logging: false
+    monitoring_enabled: true
+    alerting_enabled: true
+    backup_enabled: true
+
+# Agent Coordination Rules
+coordination:
+  primary_agent: "lokdarpan-master"
+  escalation_chain:
+    - "campaign-strategist"
+    - "intelligence-analyst" 
+    - "crisis-manager"
+  
+  collaboration_patterns:
+    - "multi-agent-consensus"
+    - "specialized-delegation"
+    - "hierarchical-review"

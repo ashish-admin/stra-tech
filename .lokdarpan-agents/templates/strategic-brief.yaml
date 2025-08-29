@@ -1,0 +1,198 @@
+# Strategic Briefing Template
+# For use with LokDarpan Political Intelligence Dashboard
+
+metadata:
+  template_version: "1.0"
+  template_type: "strategic-briefing"
+  classification: "INTERNAL-CAMPAIGN-USE"
+  last_updated: "2025-08-29"
+
+briefing_header:
+  title: "{briefing_title}"
+  classification: "{INTERNAL|RESTRICTED|CONFIDENTIAL}"
+  date_prepared: "{YYYY-MM-DD HH:MM:SS}"
+  prepared_by: "LokDarpan AI Intelligence System"
+  briefing_type: "{executive|tactical|crisis|competitive}"
+  target_audience: "{campaign_leadership|field_directors|communications_team}"
+  distribution_list: 
+    - "{authorized_recipient_1}"
+    - "{authorized_recipient_2}"
+  
+executive_summary:
+  bottom_line_up_front:
+    primary_recommendation: "{single most important strategic recommendation}"
+    confidence_level: "{high|medium|low}"
+    timeline_urgency: "{immediate|urgent|standard|planning}"
+    resource_impact: "{high|medium|low}"
+  
+  key_findings:
+    - finding_1: "{critical insight #1}"
+    - finding_2: "{critical insight #2}"  
+    - finding_3: "{critical insight #3}"
+  
+  priority_actions:
+    immediate_24h:
+      - action: "{action description}"
+        owner: "{responsible party}"
+        resources_required: "{resource needs}"
+    next_7_days:
+      - action: "{action description}"
+        owner: "{responsible party}"
+        deadline: "{YYYY-MM-DD}"
+    next_30_days:
+      - action: "{strategic initiative}"
+        owner: "{responsible party}"
+        success_metrics: ["{measurable outcomes}"]
+
+situation_analysis:
+  current_position:
+    overall_assessment: "{strategic position summary}"
+    competitive_standing: "{relative position vs opponents}"
+    trend_trajectory: "{improving|stable|declining}"
+    key_strengths: ["{advantage_1}", "{advantage_2}", "{advantage_3}"]
+    critical_vulnerabilities: ["{vulnerability_1}", "{vulnerability_2}"]
+  
+  operating_environment:
+    political_climate: "{current political environment description}"
+    media_landscape: "{media coverage and narrative environment}"
+    coalition_dynamics: "{alliance and partnership status}"
+    public_sentiment: "{overall public mood and sentiment}"
+    economic_factors: "{relevant economic conditions}"
+
+strategic_options:
+  option_1:
+    name: "{strategic option name}"
+    description: "{detailed strategy description}"
+    resource_requirements:
+      personnel: "{staffing needs}"
+      budget: "{financial requirements}"
+      time_horizon: "{implementation timeline}"
+    success_probability: "{percentage or high/medium/low}"
+    key_risks: ["{risk_1}", "{risk_2}"]
+    expected_outcomes: ["{outcome_1}", "{outcome_2}"]
+  
+  option_2:
+    name: "{alternative strategy name}"
+    description: "{alternative approach description}"
+    resource_requirements:
+      personnel: "{staffing needs}"
+      budget: "{financial requirements}"  
+      time_horizon: "{implementation timeline}"
+    success_probability: "{percentage or high/medium/low}"
+    key_risks: ["{risk_1}", "{risk_2}"]
+    expected_outcomes: ["{outcome_1}", "{outcome_2}"]
+
+  recommended_option:
+    selection: "{selected option name}"
+    rationale: "{why this option is recommended}"
+    implementation_approach: "{how to execute the strategy}"
+    success_criteria: ["{measurable success indicators}"]
+
+competitive_intelligence:
+  primary_opponents:
+    party_1:
+      current_strategy: "{opponent's apparent strategy}"
+      strengths: ["{their advantages}"]
+      vulnerabilities: ["{their weaknesses}"]
+      likely_responses: ["{anticipated counter-moves}"]
+      intelligence_confidence: "{assessment reliability}"
+    
+    party_2:
+      current_strategy: "{opponent's apparent strategy}"
+      strengths: ["{their advantages}"]
+      vulnerabilities: ["{their weaknesses}"]
+      likely_responses: ["{anticipated counter-moves}"]
+      intelligence_confidence: "{assessment reliability}"
+
+  coalition_dynamics:
+    potential_allies: ["{parties or groups for potential alliance}"]
+    alliance_opportunities: ["{specific collaboration possibilities}"]
+    relationship_risks: ["{potential coalition vulnerabilities}"]
+
+risk_assessment:
+  high_priority_risks:
+    risk_1:
+      description: "{detailed risk description}"
+      probability: "{high|medium|low}"
+      impact: "{high|medium|low}"
+      timeline: "{when risk might materialize}"
+      early_indicators: ["{warning signs to monitor}"]
+      mitigation_strategy: "{how to prevent or minimize}"
+      contingency_plan: "{response if risk materializes}"
+  
+  medium_priority_risks:
+    risk_2:
+      description: "{risk description}"
+      monitoring_approach: "{how to track this risk}"
+      threshold_triggers: ["{conditions that escalate priority}"]
+
+resource_allocation:
+  personnel_deployment:
+    senior_leadership: "{leadership time allocation recommendations}"
+    field_operations: "{ground game resource allocation}"
+    communications: "{media and messaging resource needs}"
+    research_analysis: "{intelligence and research requirements}"
+  
+  budget_priorities:
+    immediate_needs: "{urgent funding requirements}"
+    strategic_investments: "{medium-term resource allocation}"
+    contingency_reserves: "{emergency response capabilities}"
+  
+  timeline_coordination:
+    milestone_1:
+      date: "{YYYY-MM-DD}"
+      deliverables: ["{required outputs}"]
+      resources_needed: ["{resource requirements}"]
+    
+    milestone_2:
+      date: "{YYYY-MM-DD}"
+      deliverables: ["{required outputs}"]
+      decision_points: ["{key decisions required}"]
+
+intelligence_sources:
+  primary_sources:
+    - source_type: "LokDarpan AI Analysis"
+      reliability: "{high|medium|low}"
+      data_recency: "{how recent the data is}"
+    
+    - source_type: "Polling and Survey Data"  
+      reliability: "{assessment of source quality}"
+      sample_characteristics: "{polling methodology notes}"
+  
+  analytical_methods:
+    - method: "Multi-model AI Analysis (Gemini 2.5 Pro + Perplexity)"
+      confidence: "{analytical confidence level}"
+    - method: "Historical Pattern Analysis"
+      baseline_period: "{time period for comparison}"
+    - method: "Competitive Intelligence Assessment"
+      coverage_scope: "{extent of opposition research}"
+
+next_steps:
+  immediate_decisions_required:
+    decision_1:
+      description: "{decision that needs to be made}"
+      deadline: "{YYYY-MM-DD HH:MM}"
+      decision_makers: ["{who needs to decide}"]
+      information_needed: ["{additional input required}"]
+  
+  follow_up_analysis:
+    - analysis_type: "{type of additional analysis needed}"
+      timeline: "{when results will be available}"
+      purpose: "{how this supports strategy}"
+  
+  monitoring_plan:
+    daily_tracking: ["{metrics to monitor daily}"]
+    weekly_assessment: ["{weekly review requirements}"]
+    alert_triggers: ["{conditions requiring immediate attention}"]
+
+appendices:
+  appendix_a: "Detailed Competitive Intelligence Profiles"
+  appendix_b: "Electoral Forecasting and Statistical Analysis"  
+  appendix_c: "Media Environment and Narrative Analysis"
+  appendix_d: "Coalition and Stakeholder Analysis"
+  appendix_e: "Crisis Monitoring Dashboard"
+
+classification_footer:
+  security_notice: "This document contains confidential campaign strategy information. Distribution is restricted to authorized personnel only."
+  handling_instructions: "Store securely. Do not duplicate without authorization. Destroy securely when no longer needed."
+  contact_information: "For questions or clarifications, contact LokDarpan Intelligence Team"
