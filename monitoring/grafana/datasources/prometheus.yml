@@ -1,0 +1,33 @@
+# Grafana Datasource Configuration for LokDarpan
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+      queryTimeout: 60s
+      defaultRegion: asia-south1
+      customQueryParameters: ""
+    secureJsonData: {}
+    version: 1
+    uid: prometheus-lokdarpan
+
+  - name: Prometheus-AlertManager
+    type: camptocamp-prometheus-alertmanager-datasource
+    access: proxy  
+    url: http://alertmanager:9093
+    isDefault: false
+    editable: true
+    jsonData:
+      severity_critical: "critical"
+      severity_high: "high" 
+      severity_warning: "warning"
+      severity_info: "info"
+    version: 1
+    uid: alertmanager-lokdarpan

@@ -1,0 +1,372 @@
+# LokDarpan Phase 1 - GCP Infrastructure as Code
+# Google Cloud Deployment Manager Configuration
+
+imports:
+  - path: templates/compute-instance.jinja
+  - path: templates/network-security.jinja
+  - path: templates/storage-buckets.jinja
+  - path: templates/monitoring.jinja
+
+resources:
+  # =============================================================================
+  # NETWORK INFRASTRUCTURE
+  # =============================================================================
+  
+  # VPC Network for LokDarpan
+  - name: lokdarpan-vpc
+    type: compute.v1.network
+    properties:
+      autoCreateSubnetworks: false
+      description: "LokDarpan Political Intelligence Network"
+
+  # Subnet for application servers (Mumbai region)
+  - name: lokdarpan-subnet-mumbai
+    type: compute.v1.subnetwork
+    properties:
+      network: $(ref.lokdarpan-vpc.selfLink)
+      ipCidrRange: 10.1.0.0/24
+      region: asia-south1
+      description: "LokDarpan application subnet - Mumbai"
+      privateIpGoogleAccess: true
+      logConfig:
+        enable: true
+        aggregationInterval: INTERVAL_10_MIN
+        flowSampling: 0.5
+
+  # External static IP for production
+  - name: lokdarpan-static-ip
+    type: compute.v1.address
+    properties:
+      region: asia-south1
+      addressType: EXTERNAL
+      description: "LokDarpan production static IP"
+
+  # =============================================================================
+  # FIREWALL RULES - SECURITY HARDENED
+  # =============================================================================
+  
+  # HTTP/HTTPS traffic (Traefik ingress)
+  - name: lokdarpan-allow-web
+    type: compute.v1.firewall
+    properties:
+      network: $(ref.lokdarpan-vpc.selfLink)
+      direction: INGRESS
+      priority: 1000
+      sourceRanges:
+        - 0.0.0.0/0
+      allowed:
+        - IPProtocol: tcp
+          ports:
+            - "80"
+            - "443"
+      targetTags:
+        - lokdarpan-web
+      description: "Allow HTTP/HTTPS for LokDarpan web traffic"
+
+  # SSH access (restricted to admin IPs)
+  - name: lokdarpan-allow-ssh
+    type: compute.v1.firewall
+    properties:
+      network: $(ref.lokdarpan-vpc.selfLink)
+      direction: INGRESS
+      priority: 1000
+      sourceRanges:
+        # Replace with your admin IP ranges
+        - YOUR_ADMIN_IP/32
+        - YOUR_OFFICE_IP_RANGE/24
+      allowed:
+        - IPProtocol: tcp
+          ports:
+            - "22"
+      targetTags:
+        - lokdarpan-ssh
+      description: "Allow SSH for LokDarpan administration"
+
+  # Monitoring and metrics
+  - name: lokdarpan-allow-monitoring
+    type: compute.v1.firewall
+    properties:
+      network: $(ref.lokdarpan-vpc.selfLink)
+      direction: INGRESS
+      priority: 1000
+      sourceRanges:
+        - 10.1.0.0/24  # Internal subnet only
+      allowed:
+        - IPProtocol: tcp
+          ports:
+            - "8080"  # Traefik dashboard
+            - "9090"  # Prometheus
+            - "3000"  # Grafana (if used)
+      targetTags:
+        - lokdarpan-monitoring
+      description: "Allow monitoring traffic within VPC"
+
+  # Block suspicious countries (optional)
+  - name: lokdarpan-block-suspicious
+    type: compute.v1.firewall
+    properties:
+      network: $(ref.lokdarpan-vpc.selfLink)
+      direction: INGRESS
+      priority: 100  # Higher priority = processed first
+      action: DENY
+      sourceRanges:
+        # Add IP ranges for countries to block
+        - 1.2.3.0/24  # Example: Replace with actual ranges
+      targetTags:
+        - lokdarpan-web
+      description: "Block traffic from suspicious regions"
+
+  # =============================================================================
+  # COMPUTE INSTANCES
+  # =============================================================================
+  
+  # Main application server
+  - name: lokdarpan-app-server
+    type: templates/compute-instance.jinja
+    properties:
+      name: lokdarpan-app-01
+      zone: asia-south1-a
+      machineType: e2-standard-4  # 4 vCPUs, 16GB RAM
+      subnet: $(ref.lokdarpan-subnet-mumbai.selfLink)
+      staticIP: $(ref.lokdarpan-static-ip.address)
+      diskSizeGb: 100
+      diskType: pd-ssd
+      tags:
+        - lokdarpan-web
+        - lokdarpan-ssh
+        - lokdarpan-monitoring
+      labels:
+        environment: production
+        application: lokdarpan
+        component: web-app
+      startupScript: |
+        #!/bin/bash
+        
+        # Update system
+        apt-get update && apt-get upgrade -y
+        
+        # Install Docker and Docker Compose
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+        usermod -aG docker $USER
+        
+        # Install Docker Compose v2
+        curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        
+        # Create application directories
+        mkdir -p /opt/lokdarpan/{data,logs,backups}
+        mkdir -p /opt/lokdarpan/data/{postgres,redis,prometheus}
+        
+        # Set timezone to India
+        timedatectl set-timezone Asia/Kolkata
+        
+        # Configure log rotation
+        cat > /etc/logrotate.d/lokdarpan << EOF
+        /opt/lokdarpan/logs/*.log {
+            daily
+            missingok
+            rotate 30
+            compress
+            delaycompress
+            copytruncate
+        }
+        EOF
+        
+        # Install monitoring agents
+        curl -sSO https://dl.google.com/cloudagents/add-logging-agent-repo.sh
+        bash add-logging-agent-repo.sh
+        apt-get update
+        apt-get install -y google-fluentd
+        
+        # Install security tools
+        apt-get install -y fail2ban ufw
+        
+        # Configure UFW firewall
+        ufw default deny incoming
+        ufw default allow outgoing
+        ufw allow 22/tcp   # SSH
+        ufw allow 80/tcp   # HTTP
+        ufw allow 443/tcp  # HTTPS
+        ufw --force enable
+        
+        # Configure fail2ban
+        cat > /etc/fail2ban/jail.local << EOF
+        [DEFAULT]
+        bantime = 3600
+        findtime = 600
+        maxretry = 3
+        
+        [ssh]
+        enabled = true
+        port = 22
+        filter = sshd
+        logpath = /var/log/auth.log
+        maxretry = 3
+        EOF
+        
+        systemctl enable fail2ban
+        systemctl start fail2ban
+        
+        # Clone application (placeholder - use your actual repo)
+        # git clone https://github.com/your-org/lokdarpan.git /opt/lokdarpan/app
+        
+        echo "LokDarpan server setup completed" > /opt/lokdarpan/setup.log
+
+  # =============================================================================
+  # CLOUD STORAGE
+  # =============================================================================
+  
+  # Backup storage bucket
+  - name: lokdarpan-backups
+    type: storage.v1.bucket
+    properties:
+      location: asia-south1
+      storageClass: REGIONAL
+      versioning:
+        enabled: true
+      lifecycle:
+        rule:
+          - action:
+              type: Delete
+            condition:
+              age: 90  # Delete after 90 days
+              isLive: true
+          - action:
+              type: Delete
+            condition:
+              age: 30  # Delete versions after 30 days
+              isLive: false
+      logging:
+        logBucket: lokdarpan-access-logs
+        logObjectPrefix: backup-access/
+
+  # Access logs bucket
+  - name: lokdarpan-access-logs
+    type: storage.v1.bucket
+    properties:
+      location: asia-south1
+      storageClass: COLDLINE
+      lifecycle:
+        rule:
+          - action:
+              type: Delete
+            condition:
+              age: 180  # Delete logs after 6 months
+
+  # Static assets bucket (optional)
+  - name: lokdarpan-static-assets
+    type: storage.v1.bucket
+    properties:
+      location: asia-south1
+      storageClass: REGIONAL
+      website:
+        mainPageSuffix: index.html
+        notFoundPage: 404.html
+      cors:
+        - origin:
+            - https://YOUR_DOMAIN.com
+          method:
+            - GET
+            - HEAD
+          responseHeader:
+            - Content-Type
+            - Content-Length
+            - Date
+            - Server
+            - Cache-Control
+          maxAgeSeconds: 3600
+
+  # =============================================================================
+  # CLOUD SQL (Alternative to containerized PostgreSQL)
+  # =============================================================================
+  
+  # Uncomment for Cloud SQL instead of containerized PostgreSQL
+  # - name: lokdarpan-database
+  #   type: sqladmin.v1beta4.instance
+  #   properties:
+  #     databaseVersion: POSTGRES_15
+  #     region: asia-south1
+  #     tier: db-custom-2-4096  # 2 vCPUs, 4GB RAM
+  #     diskType: PD_SSD
+  #     diskSize: 50
+  #     diskAutoResize: true
+  #     diskAutoResizeLimit: 500
+  #     availabilityType: REGIONAL  # High availability
+  #     backupConfiguration:
+  #       enabled: true
+  #       startTime: "02:00"  # 2 AM IST
+  #       pointInTimeRecoveryEnabled: true
+  #       transactionLogRetentionDays: 7
+  #       backupRetentionSettings:
+  #         retainedBackups: 30
+  #         retentionUnit: COUNT
+  #     maintenanceWindow:
+  #       hour: 3  # 3 AM IST
+  #       day: 7   # Sunday
+  #       updateTrack: stable
+  #     databaseFlags:
+  #       - name: timezone
+  #         value: Asia/Kolkata
+  #       - name: shared_preload_libraries
+  #         value: pg_stat_statements
+  #     ipConfiguration:
+  #       ipv4Enabled: false
+  #       privateNetwork: $(ref.lokdarpan-vpc.selfLink)
+  #       authorizedNetworks: []
+  #     settings:
+  #       userLabels:
+  #         environment: production
+  #         application: lokdarpan
+
+  # =============================================================================
+  # CLOUD MONITORING AND ALERTING
+  # =============================================================================
+  
+  # Health check for the application
+  - name: lokdarpan-health-check
+    type: compute.v1.healthCheck
+    properties:
+      type: HTTP
+      httpHealthCheck:
+        port: 443
+        requestPath: /api/v1/status
+      checkIntervalSec: 30
+      timeoutSec: 10
+      healthyThreshold: 2
+      unhealthyThreshold: 3
+      description: "LokDarpan application health check"
+
+  # Instance group for scaling (single instance for now)
+  - name: lokdarpan-instance-group
+    type: compute.v1.instanceGroup
+    properties:
+      zone: asia-south1-a
+      network: $(ref.lokdarpan-vpc.selfLink)
+      description: "LokDarpan application instance group"
+
+  # Add instances to group
+  - name: add-instance-to-group
+    type: gcp-types/compute-v1:instanceGroups.addInstances
+    properties:
+      zone: asia-south1-a
+      instanceGroup: lokdarpan-instance-group
+      instances:
+        - instance: $(ref.lokdarpan-app-server.selfLink)
+
+outputs:
+  - name: staticIP
+    value: $(ref.lokdarpan-static-ip.address)
+    description: "Static IP address for LokDarpan"
+  
+  - name: networkName
+    value: $(ref.lokdarpan-vpc.name)
+    description: "VPC network name"
+  
+  - name: subnetName
+    value: $(ref.lokdarpan-subnet-mumbai.name)
+    description: "Application subnet name"
+  
+  - name: backupBucket
+    value: $(ref.lokdarpan-backups.name)
+    description: "Backup storage bucket"

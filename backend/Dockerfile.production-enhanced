@@ -1,0 +1,155 @@
+# Enhanced Production Dockerfile for LokDarpan Backend
+# Multi-stage build with security hardening and performance optimization
+
+# Build stage
+FROM python:3.12-slim as builder
+
+# Set build environment
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --user --no-warn-script-location -r requirements.txt
+
+# Production stage
+FROM python:3.12-slim as production
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    curl \
+    dumb-init \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create application user and group
+RUN groupadd -r lokdarpan && \
+    useradd -r -g lokdarpan -d /app -s /bin/bash lokdarpan && \
+    mkdir -p /app /app/data /app/logs && \
+    chown -R lokdarpan:lokdarpan /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python packages from builder
+COPY --from=builder /root/.local /home/lokdarpan/.local
+
+# Update PATH to include user packages
+ENV PATH="/home/lokdarpan/.local/bin:$PATH" \
+    PYTHONPATH="/app:$PYTHONPATH"
+
+# Copy application code
+COPY --chown=lokdarpan:lokdarpan . .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/{data,logs,certs} && \
+    chown -R lokdarpan:lokdarpan /app && \
+    chmod -R 755 /app
+
+# Create Gunicorn configuration
+RUN cat > /app/gunicorn_config.py << 'EOF'
+# Gunicorn Configuration for Production
+import multiprocessing
+import os
+
+# Server socket
+bind = "0.0.0.0:5000"
+backlog = 2048
+
+# Worker processes
+workers = int(os.getenv('GUNICORN_WORKERS', '4'))
+worker_class = os.getenv('GUNICORN_WORKER_CLASS', 'gevent')
+worker_connections = int(os.getenv('GUNICORN_WORKER_CONNECTIONS', '1000'))
+threads = int(os.getenv('GUNICORN_THREADS', '2'))
+
+# Worker management
+max_requests = 1000
+max_requests_jitter = 100
+preload_app = True
+timeout = 120
+keepalive = 5
+
+# Logging
+accesslog = "/app/logs/gunicorn_access.log"
+errorlog = "/app/logs/gunicorn_error.log"
+loglevel = os.getenv('LOG_LEVEL', 'info')
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
+
+# Process naming
+proc_name = 'lokdarpan-backend'
+
+# Security
+limit_request_line = 4094
+limit_request_fields = 100
+limit_request_field_size = 8190
+
+# Performance
+worker_tmp_dir = '/dev/shm'
+
+def when_ready(server):
+    server.log.info("LokDarpan Backend ready for political intelligence processing")
+
+def worker_int(worker):
+    worker.log.info("Worker received INT or QUIT signal")
+
+def pre_fork(server, worker):
+    server.log.info("Worker spawned (pid: %s)", worker.pid)
+
+def post_fork(server, worker):
+    server.log.info("Worker spawned (pid: %s)", worker.pid)
+EOF
+
+# Create health check endpoint script
+RUN cat > /app/health_check.py << 'EOF'
+#!/usr/bin/env python
+import requests
+import sys
+import os
+
+def check_health():
+    try:
+        response = requests.get('http://localhost:5000/api/v1/health', timeout=5)
+        if response.status_code == 200:
+            return True
+    except:
+        pass
+    return False
+
+if __name__ == "__main__":
+    if check_health():
+        sys.exit(0)
+    else:
+        sys.exit(1)
+EOF
+
+# Make scripts executable
+RUN chmod +x /app/health_check.py
+
+# Switch to non-root user
+USER lokdarpan
+
+# Health check with enhanced monitoring
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python /app/health_check.py || exit 1
+
+# Expose port
+EXPOSE 5000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Command with enhanced configuration
+CMD ["gunicorn", "--config", "gunicorn_config.py", "app:create_app()"]

@@ -36,6 +36,13 @@ export const queryClient = new QueryClient({
 
 // Query Keys for consistent caching
 export const queryKeys = {
+  // Authentication
+  auth: {
+    all: ['auth'],
+    status: () => ['auth', 'status'],
+    user: () => ['auth', 'user']
+  },
+
   // Ward-related data
   ward: {
     all: ['ward'],
@@ -57,6 +64,13 @@ export const queryKeys = {
     all: ['posts'],
     byWard: (ward) => ['posts', 'ward', ward],
     filtered: ({ ward, limit, offset }) => ['posts', 'filtered', ward, limit, offset]
+  },
+
+  // Content API
+  content: {
+    all: ['content'],
+    posts: (params) => ['content', 'posts', params],
+    competitive: (params) => ['content', 'competitive', params]
   },
   
   // Strategic analysis

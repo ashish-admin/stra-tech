@@ -1,0 +1,184 @@
+# LokDarpan Phase 1 Production Docker Compose Configuration
+# Optimized for Indian network conditions and political campaign teams
+# Production-ready deployment with monitoring and security
+
+version: '3.8'
+
+services:
+  # LokDarpan Frontend Service
+  lokdarpan-frontend:
+    image: ${LOKDARPAN_IMAGE_TAG:-lokdarpan/frontend:production-latest}
+    container_name: lokdarpan-frontend-prod
+    restart: unless-stopped
+    
+    # Port mapping for production
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS
+    
+    # Environment configuration
+    environment:
+      - NODE_ENV=production
+      - DEPLOYMENT_ENV=production
+      - DEPLOYMENT_TIMESTAMP=${DEPLOYMENT_TIMESTAMP:-unknown}
+      - TZ=Asia/Kolkata
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits for production stability
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Security configuration
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service,environment"
+    
+    # Volume mounts for configuration and logs
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./logs/nginx:/var/log/nginx:delegated
+      - ./ssl:/etc/nginx/ssl:ro
+    
+    # Network configuration
+    networks:
+      - lokdarpan-network
+    
+    # Labels for monitoring and management
+    labels:
+      - "lokdarpan.component=frontend"
+      - "lokdarpan.environment=production"
+      - "lokdarpan.service=political-intelligence-dashboard"
+      - "lokdarpan.version=${DEPLOYMENT_TIMESTAMP:-latest}"
+      - "traefik.enable=true"
+      - "traefik.http.routers.lokdarpan.rule=Host(`lokdarpan.com`)"
+      - "traefik.http.routers.lokdarpan.tls=true"
+      - "traefik.http.routers.lokdarpan.tls.certresolver=letsencrypt"
+
+  # Nginx Reverse Proxy (if needed for load balancing)
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: lokdarpan-nginx-proxy
+    restart: unless-stopped
+    
+    ports:
+      - "8080:80"    # Proxy port
+    
+    volumes:
+      - ./nginx/proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/proxy:/var/log/nginx:delegated
+    
+    depends_on:
+      lokdarpan-frontend:
+        condition: service_healthy
+    
+    networks:
+      - lokdarpan-network
+    
+    labels:
+      - "lokdarpan.component=proxy"
+      - "lokdarpan.environment=production"
+
+  # Health Monitoring Service
+  health-monitor:
+    image: prom/blackbox-exporter:latest
+    container_name: lokdarpan-health-monitor
+    restart: unless-stopped
+    
+    ports:
+      - "9115:9115"
+    
+    volumes:
+      - ./monitoring/blackbox.yml:/config/blackbox.yml:ro
+    
+    command:
+      - '--config.file=/config/blackbox.yml'
+    
+    networks:
+      - lokdarpan-network
+    
+    labels:
+      - "lokdarpan.component=monitoring"
+      - "lokdarpan.environment=production"
+
+  # Log Aggregator (optional)
+  log-aggregator:
+    image: fluent/fluent-bit:latest
+    container_name: lokdarpan-log-aggregator
+    restart: unless-stopped
+    
+    volumes:
+      - ./logs:/var/log/lokdarpan:ro
+      - ./monitoring/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    
+    depends_on:
+      - lokdarpan-frontend
+    
+    networks:
+      - lokdarpan-network
+    
+    labels:
+      - "lokdarpan.component=logging"
+      - "lokdarpan.environment=production"
+
+# Network configuration
+networks:
+  lokdarpan-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1500
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Volume configuration for persistent data
+volumes:
+  nginx-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./logs/nginx
+  
+  ssl-certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./ssl
+
+# Production deployment configuration
+configs:
+  nginx-config:
+    file: ./nginx.conf
+  
+  ssl-cert:
+    file: ./ssl/lokdarpan.com.crt
+  
+  ssl-key:
+    file: ./ssl/lokdarpan.com.key

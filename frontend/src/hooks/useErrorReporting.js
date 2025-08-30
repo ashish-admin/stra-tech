@@ -74,6 +74,27 @@ export const useErrorReporting = () => {
       if (!errorMessage || errorMessage === 'Unknown error') {
         return;
       }
+
+      // Filter out benign ResizeObserver errors that are common in development
+      if (errorMessage.includes('ResizeObserver loop completed with undelivered notifications')) {
+        // In development, we can ignore this common React/browser issue
+        if (import.meta.env.DEV) {
+          // Only log once every 30 seconds to avoid spam
+          const resizeObserverKey = 'resizeObserver-warning';
+          const lastWarning = window.lastResizeObserverWarning || 0;
+          const now = Date.now();
+          
+          if (now - lastWarning > 30000) { // 30 seconds
+            console.warn(
+              '🔍 ResizeObserver Warning (Development Only): This is usually caused by browser extensions or chart libraries and is generally harmless. ' +
+              'To test if it\'s extension-related, try incognito mode.',
+              { url: window.location.href }
+            );
+            window.lastResizeObserverWarning = now;
+          }
+        }
+        return; // Don't report this error
+      }
       
       window.reportError({
         component: 'Global',

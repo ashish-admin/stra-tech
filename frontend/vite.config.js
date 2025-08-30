@@ -10,9 +10,56 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: 'auto',
       
+      // 2024 Best Practice: Use custom manifest configuration instead of external file
+      manifest: {
+        name: 'LokDarpan Political Intelligence Dashboard',
+        short_name: 'LokDarpan',
+        description: 'Real-time political intelligence and campaign analytics platform for strategic decision making',
+        theme_color: '#3b82f6',
+        background_color: '#1f2937',
+        display: 'standalone',
+        orientation: 'any',
+        scope: '/',
+        start_url: '/',
+        categories: ['politics', 'analytics', 'business', 'productivity'],
+        lang: 'en-US',
+        icons: [
+          {
+            src: '/favicon.ico',
+            sizes: '16x16 32x32 48x48',
+            type: 'image/x-icon',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          }
+        ]
+      },
+      
+      // Include essential PWA assets
+      includeAssets: ['favicon.ico', 'icons/*.png', 'icons/*.svg'],
+      
+      // 2024 Best Practice: Enable in development for testing
+      devOptions: {
+        enabled: true,
+        suppressWarnings: true,
+        navigateFallback: 'index.html',
+        navigateFallbackAllowlist: [/^\/$/],
+        type: 'module',
+      },
+      
+      // PWA assets configuration disabled to prevent config errors in development
       pwaAssets: {
-        disabled: false,
-        config: true,
+        disabled: true
       },
 
       workbox: {
@@ -23,6 +70,9 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/],
         skipWaiting: true,
         clientsClaim: true,
+        
+        // 2024 Best Practice: Increase cache size for modern web apps
+        maximumFileSizeToCacheInBytes: 3000000, // 3MB instead of default 2MB
         
         // Political Intelligence specific caching
         runtimeCaching: [
@@ -85,14 +135,6 @@ export default defineConfig({
             }
           }
         ]
-      },
-
-      devOptions: {
-        enabled: false,
-        suppressWarnings: true,
-        navigateFallback: 'index.html',
-        navigateFallbackAllowlist: [/^\/$/],
-        type: 'module',
       },
 
       selfDestroying: false,

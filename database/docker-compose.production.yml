@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  lokdarpan-db:
+    image: pgvector/pgvector:pg15
+    container_name: lokdarpan_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_DB: lokdarpan_db
+      POSTGRES_USER: lokdarpan_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - lokdarpan_db_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+      - ./backups:/backups
+      - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+      -c log_destination=stderr
+      -c log_statement=all
+      -c log_min_duration_statement=1000ms
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lokdarpan_user -d lokdarpan_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - lokdarpan_network
+
+  # Redis for Celery and caching
+  lokdarpan-redis:
+    image: redis:7-alpine
+    container_name: lokdarpan_redis_prod
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - lokdarpan_redis_data:/data
+      - ./config/redis.conf:/etc/redis/redis.conf
+    command: redis-server /etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - lokdarpan_network
+
+volumes:
+  lokdarpan_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/lokdarpan/data/postgresql
+  
+  lokdarpan_redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/lokdarpan/data/redis
+
+networks:
+  lokdarpan_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

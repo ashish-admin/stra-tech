@@ -1,0 +1,102 @@
+# LokDarpan Frontend Production Dockerfile - Phase 1
+# Multi-stage build optimized for Indian network conditions
+# Focused on minimal bundle sizes and fast loading
+
+# Stage 1: Build Environment
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev
+
+# Copy package files for dependency installation
+COPY frontend/package*.json ./
+COPY frontend/pnpm-lock.yaml* ./
+
+# Install dependencies with production optimizations
+RUN npm install -g pnpm@latest && \
+    pnpm install --frozen-lockfile --prod=false
+
+# Copy source code
+COPY frontend/ .
+
+# Build environment variables for production
+ENV NODE_ENV=production
+ENV VITE_API_BASE_URL=""
+ENV GENERATE_SOURCEMAP=false
+
+# Build the application with production optimizations
+RUN pnpm run build && \
+    pnpm run build:analyze
+
+# Verify build output and bundle sizes
+RUN ls -la dist/ && \
+    du -sh dist/* && \
+    echo "Frontend build completed successfully"
+
+# Stage 2: Production Runtime with Nginx
+FROM nginx:alpine AS production
+
+# Install additional tools for monitoring and debugging
+RUN apk add --no-cache \
+    curl \
+    ca-certificates \
+    tzdata
+
+# Set timezone to Indian Standard Time
+ENV TZ=Asia/Kolkata
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Create nginx directories and set permissions
+RUN mkdir -p /var/cache/nginx/client_temp \
+             /var/cache/nginx/proxy_temp \
+             /var/cache/nginx/fastcgi_temp \
+             /var/cache/nginx/uwsgi_temp \
+             /var/cache/nginx/scgi_temp && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx
+
+# Copy built application from builder stage
+COPY --from=builder /app/dist /var/www/lokdarpan/dist
+
+# Set ownership and permissions
+RUN chown -R nginx:nginx /var/www/lokdarpan/dist && \
+    chmod -R 755 /var/www/lokdarpan/dist
+
+# Create health check script
+RUN echo '#!/bin/sh' > /usr/local/bin/health-check.sh && \
+    echo 'curl -f http://localhost/health || exit 1' >> /usr/local/bin/health-check.sh && \
+    chmod +x /usr/local/bin/health-check.sh
+
+# Health check for political dashboard availability
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /usr/local/bin/health-check.sh
+
+# Expose HTTP and HTTPS ports
+EXPOSE 80 443
+
+# Labels for container metadata
+LABEL maintainer="LokDarpan Team" \
+      version="1.0.0" \
+      description="LokDarpan Political Intelligence Dashboard - Frontend" \
+      component="frontend" \
+      network-optimization="indian-networks" \
+      features="PWA,SSE,Real-time-Intelligence"
+
+# Non-root user for security
+USER nginx
+
+# Start nginx in foreground
+CMD ["nginx", "-g", "daemon off;"]

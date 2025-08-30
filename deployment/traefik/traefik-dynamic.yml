@@ -1,0 +1,370 @@
+# LokDarpan Phase 1 - Traefik Dynamic Configuration
+# Advanced routing, middleware, and security configuration
+
+# =============================================================================
+# HTTP MIDDLEWARES - SECURITY AND PERFORMANCE
+# =============================================================================
+
+http:
+  middlewares:
+    # Security Headers - Enhanced for Political Dashboard
+    security-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          # Security Headers
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "DENY"
+          X-XSS-Protection: "1; mode=block"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()"
+          
+          # HSTS - 2 year max age with preload
+          Strict-Transport-Security: "max-age=63072000; includeSubDomains; preload"
+          
+          # CSP for political dashboard - Allow necessary resources
+          Content-Security-Policy: >-
+            default-src 'self';
+            script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://cdn.jsdelivr.net;
+            style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net;
+            img-src 'self' data: https: blob:;
+            font-src 'self' data: https://fonts.gstatic.com;
+            connect-src 'self' https://*.googleapis.com wss://*.lokdarpan.com https://*.lokdarpan.com;
+            media-src 'self' blob:;
+            object-src 'none';
+            base-uri 'self';
+            form-action 'self';
+            frame-ancestors 'none';
+            upgrade-insecure-requests;
+
+    # API Rate Limiting - Tiered for different endpoints
+    api-rate-limit-standard:
+      rateLimit:
+        average: 100      # 100 requests per minute
+        period: "1m"
+        burst: 50         # Allow bursts up to 50
+        sourceCriterion:
+          ipStrategy:
+            depth: 1      # Get real IP from first proxy
+
+    api-rate-limit-heavy:
+      rateLimit:
+        average: 20       # 20 requests per minute for heavy operations
+        period: "1m"
+        burst: 10
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    api-rate-limit-auth:
+      rateLimit:
+        average: 10       # Strict limit for auth endpoints
+        period: "1m"
+        burst: 5
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # SSE Streaming Configuration
+    sse-headers:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "no-cache, no-store, must-revalidate"
+          Connection: "keep-alive"
+          Access-Control-Allow-Credentials: "true"
+          Access-Control-Allow-Origin: "https://lokdarpan.com"
+          Access-Control-Allow-Methods: "GET, OPTIONS"
+          Access-Control-Allow-Headers: "Accept, Authorization, Content-Type"
+
+    # Compression - Optimize for political data
+    compression:
+      compress: true
+      excludedContentTypes:
+        - "text/event-stream"  # Don't compress SSE
+        - "application/grpc"
+        - "application/grpc+proto"
+
+    # API Logging Enhancement
+    api-logging:
+      accessLog:
+        format: >-
+          {
+            "time": "{{.StartUTC.Format "2006-01-02T15:04:05.000Z"}}",
+            "remote_addr": "{{.ClientHost}}",
+            "method": "{{.RequestMethod}}",
+            "uri": "{{.RequestPath}}",
+            "status": {{.DownstreamStatus}},
+            "duration_ms": {{.Duration.Milliseconds}},
+            "size": {{.DownstreamContentSize}},
+            "user_agent": "{{.RequestHeader "User-Agent"}}",
+            "referer": "{{.RequestHeader "Referer"}}",
+            "ward": "{{.RequestHeader "X-Ward-Context"}}",
+            "campaign_id": "{{.RequestHeader "X-Campaign-ID"}}"
+          }
+
+    # Geographic IP Blocking (Example for suspicious regions)
+    geo-block:
+      ipWhiteList:
+        sourceRange:
+          - "10.0.0.0/8"      # Private networks
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          - "1.0.0.0/8"       # India IP ranges (example - customize as needed)
+          - "14.0.0.0/8"
+          - "27.0.0.0/8"
+          - "39.0.0.0/8"
+          - "49.0.0.0/8"
+          - "103.0.0.0/8"
+          - "106.0.0.0/8"
+          - "110.0.0.0/8"
+          - "117.0.0.0/8"
+          - "118.0.0.0/8"
+          - "122.0.0.0/8"
+          - "123.0.0.0/8"
+          - "125.0.0.0/8"
+          - "150.0.0.0/8"
+          - "163.0.0.0/8"
+          - "164.0.0.0/8"
+          - "165.0.0.0/8"
+          - "182.0.0.0/8"
+          - "183.0.0.0/8"
+          - "202.0.0.0/8"
+          - "203.0.0.0/8"
+
+    # Circuit Breaker - Protect backend from overload
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.3 || ResponseCodeRatio(500, 600, 0, 600) > 0.3"
+        checkPeriod: "10s"
+        fallbackDuration: "30s"
+        recoveryDuration: "30s"
+
+    # Request/Response Size Limits
+    size-limits:
+      buffering:
+        maxRequestBodyBytes: 16777216    # 16MB max request body
+        maxResponseBodyBytes: 52428800   # 50MB max response body
+        memRequestBodyBytes: 1048576     # 1MB memory buffer
+        memResponseBodyBytes: 1048576
+        retryExpression: "IsNetworkError() && Attempts() < 3"
+
+  # =============================================================================
+  # ROUTERS - ADVANCED ROUTING CONFIGURATION
+  # =============================================================================
+
+  routers:
+    # Main Application Router
+    lokdarpan-app:
+      rule: "Host(`lokdarpan.com`) || Host(`www.lokdarpan.com`)"
+      entryPoints:
+        - websecure
+      service: frontend-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - compression
+        - api-logging
+
+    # API Router - Standard Endpoints
+    lokdarpan-api:
+      rule: "Host(`lokdarpan.com`) && PathPrefix(`/api/v1`) && !PathPrefix(`/api/v1/strategist`) && !PathPrefix(`/api/v1/auth`)"
+      entryPoints:
+        - websecure
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - api-rate-limit-standard
+        - compression
+        - circuit-breaker
+        - api-logging
+
+    # Authentication Router - Strict Rate Limiting
+    lokdarpan-auth:
+      rule: "Host(`lokdarpan.com`) && PathPrefix(`/api/v1/auth`)"
+      entryPoints:
+        - websecure
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - api-rate-limit-auth
+        - api-logging
+
+    # Political Strategist Router - Heavy Operations
+    lokdarpan-strategist:
+      rule: "Host(`lokdarpan.com`) && PathPrefix(`/api/v1/strategist`) && !PathPrefix(`/api/v1/strategist/stream`)"
+      entryPoints:
+        - websecure
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - api-rate-limit-heavy
+        - circuit-breaker
+        - api-logging
+      priority: 100  # Higher priority than generic API
+
+    # SSE Streaming Router - Special Configuration
+    lokdarpan-sse:
+      rule: "Host(`lokdarpan.com`) && PathPrefix(`/api/v1/strategist/stream`)"
+      entryPoints:
+        - websecure
+      service: backend-sse-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - sse-headers
+        - api-rate-limit-heavy
+        - api-logging
+      priority: 200  # Highest priority for SSE
+
+    # Admin Dashboard Router
+    lokdarpan-admin:
+      rule: "Host(`admin.lokdarpan.com`)"
+      entryPoints:
+        - websecure
+      service: admin-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - admin-auth
+        - geo-block
+        - api-logging
+
+    # Metrics Router
+    lokdarpan-metrics:
+      rule: "Host(`metrics.lokdarpan.com`)"
+      entryPoints:
+        - websecure
+      service: prometheus-service
+      tls:
+        certResolver: letsencrypt
+        options: modern-tls
+      middlewares:
+        - security-headers
+        - metrics-auth
+        - geo-block
+        - api-logging
+
+  # =============================================================================
+  # SERVICES - LOAD BALANCING AND HEALTH CHECKS
+  # =============================================================================
+
+  services:
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:80"
+        healthCheck:
+          path: "/"
+          interval: "30s"
+          timeout: "10s"
+          
+    backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://backend:5000"
+        healthCheck:
+          path: "/api/v1/status"
+          interval: "30s"
+          timeout: "10s"
+        sticky:
+          cookie:
+            name: "lokdarpan-session"
+            secure: true
+            httpOnly: true
+            sameSite: "strict"
+
+    backend-sse-service:
+      loadBalancer:
+        servers:
+          - url: "http://backend:5000"
+        healthCheck:
+          path: "/api/v1/strategist/health"
+          interval: "30s"
+          timeout: "15s"
+        # No session stickiness for SSE to allow failover
+
+    admin-service:
+      loadBalancer:
+        servers:
+          - url: "http://traefik:8080"
+        healthCheck:
+          path: "/api/version"
+          interval: "60s"
+          timeout: "10s"
+
+    prometheus-service:
+      loadBalancer:
+        servers:
+          - url: "http://prometheus:9090"
+        healthCheck:
+          path: "/api/v1/status/runtimeinfo"
+          interval: "60s"
+          timeout: "10s"
+
+# =============================================================================
+# TLS CONFIGURATION - MODERN SECURITY
+# =============================================================================
+
+tls:
+  options:
+    modern-tls:
+      sslProtocols:
+        - "TLSv1.3"
+        - "TLSv1.2"
+      cipherSuites:
+        # TLS 1.3 cipher suites
+        - "TLS_AES_256_GCM_SHA384"
+        - "TLS_CHACHA20_POLY1305_SHA256"
+        - "TLS_AES_128_GCM_SHA256"
+        # TLS 1.2 cipher suites
+        - "ECDHE-RSA-AES256-GCM-SHA384"
+        - "ECDHE-RSA-CHACHA20-POLY1305"
+        - "ECDHE-RSA-AES128-GCM-SHA256"
+        - "ECDHE-RSA-AES256-SHA384"
+        - "ECDHE-RSA-AES128-SHA256"
+      curvePreferences:
+        - "X25519"
+        - "secp384r1"
+        - "secp256r1"
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+
+  certificates:
+    # Let's Encrypt will manage these automatically
+    # This section is for reference and custom certificates if needed
+    - certFile: "/certs/lokdarpan.com.crt"
+      keyFile: "/certs/lokdarpan.com.key"
+      stores:
+        - default
+
+# =============================================================================
+# EXPERIMENTAL FEATURES
+# =============================================================================
+
+experimental:
+  plugins:
+    # Plugin for advanced IP geolocation (if available)
+    geoblock:
+      moduleName: "github.com/traefik/plugin-geoblock"
+      version: "v0.2.7"
+    
+    # Plugin for advanced rate limiting (if available)  
+    ratelimit:
+      moduleName: "github.com/traefik/plugin-ratelimit"
+      version: "v0.3.1"

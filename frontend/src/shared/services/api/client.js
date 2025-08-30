@@ -9,7 +9,7 @@
 import axios from 'axios';
 
 // Base configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 const API_VERSION = '/api/v1';
 
 /**
@@ -219,7 +219,8 @@ export const lokDarpanApi = {
   content: {
     getPosts: (params) => apiMethods.get('/posts', { params }),
     getAlerts: (ward) => apiMethods.get(`/alerts/${ward}`),
-    getCompetitiveAnalysis: (params) => apiMethods.get('/competitive-analysis', { params })
+    getCompetitiveAnalysis: (params) => apiMethods.get('/competitive-analysis', { params }),
+    postTelemetry: (data) => apiMethods.post('/telemetry/user-action', data)
   }
 };
 

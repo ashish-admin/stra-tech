@@ -3,13 +3,22 @@
  * Provides React integration for real-time multi-model AI analysis
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import EnhancedSSEClient from '../services/enhancedSSEClient';
 
 /**
  * Hook for managing enhanced SSE connection with Stream A's AI orchestration
  */
 export function useEnhancedSSE(ward, options = {}) {
+  // Memoize options to prevent infinite loops caused by object recreation
+  const memoizedOptions = useMemo(() => ({
+    maxRetries: options.maxRetries || 3,
+    retryBaseDelay: options.retryBaseDelay || 1000,
+    priority: options.priority || 'normal',
+    timeframe: options.timeframe || null,
+    type: options.type || null
+  }), [options.maxRetries, options.retryBaseDelay, options.priority, options.timeframe, options.type]);
+
   const [connectionState, setConnectionState] = useState({
     connected: false,
     connecting: false,
@@ -38,11 +47,7 @@ export function useEnhancedSSE(ward, options = {}) {
       console.log('SSE connection enabled for Phase 4.2 development testing');
     }
 
-    clientRef.current = new EnhancedSSEClient({
-      maxRetries: options.maxRetries || 5,
-      retryBaseDelay: options.retryBaseDelay || 1000,
-      ...options
-    });
+    clientRef.current = new EnhancedSSEClient(memoizedOptions);
 
     return () => {
       if (clientRef.current) {
@@ -50,7 +55,7 @@ export function useEnhancedSSE(ward, options = {}) {
         clientRef.current = null;
       }
     };
-  }, [ward, options.maxRetries, options.retryBaseDelay]);
+  }, [ward, memoizedOptions.maxRetries, memoizedOptions.retryBaseDelay]);
 
   // Setup event listeners
   useEffect(() => {
@@ -148,7 +153,7 @@ export function useEnhancedSSE(ward, options = {}) {
       client.off('intelligence', handleIntelligence);
       client.off('alert', handleAlert);
     };
-  }, [clientRef.current]);
+  }, []); // Event listeners setup should only run once when component mounts
 
   // Connect to SSE when ward changes
   useEffect(() => {
@@ -163,7 +168,7 @@ export function useEnhancedSSE(ward, options = {}) {
 
     // Connect to enhanced endpoints
     clientRef.current.connect(ward, {
-      priority: options.priority || 'all',
+      priority: memoizedOptions.priority || 'all',
       includeConfidence: true,
       includeProgress: true
     });
@@ -173,7 +178,7 @@ export function useEnhancedSSE(ward, options = {}) {
         clientRef.current.disconnect();
       }
     };
-  }, [ward, options.priority]);
+  }, [ward, memoizedOptions.priority]);
 
   // Manual reconnection
   const reconnect = useCallback(() => {
@@ -305,10 +310,12 @@ export function useConfidenceScore(ward) {
     lastUpdate: null
   });
 
-  const { confidence } = useEnhancedSSE(ward, { priority: 'confidence' });
+  const lastUpdateRef = useRef(null);
+  const { confidence } = useEnhancedSSE(ward, { priority: 'high' });
 
   useEffect(() => {
-    if (confidence) {
+    if (confidence?.score != null && confidence?.receivedAt !== lastUpdateRef.current) {
+      lastUpdateRef.current = confidence.receivedAt;
       setConfidenceData(prev => ({
         current: confidence.score,
         trend: confidence.trend,
@@ -324,7 +331,7 @@ export function useConfidenceScore(ward) {
         lastUpdate: confidence.receivedAt
       }));
     }
-  }, [confidence]);
+  }, [confidence?.score, confidence?.receivedAt, confidence?.trend, confidence?.reliability]);
 
   return confidenceData;
 }

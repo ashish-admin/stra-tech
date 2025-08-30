@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import "./index.css";
+import "./lib/i18n";
 
 // Epic 5.0.1: Dashboard Integration with Phase 3-4 Infrastructure
 import Dashboard from "./features/dashboard/components/Dashboard";
@@ -13,8 +14,8 @@ import {
 
 // Phase 3-4: Core Infrastructure
 import { WardProvider } from "./shared/context/WardContext";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./shared/services/cache";
+import { QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryClient, queryKeys } from "./shared/services/cache";
 
 // Phase 4.5: PWA Infrastructure
 import { PWAProvider } from "./context/PWAContext";
@@ -23,69 +24,90 @@ import OfflineIndicator from "./components/OfflineIndicator";
 import pushNotificationService from "./services/pushNotifications";
 
 // Core API Layer
-import { fetchJson } from "./lib/api";
+import { lokDarpanApi, apiMethods } from "./shared/services/api/client";
 
 // Enhanced Error Reporting System
 import { useErrorReporting, useErrorMetrics } from "./hooks/useErrorReporting";
 
 function AppContent() {
-  const [authChecked, setAuthChecked] = useState(false);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [user, setUser] = useState(null);
+  const rqClient = useQueryClient();
+  // Centralized auth status via React Query
+  const {
+    data: authStatus,
+    isLoading: authLoading,
+  } = useQuery({
+    queryKey: queryKeys.auth.status(),
+    queryFn: () => lokDarpanApi.auth.status(),
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const { isAuthed, user } = useMemo(() => ({
+    isAuthed: !!authStatus?.authenticated,
+    user: authStatus?.user || null,
+  }), [authStatus]);
 
   // Initialize error reporting and metrics (Phase 4)
   useErrorReporting();
   useErrorMetrics();
 
-  async function checkSession() {
-    try {
-      const data = await fetchJson("api/v1/status");
-      setIsAuthed(!!data?.authenticated);
-      setUser(data?.user || null);
-    } catch (error) {
-      console.log("Session check failed:", error.message);
-      setIsAuthed(false);
-      setUser(null);
-    } finally {
-      setAuthChecked(true);
-    }
-  }
-
+  // Initialize PWA services after successful authentication (opt-in friendly)
+  const [pwaInitialized, setPwaInitialized] = useState(false);
   useEffect(() => {
-    checkSession();
-    
-    // Initialize PWA services after authentication check (Phase 4.5)
-    const initializePWA = async () => {
+    if (!isAuthed || pwaInitialized) return;
+    (async () => {
       try {
         console.log('[App] Initializing PWA services for LokDarpan Campaign Intelligence');
-        
-        // Initialize push notifications service
         const pushInitialized = await pushNotificationService.initialize();
         if (pushInitialized) {
           console.log('[App] Push notifications service ready for political alerts');
         }
       } catch (error) {
         console.warn('[App] PWA initialization failed:', error);
+      } finally {
+        setPwaInitialized(true);
       }
-    };
+    })();
+  }, [isAuthed, pwaInitialized]);
 
-    initializePWA();
+  // Lightweight telemetry for online/offline and auth errors
+  useEffect(() => {
+    const onAuthError = (e) => {
+      lokDarpanApi.content.postTelemetry({
+        action: 'auth_error',
+        details: { reason: e?.detail?.statusText || 'unknown' },
+        timestamp: new Date().toISOString(),
+      }).catch(() => {});
+    };
+    const onOnline = () => lokDarpanApi.content.postTelemetry({ action: 'online', timestamp: new Date().toISOString() }).catch(() => {});
+    const onOffline = () => lokDarpanApi.content.postTelemetry({ action: 'offline', timestamp: new Date().toISOString() }).catch(() => {});
+    window.addEventListener('api:auth-error', onAuthError);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('api:auth-error', onAuthError);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
   }, []);
 
   async function handleLogin({ username, password }) {
     try {
-      await fetchJson("api/v1/login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      });
-      await checkSession();
+      await lokDarpanApi.auth.login({ username, password });
+      await rqClient.invalidateQueries({ queryKey: queryKeys.auth.status() });
     } catch (error) {
       console.error("Login failed:", error);
+      // telemetry for failed login
+      lokDarpanApi.content.postTelemetry({
+        action: 'login_failed',
+        details: { username },
+        timestamp: new Date().toISOString(),
+      }).catch(() => {});
       throw error; // Let LoginPage handle the error display
     }
   }
 
-  if (!authChecked) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -115,9 +137,15 @@ function AppContent() {
   // Epic 5.0.1: Full Dashboard Integration with Complete Provider Chain
   return (
     <PWAProvider>
-      <QueryClientProvider client={queryClient}>
-        <WardProvider>
-          <>
+      <WardProvider>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading dashboard…</p>
+              </div>
+            </div>
+          }>
             {/* PWA Components */}
             <OfflineIndicator />
             <PWAInstallPrompt />
@@ -126,9 +154,8 @@ function AppContent() {
             <DashboardErrorBoundary componentName="LokDarpan Main Application">
               <Dashboard currentUser={user} />
             </DashboardErrorBoundary>
-          </>
-        </WardProvider>
-      </QueryClientProvider>
+          </Suspense>
+      </WardProvider>
     </PWAProvider>
   );
 }
@@ -154,5 +181,9 @@ function AppContent() {
  * CAMPAIGN TEAM READY: All $200K+ Phase 3-4 features now accessible
  */
 export default function App() {
-  return <AppContent />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
+  );
 }

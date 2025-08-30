@@ -23,8 +23,8 @@ export default function PoliticalStrategist({ selectedWard }) {
   const [streamingMode, setStreamingMode] = useState(preferences.enableStreaming || false);
   const [streamingResult, setStreamingResult] = useState(null);
 
-  // Enhanced SSE connections
-  const strategistSSE = useStrategistSSE(selectedWard, {
+  // Memoize SSE options to prevent infinite loops
+  const strategistSSEOptions = useMemo(() => ({
     depth: analysisDepth,
     context: contextMode,
     autoConnect: streamingMode,
@@ -38,12 +38,17 @@ export default function PoliticalStrategist({ selectedWard }) {
     onError: (error) => {
       console.warn('[PoliticalStrategist] SSE error:', error);
     }
-  });
+  }), [analysisDepth, contextMode, streamingMode]);
 
-  const intelligenceSSE = useIntelligenceFeedSSE(selectedWard, {
+  // Memoize intelligence SSE options to prevent infinite loops
+  const intelligenceSSEOptions = useMemo(() => ({
     priority: preferences.priorityFilter,
     autoConnect: true
-  });
+  }), [preferences.priorityFilter]);
+
+  // Enhanced SSE connections
+  const strategistSSE = useStrategistSSE(selectedWard, strategistSSEOptions);
+  const intelligenceSSE = useIntelligenceFeedSSE(selectedWard, intelligenceSSEOptions);
 
   // Overall SSE health monitoring
   const sseHealth = useSSEHealthMonitor([strategistSSE, intelligenceSSE]);

@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { fetchJson } from "../lib/api";
 import { useWard } from "../context/WardContext.jsx";
 import useViewport from "../hooks/useViewport";
+import { useChartResizeObserver } from "../hooks/useResizeObserver";
 import { AlertTriangle, Map as MapIcon, RefreshCw, Navigation } from "lucide-react";
 import { MapSkeleton, LoadingSpinner } from "./ui/LoadingSkeleton.jsx";
 
@@ -173,26 +174,50 @@ export default function LocationMap({
     }
   }, []);
 
+  // Stable callback for handling reference element height changes
+  const handleReferenceHeightChange = useMemo(() => ({
+    callback: ({ height }) => {
+      const el = wrapperRef.current;
+      if (!el || !mapRef.current) return;
+      
+      const h = Math.max(minHeight, Math.min(maxHeight, height));
+      el.style.height = `${h}px`;
+      
+      // Use requestAnimationFrame to prevent ResizeObserver loops
+      requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      });
+    },
+    debounceMs: 150, // Debounce for map stability
+    minHeight: 200   // Minimum height for the reference observer
+  }), [minHeight, maxHeight]);
+
+  // Use the stable ResizeObserver hook for reference element
+  const referenceObserverRef = useChartResizeObserver(
+    handleReferenceHeightChange.callback,
+    {
+      debounceMs: handleReferenceHeightChange.debounceMs,
+      minHeight: handleReferenceHeightChange.minHeight
+    }
+  );
+
   /* ---------- responsive height ---------- */
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el || !mapRef.current) return;
 
-    // If a reference panel is provided, mirror its height
-    if (matchHeightRef?.current) {
-      const ro = new ResizeObserver((entries) => {
-        const h = Math.max(
-          minHeight,
-          Math.min(maxHeight, entries[0].contentRect.height)
-        );
-        el.style.height = `${h}px`;
-        mapRef.current.invalidateSize();
-      });
-      ro.observe(matchHeightRef.current);
-      const nowH = matchHeightRef.current.getBoundingClientRect().height || minHeight;
-      el.style.height = `${Math.max(minHeight, Math.min(maxHeight, nowH))}px`;
+    // If a reference panel is provided, attach our stable observer
+    if (matchHeightRef?.current && referenceObserverRef.current !== matchHeightRef.current) {
+      // Set initial height
+      const initialHeight = matchHeightRef.current.getBoundingClientRect().height || minHeight;
+      const h = Math.max(minHeight, Math.min(maxHeight, initialHeight));
+      el.style.height = `${h}px`;
       mapRef.current.invalidateSize();
-      return () => ro.disconnect();
+      
+      // Update the observer reference
+      referenceObserverRef.current = matchHeightRef.current;
     }
 
     // Otherwise, use viewport height (dvh-ish)
@@ -213,7 +238,7 @@ export default function LocationMap({
       window.removeEventListener("resize", setH);
       window.removeEventListener("orientationchange", setH);
     };
-  }, [matchHeightRef, minHeight, maxHeight, preferredDvh, isDesktop, vh]);
+  }, [matchHeightRef, minHeight, maxHeight, preferredDvh, isDesktop, vh, referenceObserverRef]);
 
   /* ---------- draw polygons ---------- */
   useEffect(() => {
